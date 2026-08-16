@@ -15,6 +15,7 @@ import (
 
 const (
 	facilityReferenceDataEventChanged = "facility_reference_data.changed"
+	facilityChangedEvent              = "facility.changed"
 	facilityCopyJobProgressEvent      = "facility.copy_job.progress"
 	facilityReferenceDataWriteWait    = 10 * time.Second
 	facilityReferenceDataPongWait     = 60 * time.Second
@@ -39,6 +40,18 @@ type FacilityReferenceDataEvent struct {
 	At        time.Time `json:"at"`
 }
 
+// FacilityChangeEvent is the shared facility-stream invalidation contract.
+// Resource names are intentionally plural so one event can invalidate a list,
+// a detail view and any matching client-side cache.
+type FacilityChangeEvent struct {
+	Type     string      `json:"type"`
+	Resource string      `json:"resource"`
+	Action   string      `json:"action"`
+	IDs      []uuid.UUID `json:"ids"`
+	ActorID  *uuid.UUID  `json:"actor_id,omitempty"`
+	At       time.Time   `json:"at"`
+}
+
 type facilityCopyJobEvent struct {
 	Type      string    `json:"type"`
 	JobID     uuid.UUID `json:"job_id"`
@@ -56,9 +69,10 @@ type facilityReferenceDataBusEvent struct {
 }
 
 type facilityReferenceDataClient struct {
-	hub    *FacilityReferenceDataHub
-	userID uuid.UUID
-	socket *WebSocketClient
+	hub               *FacilityReferenceDataHub
+	userID            uuid.UUID
+	readableResources map[string]struct{}
+	socket            *WebSocketClient
 }
 
 type FacilityReferenceDataHub struct {
@@ -108,8 +122,8 @@ func (h *FacilityReferenceDataHub) Close() {
 	})
 }
 
-func (h *FacilityReferenceDataHub) Stream(w http.ResponseWriter, r *http.Request, userID uuid.UUID) {
-	client := &facilityReferenceDataClient{hub: h, userID: userID}
+func (h *FacilityReferenceDataHub) Stream(w http.ResponseWriter, r *http.Request, userID uuid.UUID, readableResources map[string]struct{}) {
+	client := &facilityReferenceDataClient{hub: h, userID: userID, readableResources: cloneFacilityReadableResources(readableResources)}
 	socket, err := AcceptWebSocket(w, r, facilityReferenceDataSocketConfig, client.handleMessage, func() {
 		h.unregister(client)
 	})
@@ -131,11 +145,25 @@ func (h *FacilityReferenceDataHub) BroadcastFacilityReferenceDataChange(_ contex
 		return
 	}
 
-	h.broadcastDistributed(FacilityReferenceDataEvent{
+	event := FacilityReferenceDataEvent{
 		Type:      facilityReferenceDataEventChanged,
 		Resources: normalizedResources,
 		At:        time.Now().UTC(),
-	})
+	}
+	h.broadcastReferenceDataEvent(event)
+	h.publishEvent(event)
+}
+
+func (h *FacilityReferenceDataHub) BroadcastFacilityChange(_ context.Context, resource, action string, ids []uuid.UUID, actorID *uuid.UUID) {
+	if !isFacilityRealtimeResource(resource) || !isFacilityRealtimeAction(action) {
+		return
+	}
+	event := FacilityChangeEvent{
+		Type: facilityChangedEvent, Resource: resource, Action: action,
+		IDs: uniqueUUIDs(ids), ActorID: actorID, At: time.Now().UTC(),
+	}
+	h.broadcastFacilityChangeEvent(event)
+	h.publishEvent(event)
 }
 
 // BroadcastCopyJobProgress delivers a progress update only to browser
@@ -208,7 +236,14 @@ func (h *FacilityReferenceDataHub) handleBusEvent(event apprealtime.Event) {
 			slog.Warn("ignored invalid facility reference data event")
 			return
 		}
-		h.broadcastBytes(busEvent.Payload)
+		h.broadcastReferenceDataEvent(payload)
+	case facilityChangedEvent:
+		var payload FacilityChangeEvent
+		if err := json.Unmarshal(busEvent.Payload, &payload); err != nil || !isFacilityRealtimeResource(payload.Resource) || !isFacilityRealtimeAction(payload.Action) {
+			slog.Warn("ignored invalid facility change event")
+			return
+		}
+		h.broadcastFacilityChangeEvent(payload)
 	case facilityCopyJobProgressEvent:
 		var payload facilityCopyJobEvent
 		if err := json.Unmarshal(busEvent.Payload, &payload); err != nil || payload.JobID == uuid.Nil || busEvent.OwnerID == uuid.Nil {
@@ -239,16 +274,47 @@ func (h *FacilityReferenceDataHub) unregister(client *facilityReferenceDataClien
 	}
 }
 
-func (h *FacilityReferenceDataHub) broadcastDistributed(event FacilityReferenceDataEvent) {
+func (h *FacilityReferenceDataHub) broadcastReferenceDataEvent(event FacilityReferenceDataEvent) {
+	resources := normalizeFacilityReferenceDataResources(event.Resources)
+	if len(resources) == 0 {
+		return
+	}
+	event.Resources = resources
+	h.forEachClient(func(client *facilityReferenceDataClient) {
+		allowed := make([]string, 0, len(resources))
+		for _, resource := range resources {
+			if client.canRead(resource) {
+				allowed = append(allowed, resource)
+			}
+		}
+		if len(allowed) == 0 {
+			return
+		}
+		eventForClient := event
+		eventForClient.Resources = allowed
+		h.sendEvent(client, eventForClient)
+	})
+}
+
+func (h *FacilityReferenceDataHub) broadcastFacilityChangeEvent(event FacilityChangeEvent) {
+	h.forEachClient(func(client *facilityReferenceDataClient) {
+		if client.canRead(event.Resource) {
+			h.sendEvent(client, event)
+		}
+	})
+}
+
+func (h *FacilityReferenceDataHub) sendEvent(client *facilityReferenceDataClient, event any) {
 	payload, err := json.Marshal(event)
 	if err != nil {
 		return
 	}
-	h.broadcastBytes(payload)
-	h.publishPayload(payload)
+	if client.socket == nil || !client.socket.SendBytes(payload) {
+		h.unregister(client)
+	}
 }
 
-func (h *FacilityReferenceDataHub) broadcastBytes(payload []byte) {
+func (h *FacilityReferenceDataHub) forEachClient(fn func(*facilityReferenceDataClient)) {
 	h.mu.RLock()
 	clients := make([]*facilityReferenceDataClient, 0, len(h.clients))
 	for client := range h.clients {
@@ -257,9 +323,7 @@ func (h *FacilityReferenceDataHub) broadcastBytes(payload []byte) {
 	h.mu.RUnlock()
 
 	for _, client := range clients {
-		if client.socket == nil || !client.socket.SendBytes(payload) {
-			h.unregister(client)
-		}
+		fn(client)
 	}
 }
 
@@ -280,6 +344,14 @@ func (h *FacilityReferenceDataHub) broadcastCopyJobBytes(ownerID uuid.UUID, payl
 	}
 }
 
+func (h *FacilityReferenceDataHub) publishEvent(event any) {
+	payload, err := json.Marshal(event)
+	if err != nil {
+		return
+	}
+	h.publishPayload(payload)
+}
+
 func (h *FacilityReferenceDataHub) publishPayload(payload []byte) {
 	if h.bus == nil {
 		return
@@ -296,6 +368,64 @@ func (h *FacilityReferenceDataHub) publishPayload(payload []byte) {
 	defer cancel()
 	if err := h.bus.Publish(ctx, apprealtime.NewEvent(apprealtime.TopicFacilityReferenceData, h.nodeID, busPayload)); err != nil {
 		slog.Warn("facility reference data realtime bus publish failed", "err", err)
+	}
+}
+
+func (c *facilityReferenceDataClient) canRead(resource string) bool {
+	if c.readableResources == nil {
+		return true
+	}
+	_, ok := c.readableResources[resource]
+	return ok
+}
+
+func cloneFacilityReadableResources(resources map[string]struct{}) map[string]struct{} {
+	if resources == nil {
+		return nil
+	}
+	copy := make(map[string]struct{}, len(resources))
+	for resource := range resources {
+		if isFacilityRealtimeResource(resource) {
+			copy[resource] = struct{}{}
+		}
+	}
+	return copy
+}
+
+func uniqueUUIDs(ids []uuid.UUID) []uuid.UUID {
+	if len(ids) == 0 {
+		return []uuid.UUID{}
+	}
+	seen := make(map[uuid.UUID]struct{}, len(ids))
+	result := make([]uuid.UUID, 0, len(ids))
+	for _, id := range ids {
+		if id == uuid.Nil {
+			continue
+		}
+		if _, exists := seen[id]; exists {
+			continue
+		}
+		seen[id] = struct{}{}
+		result = append(result, id)
+	}
+	return result
+}
+
+func isFacilityRealtimeResource(resource string) bool {
+	switch resource {
+	case "buildings", "system_types", "system_parts", "apparats", "control_cabinets", "sps_controllers", "sps_controller_system_types", "field_devices", "bacnet_objects", "object_data", "state_texts", "notification_classes", "alarm_definitions", "alarm_types", "alarm_type_fields", "alarm_fields", "units":
+		return true
+	default:
+		return false
+	}
+}
+
+func isFacilityRealtimeAction(action string) bool {
+	switch action {
+	case "created", "updated", "deleted", "copied", "bulk_created", "bulk_updated", "bulk_deleted":
+		return true
+	default:
+		return false
 	}
 }
 

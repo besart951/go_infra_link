@@ -79,3 +79,47 @@ func TestFacilityCopyJobProgressIsOnlyDeliveredToTheOwningUser(t *testing.T) {
 	}
 	assertNoSocketMessageOfType(t, otherClient.socket, facilityCopyJobProgressEvent)
 }
+
+func TestFacilityChangeIsFilteredByReadableResource(t *testing.T) {
+	hub := NewFacilityReferenceDataHub()
+	defer hub.Close()
+
+	allowedClient := &facilityReferenceDataClient{
+		hub: hub, readableResources: map[string]struct{}{"apparats": {}}, socket: newTestSocket(4),
+	}
+	deniedClient := &facilityReferenceDataClient{
+		hub: hub, readableResources: map[string]struct{}{"system_parts": {}}, socket: newTestSocket(4),
+	}
+	hub.register(allowedClient)
+	hub.register(deniedClient)
+
+	id := uuid.New()
+	hub.BroadcastFacilityChange(context.Background(), "apparats", "updated", []uuid.UUID{id, id}, nil)
+
+	message := receiveSocketMessageOfType(t, allowedClient.socket, facilityChangedEvent)
+	if message["resource"] != "apparats" || message["action"] != "updated" {
+		t.Fatalf("facility event = %#v", message)
+	}
+	ids, ok := message["ids"].([]any)
+	if !ok || len(ids) != 1 || ids[0] != id.String() {
+		t.Fatalf("IDs = %#v, want one %s", message["ids"], id)
+	}
+	assertNoSocketMessageOfType(t, deniedClient.socket, facilityChangedEvent)
+}
+
+func TestFacilityReferenceDataChangeFiltersIndividualResources(t *testing.T) {
+	hub := NewFacilityReferenceDataHub()
+	defer hub.Close()
+
+	client := &facilityReferenceDataClient{
+		hub: hub, readableResources: map[string]struct{}{"apparats": {}}, socket: newTestSocket(4),
+	}
+	hub.register(client)
+	hub.BroadcastFacilityReferenceDataChange(context.Background(), FacilityReferenceDataResourceApparats, FacilityReferenceDataResourceSystemParts)
+
+	message := receiveSocketMessageOfType(t, client.socket, facilityReferenceDataEventChanged)
+	resources, ok := message["resources"].([]any)
+	if !ok || len(resources) != 1 || resources[0] != FacilityReferenceDataResourceApparats {
+		t.Fatalf("resources = %#v, want only apparats", message["resources"])
+	}
+}

@@ -46,6 +46,7 @@ func newFacilityHandlers(services *Services, collaboration facilityhandler.Proje
 		AlarmTypeField:          services.Facility.AlarmTypeField,
 		BacnetAlarm:             services.Facility.BacnetAlarmValue,
 		BacnetReferenceUsage:    services.Facility.BacnetReferenceUsage,
+		DeleteImpact:            services.Facility.DeleteImpact,
 		CopyJobs:                copyJobs,
 		Collaboration:           collaboration,
 		ReferenceData:           referenceData,

@@ -3,7 +3,7 @@
   import { Button } from '$lib/components/ui/button/index.js';
   import { Input } from '$lib/components/ui/input/index.js';
   import * as InputGroup from '$lib/components/ui/input-group/index.js';
-  import { goto, invalidateAll } from '$app/navigation';
+  import { goto } from '$app/navigation';
   import { api } from '$lib/api/client';
   import {
     Field,
@@ -66,7 +66,10 @@
         body: JSON.stringify({ email, password })
       });
 
-      await invalidateAll();
+      // Navigating to the authenticated layout loads its data with the newly
+      // issued cookies. Invalidating the current login route first makes its
+      // load function redirect as well, racing this navigation and mounting
+      // the global realtime streams twice.
       await goto('/');
     } catch (err: any) {
       error = err.error || 'login_failed';

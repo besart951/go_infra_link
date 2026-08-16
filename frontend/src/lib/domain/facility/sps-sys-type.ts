@@ -13,6 +13,12 @@ export interface SPSControllerSystemType {
   updated_at: string;
 }
 
+export interface UpdateSPSControllerSystemTypeRequest {
+  base_version?: number;
+  number?: number;
+  document_name?: string;
+}
+
 export interface SPSControllerSystemTypeListParams {
   page?: number;
   limit?: number;

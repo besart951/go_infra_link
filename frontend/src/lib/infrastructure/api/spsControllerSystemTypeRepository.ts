@@ -3,7 +3,8 @@ import type { ListParams, PaginatedResponse } from '$lib/domain/ports/listReposi
 import type {
   SPSControllerSystemType,
   SPSControllerSystemTypeListResponse,
-  CopyJob
+  CopyJob,
+  UpdateSPSControllerSystemTypeRequest
 } from '$lib/domain/facility/index.js';
 import { toCopyJob } from '$lib/domain/facility/copy-job.js';
 import { ApiException, api } from '$lib/api/client.js';
@@ -86,6 +87,18 @@ function clearSystemTypeListCache(): void {
   listCache.clear();
 }
 
+function isSPSControllerSystemType(value: unknown): value is SPSControllerSystemType {
+  if (!value || typeof value !== 'object') return false;
+  const item = value as Record<string, unknown>;
+  return (
+    typeof item.id === 'string' &&
+    typeof item.sps_controller_id === 'string' &&
+    typeof item.system_type_id === 'string' &&
+    typeof item.created_at === 'string' &&
+    typeof item.updated_at === 'string'
+  );
+}
+
 async function listSystemTypesWithCache(
   params: ListParams,
   signal?: AbortSignal
@@ -154,6 +167,24 @@ export const spsControllerSystemTypeRepository: SPSControllerSystemTypeRepositor
       throw new ApiException(404, 'not_found', 'SPS controller system type not found');
     }
 
+    return response;
+  },
+
+  async update(
+    id: string,
+    data: UpdateSPSControllerSystemTypeRequest,
+    signal?: AbortSignal
+  ): Promise<SPSControllerSystemType> {
+    const { data: response } = await apiClient.PUT('/api/v1/facility/sps-controller-system-types/{id}', {
+      params: { path: { id } },
+      body: data,
+      signal
+    });
+    if (!isSPSControllerSystemType(response)) {
+      throw new Error('SPS controller system type update response is empty');
+    }
+    clearSystemTypeListCache();
+    clearCachedFetchById('facility-sps-controller-system-types');
     return response;
   },
 

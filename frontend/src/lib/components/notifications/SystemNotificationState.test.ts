@@ -1,5 +1,8 @@
-import { describe, expect, it } from 'vitest';
-import { parseSystemNotificationStreamEvent } from './SystemNotificationState.svelte.js';
+import { describe, expect, it, vi } from 'vitest';
+import {
+  parseSystemNotificationStreamEvent,
+  SystemNotificationState
+} from './SystemNotificationState.svelte.js';
 
 const notificationId = '11111111-1111-4111-8111-111111111111';
 const userId = '22222222-2222-4222-8222-222222222222';
@@ -62,5 +65,35 @@ describe('system notification realtime message validation', () => {
         at: '2026-01-01T10:00:01Z'
       })
     ).toThrow();
+  });
+});
+
+describe('system notification connection lifecycle', () => {
+  it('keeps the shared stream open during a transient bell remount', async () => {
+    vi.useFakeTimers();
+    try {
+      const stream = { connect: vi.fn(), disconnect: vi.fn() };
+      const state = new SystemNotificationState({ stream: stream as never });
+
+      state.connect();
+      state.disconnect();
+      state.connect();
+      await vi.advanceTimersByTimeAsync(1500);
+
+      expect(stream.connect).toHaveBeenCalledTimes(2);
+      expect(stream.disconnect).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('closes immediately when the user logs out', () => {
+    const stream = { connect: vi.fn(), disconnect: vi.fn() };
+    const state = new SystemNotificationState({ stream: stream as never });
+
+    state.connect();
+    state.disconnect({ immediate: true });
+
+    expect(stream.disconnect).toHaveBeenCalledOnce();
   });
 });

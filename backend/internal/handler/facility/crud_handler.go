@@ -134,6 +134,7 @@ func (h *crudHandler[T, CreateReq, UpdateReq]) handleDelete(c *gin.Context) {
 	if err := h.svc.DeleteByID(ctx, id); err != nil {
 		respondLocalizedDomainError(c, err, "deletion_failed", "facility.deletion_failed",
 			localizedNotFound(h.notFoundKey),
+			localizedReferenceInUse(),
 			localizedBacnetReferenceInUse(),
 		)
 		return

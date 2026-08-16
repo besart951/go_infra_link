@@ -16,6 +16,7 @@ import { z } from 'zod';
 const PREVIEW_LIMIT = 5;
 const INBOX_LIMIT = 20;
 const SYSTEM_NOTIFICATION_METADATA_MAX = 50;
+const SYSTEM_NOTIFICATION_DISCONNECT_GRACE_MS = 1500;
 
 const uuidSchema = z.string().uuid();
 const dateTimeSchema = z.string().min(1).max(80);
@@ -100,6 +101,7 @@ export class SystemNotificationState {
   private readonly stream: RealtimeJsonStream<SystemNotificationStreamEvent>;
   private connectionRefs = 0;
   private inboxLoaded = false;
+  private disconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(deps: SystemNotificationStateDeps = {}) {
     this.repository = deps.repository ?? systemNotificationRepository;
@@ -120,16 +122,40 @@ export class SystemNotificationState {
   connect(): void {
     if (typeof window === 'undefined') return;
 
+    this.cancelScheduledDisconnect();
     this.connectionRefs += 1;
     this.stream.connect();
   }
 
-  disconnect(): void {
+  disconnect(options: { immediate?: boolean } = {}): void {
     this.connectionRefs = Math.max(0, this.connectionRefs - 1);
     if (this.connectionRefs > 0) return;
 
+    if (options.immediate) {
+      this.cancelScheduledDisconnect();
+      this.finishDisconnect();
+      return;
+    }
+    if (this.disconnectTimer) return;
+
+    // Keep the one shared notification stream alive across a transient layout
+    // handover. A new mounted bell cancels this timer instead of opening a
+    // second socket while the previous close handshake is still in flight.
+    this.disconnectTimer = setTimeout(() => {
+      this.disconnectTimer = null;
+      this.finishDisconnect();
+    }, SYSTEM_NOTIFICATION_DISCONNECT_GRACE_MS);
+  }
+
+  private finishDisconnect(): void {
     this.inboxLoaded = false;
     this.stream.disconnect();
+  }
+
+  private cancelScheduledDisconnect(): void {
+    if (!this.disconnectTimer) return;
+    clearTimeout(this.disconnectTimer);
+    this.disconnectTimer = null;
   }
 
   async loadPreview(): Promise<void> {
@@ -289,4 +315,17 @@ function logInvalidSystemNotificationMessage(raw: string, error: unknown): void 
   });
 }
 
-export const systemNotificationState = new SystemNotificationState();
+const systemNotificationStateGlobalKey = '__goInfraLinkSystemNotificationState__';
+
+type SystemNotificationStateGlobal = typeof globalThis & {
+  [systemNotificationStateGlobalKey]?: SystemNotificationState;
+};
+
+function getSystemNotificationState(): SystemNotificationState {
+  const globalState = globalThis as SystemNotificationStateGlobal;
+  return (globalState[systemNotificationStateGlobalKey] ??= new SystemNotificationState());
+}
+
+// The notification bell is loaded from the application layout and lazy route
+// chunks. Keeping the state browser-global prevents duplicate stream clients.
+export const systemNotificationState = getSystemNotificationState();

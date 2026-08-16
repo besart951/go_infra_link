@@ -39,6 +39,7 @@
   description={$t('facility.system_types_desc')}
   createLabel={$t('facility.new_system_type')}
   permissionResource="systemtype"
+  realtimeResource="system_types"
   store={systemTypesStore}
   {actions}
   form={SystemTypeForm}

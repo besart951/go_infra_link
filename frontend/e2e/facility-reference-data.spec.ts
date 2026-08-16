@@ -16,13 +16,13 @@ test.describe('facility reference-data cache', () => {
     createContext
   }) => {
     const { page: readerPage } = await createContext();
-    const readerSockets = observeWebSockets(readerPage);
+    const readerSockets = await observeWebSockets(readerPage);
     const apparatRequests = countRequests(readerPage, '/api/v1/facility/apparats');
     const systemPartRequests = countRequests(readerPage, '/api/v1/facility/system-parts');
 
-    await login(readerPage, e2eUsers.superadmin);
+    await login(readerPage, e2eUsers.collaborator);
     await expectActiveSocketCount(readerSockets, '/api/v1/facility/reference-data/stream', 1);
-    expectNoConcurrentSockets(readerSockets, '/api/v1/facility/reference-data/stream');
+    await expectNoConcurrentSockets(readerSockets, '/api/v1/facility/reference-data/stream');
     await expect.poll(apparatRequests).toBeGreaterThan(0);
     await expect.poll(systemPartRequests).toBeGreaterThan(0);
 

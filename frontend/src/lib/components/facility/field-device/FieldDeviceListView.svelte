@@ -16,6 +16,7 @@
   import { provideFieldDeviceState } from './state/context.svelte.js';
   import type { FieldDeviceFilters } from './state/types.js';
   import type { ProjectCapabilities } from '$lib/domain/project/capabilities.js';
+  import { facilityReferenceDataCache } from '$lib/services/facilityReferenceDataCache.js';
 
   const t = createTranslator();
 
@@ -64,11 +65,22 @@
   let initialized = $state(false);
   let lastRefreshKey: string | number | undefined = $state(undefined);
   let lastRefreshRequestKey: string | number | undefined = $state(undefined);
+  let remoteChangePending = $state(false);
 
   onMount(() => {
     initialized = true;
     lastRefreshKey = refreshKey;
     void fieldDeviceState.initialize();
+    return facilityReferenceDataCache.subscribeFacilityChanges((event) => {
+      if (projectId || (event.resource !== 'field_devices' && event.resource !== 'all')) return;
+      if (fieldDeviceState.showMultiCreateForm || fieldDeviceState.editing.hasUnsavedChanges) {
+        if (!facilityReferenceDataCache.isChangeFromCurrentUser(event)) {
+          remoteChangePending = true;
+        }
+        return;
+      }
+      void fieldDeviceState.reload();
+    });
   });
 
   onDestroy(() => {
@@ -127,6 +139,24 @@
 </script>
 
 <div class="flex min-w-0 flex-col gap-6">
+  {#if remoteChangePending}
+    <div
+      class="flex items-center justify-between gap-3 rounded-md border border-warning-border bg-warning-muted px-3 py-2 text-sm text-warning-muted-foreground"
+      role="status"
+    >
+      <span>{$t('facility.realtime_change_pending')}</span>
+      <button
+        class="font-medium underline underline-offset-2"
+        type="button"
+        onclick={() => {
+          remoteChangePending = false;
+          void fieldDeviceState.reload();
+        }}
+      >
+        {$t('common.refresh')}
+      </button>
+    </div>
+  {/if}
   <div class="flex justify-end gap-2">
     {#if !fieldDeviceState.showMultiCreateForm && fieldDeviceState.canCreateFieldDevice()}
       <Button onclick={() => fieldDeviceState.openMultiCreateForm()}>

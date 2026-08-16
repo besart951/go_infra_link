@@ -60,6 +60,8 @@ function createStandardFacilityCrudActions<TItem>(
     getDeleteSuccessMessage: options.getDeleteSuccessMessage,
     getDeleteFailureMessage: options.getDeleteFailureMessage,
     getBacnetUsageMessage: (count) => translate('facility.bacnet_usage_count', { count }),
+    getReferenceDeleteBlockedMessage: (count) =>
+      translate('facility.referenced_entity_in_use').replace('{count}', String(count)),
     getBacnetDeleteBlockedMessage: (count) =>
       translate('facility.bacnet_delete_disabled', { count }),
     getBacnetUpdateConfirmTitle: () => translate('facility.bacnet_update_confirm_title'),

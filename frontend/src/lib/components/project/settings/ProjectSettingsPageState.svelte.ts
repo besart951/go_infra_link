@@ -3,6 +3,7 @@ import { objectDataRepository } from '$lib/infrastructure/api/objectDataReposito
 import {
   addProjectObjectData,
   addProjectUser,
+  deleteProject,
   getProject,
   listProjectObjectData,
   listProjectUsers,
@@ -75,6 +76,10 @@ export class ProjectSettingsPageState {
     return canProject(this.resolveProjectCapabilities(), 'project.update');
   }
 
+  get canDeleteProject(): boolean {
+    return canProject(this.resolveProjectCapabilities(), 'project.delete');
+  }
+
   get canUpdateObjectData(): boolean {
     return can('objectdata.update');
   }
@@ -137,6 +142,34 @@ export class ProjectSettingsPageState {
         error instanceof Error ? error.message : translate('projects.settings.update_failed'),
         'error'
       );
+    } finally {
+      this.saving = false;
+    }
+  }
+
+  async deleteProject(): Promise<boolean> {
+    if (!this.projectId || !this.project || !this.canDeleteProject || this.saving) return false;
+
+    const ok = await confirm({
+      title: translate('projects.settings.delete_title'),
+      message: translate('projects.settings.delete_message', { name: this.project.name }),
+      confirmText: translate('projects.settings.delete_confirm'),
+      cancelText: translate('common.cancel'),
+      variant: 'destructive'
+    });
+    if (!ok) return false;
+
+    this.saving = true;
+    try {
+      await deleteProject(this.projectId);
+      addToast(translate('projects.settings.deleted'), 'success');
+      return true;
+    } catch (error) {
+      addToast(
+        error instanceof Error ? error.message : translate('projects.settings.delete_failed'),
+        'error'
+      );
+      return false;
     } finally {
       this.saving = false;
     }

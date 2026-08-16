@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { PageData } from './$types.js';
   import { invalidateAll } from '$app/navigation';
+  import { onMount } from 'svelte';
   import { Button } from '$lib/components/ui/button/index.js';
   import * as Card from '$lib/components/ui/card/index.js';
   import EntityListHeader from '$lib/components/layout/EntityListHeader.svelte';
@@ -12,6 +13,7 @@
   import FieldDeviceListView from '$lib/components/facility/field-device/FieldDeviceListView.svelte';
   import { SPSControllerSystemTypeDetailState } from '$lib/components/facility/sps-controller-system-type-detail/state/SPSControllerSystemTypeDetailState.svelte.js';
   import { can } from '$lib/utils/permissions.js';
+  import { facilityReferenceDataCache } from '$lib/services/facilityReferenceDataCache.js';
 
   let { data }: { data: PageData } = $props();
 
@@ -21,10 +23,34 @@
     invalidateAllAction: invalidateAll
   });
   let historyOpen = $state(false);
+  let remoteChangePending = $state(false);
   const canReadTimeline = $derived(can('timeline.read'));
 
   async function handleRefreshAfterChange(): Promise<void> {
     await detailState.refreshAfterChange();
+  }
+
+  onMount(() =>
+    facilityReferenceDataCache.subscribeFacilityChanges((event) => {
+      if (
+        event.resource !== 'sps_controller_system_types' &&
+        event.resource !== 'field_devices' &&
+        event.resource !== 'all'
+      )
+        return;
+      if (detailState.showEdit) {
+        if (!facilityReferenceDataCache.isChangeFromCurrentUser(event)) {
+          remoteChangePending = true;
+        }
+        return;
+      }
+      void invalidateAll();
+    })
+  );
+
+  async function reloadRemoteChange(): Promise<void> {
+    await invalidateAll();
+    remoteChangePending = false;
   }
 </script>
 
@@ -69,6 +95,17 @@
       </Button>
     {/if}
   </EntityListHeader>
+
+  {#if remoteChangePending}
+    <div
+      class="flex items-center justify-between gap-3 rounded-md border border-warning/40 bg-warning/10 p-4 text-sm"
+    >
+      <span>{$t('facility.realtime_change_pending')}</span>
+      <Button variant="outline" size="sm" onclick={reloadRemoteChange}
+        >{$t('common.refresh')}</Button
+      >
+    </div>
+  {/if}
 
   {#if detailState.showEdit}
     <SPSControllerForm

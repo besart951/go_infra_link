@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { page } from '$app/stores';
+  import { goto } from '$app/navigation';
   import type { PageData } from '../$types.js';
   import { Button } from '$lib/components/ui/button/index.js';
   import { Input } from '$lib/components/ui/input/index.js';
@@ -32,6 +33,12 @@
   onMount(() => {
     void state.load();
   });
+
+  async function handleProjectDelete(): Promise<void> {
+    if (await state.deleteProject()) {
+      await goto('/projects/list');
+    }
+  }
 </script>
 
 <ConfirmDialog />
@@ -170,6 +177,23 @@
             <div class="text-sm font-medium">{state.formatDate(state.project.updated_at)}</div>
           </div>
         </div>
+
+        {#if state.canDeleteProject}
+          <section class="mt-8 rounded-lg border border-destructive/40 bg-destructive/5 p-4">
+            <h2 class="font-medium">{$t('projects.settings.delete_title')}</h2>
+            <p class="mt-1 text-sm text-muted-foreground">
+              {$t('projects.settings.delete_hint')}
+            </p>
+            <Button
+              class="mt-4"
+              variant="destructive"
+              disabled={state.saving}
+              onclick={handleProjectDelete}
+            >
+              {$t('projects.settings.delete_confirm')}
+            </Button>
+          </section>
+        {/if}
       </div>
     {:else if state.activeTab === 'users'}
       <div class="p-6">

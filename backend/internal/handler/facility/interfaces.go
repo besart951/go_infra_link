@@ -59,6 +59,10 @@ type BacnetObjectService interface {
 	ReplaceForObjectData(ctx context.Context, objectDataID uuid.UUID, inputs []domainFacility.BacnetObject) error
 }
 
+type DeleteImpactService interface {
+	List(ctx context.Context, resource domainFacility.DeleteImpactResource, ids []uuid.UUID) ([]domainFacility.DeleteImpact, error)
+}
+
 type FieldDeviceService interface {
 	Create(ctx context.Context, fieldDevice *domainFacility.FieldDevice) error
 	CreateWithBacnetObjects(ctx context.Context, fieldDevice *domainFacility.FieldDevice, objectDataID *uuid.UUID, bacnetObjects []domainFacility.BacnetObject) error

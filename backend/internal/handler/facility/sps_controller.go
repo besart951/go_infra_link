@@ -332,6 +332,7 @@ func (h *SPSControllerHandler) UpdateSPSController(c *gin.Context) {
 // @Param id path string true "SPS Controller ID"
 // @Success 204
 // @Failure 400 {object} dto.ErrorResponse
+// @Failure 409 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/facility/sps-controllers/{id} [delete]
 func (h *SPSControllerHandler) DeleteSPSController(c *gin.Context) {
@@ -345,6 +346,7 @@ func (h *SPSControllerHandler) DeleteSPSController(c *gin.Context) {
 	if err := h.service.DeleteByID(ctx, id); err != nil {
 		respondLocalizedDomainError(c, err, "deletion_failed", "facility.deletion_failed",
 			localizedNotFound("facility.sps_controller_not_found"),
+			localizedReferenceInUse(),
 		)
 		return
 	}

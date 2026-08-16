@@ -78,7 +78,12 @@
             >{$t('common.manage')}</Button
           >
           {#if canPerform('delete', 'team')}
-            <Button variant="outline" size="icon" onclick={() => state.handleDeleteTeam(team)}>
+            <Button
+              variant="outline"
+              size="icon"
+              aria-label={$t('common.delete_team')}
+              onclick={() => state.handleDeleteTeam(team)}
+            >
               <Trash2 class="h-4 w-4 text-destructive" />
             </Button>
           {/if}

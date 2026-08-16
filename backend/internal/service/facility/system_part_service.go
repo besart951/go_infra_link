@@ -9,16 +9,21 @@ import (
 
 type SystemPartService struct {
 	baseService[domainFacility.SystemPart]
-	extRepo     domainFacility.SystemPartRepository
-	deleteGuard bacnetReferenceDeleteGuard
+	extRepo      domainFacility.SystemPartRepository
+	deleteGuard  bacnetReferenceDeleteGuard
+	deleteImpact *DeleteImpactService
 }
 
-func NewSystemPartService(repo domainFacility.SystemPartRepository, usageRepos ...domainFacility.BacnetReferenceUsageRepository) *SystemPartService {
-	return &SystemPartService{
+func NewSystemPartService(repo domainFacility.SystemPartRepository, usageRepo domainFacility.BacnetReferenceUsageRepository, deleteImpact ...domainFacility.DeleteImpactRepository) *SystemPartService {
+	service := &SystemPartService{
 		baseService: newBase(repo, 10),
 		extRepo:     repo,
-		deleteGuard: newBacnetReferenceDeleteGuard(domainFacility.BacnetReferenceResourceSystemPart, usageRepos...),
+		deleteGuard: newBacnetReferenceDeleteGuard(domainFacility.BacnetReferenceResourceSystemPart, usageRepo),
 	}
+	if len(deleteImpact) > 0 {
+		service.deleteImpact = NewDeleteImpactService(deleteImpact[0])
+	}
+	return service
 }
 
 func (s *SystemPartService) Create(ctx context.Context, systemPart *domainFacility.SystemPart) error {
@@ -48,6 +53,11 @@ func (s *SystemPartService) Update(ctx context.Context, systemPart *domainFacili
 }
 
 func (s *SystemPartService) DeleteByID(ctx context.Context, id uuid.UUID) error {
+	if s.deleteImpact != nil {
+		if err := s.deleteImpact.EnsureDeleteAllowed(ctx, domainFacility.DeleteImpactResourceSystemPart, id); err != nil {
+			return err
+		}
+	}
 	if err := s.deleteGuard.ensureDeleteAllowed(ctx, id); err != nil {
 		return err
 	}

@@ -19,9 +19,11 @@ import (
 )
 
 const (
-	e2eEnvironment     = "e2e"
-	plannerEmailKey    = "E2E_PLANNER_EMAIL"
-	plannerPasswordKey = "E2E_PLANNER_PASSWORD"
+	e2eEnvironment          = "e2e"
+	plannerEmailKey         = "E2E_PLANNER_EMAIL"
+	plannerPasswordKey      = "E2E_PLANNER_PASSWORD"
+	collaboratorEmailKey    = "E2E_COLLABORATOR_EMAIL"
+	collaboratorPasswordKey = "E2E_COLLABORATOR_PASSWORD"
 )
 
 func main() {
@@ -47,13 +49,31 @@ func main() {
 	if err := ensureRestrictedPlanner(database, email, password, time.Now()); err != nil {
 		log.Fatalf("seed restricted planner: %v", err)
 	}
+
+	collaboratorEmail := strings.TrimSpace(os.Getenv(collaboratorEmailKey))
+	collaboratorPassword := os.Getenv(collaboratorPasswordKey)
+	if collaboratorEmail == "" || collaboratorPassword == "" {
+		log.Fatalf("%s and %s must be set", collaboratorEmailKey, collaboratorPasswordKey)
+	}
+	if err := ensureRealtimeCollaborator(database, collaboratorEmail, collaboratorPassword, time.Now()); err != nil {
+		log.Fatalf("seed E2E collaborator: %v", err)
+	}
 	log.Printf("seeded restricted E2E planner: %s", domain.NormalizeEmail(email))
+	log.Printf("seeded E2E realtime collaborator: %s", domain.NormalizeEmail(collaboratorEmail))
 }
 
 func ensureRestrictedPlanner(database *gorm.DB, email, password string, now time.Time) error {
+	return ensureE2EUser(database, email, password, "E2E", "Planner", domain.RolePlaner, now)
+}
+
+func ensureRealtimeCollaborator(database *gorm.DB, email, password string, now time.Time) error {
+	return ensureE2EUser(database, email, password, "E2E", "Collaborator", domain.RoleSuperAdmin, now)
+}
+
+func ensureE2EUser(database *gorm.DB, email, password, firstName, lastName string, role domain.Role, now time.Time) error {
 	normalizedEmail := domain.NormalizeEmail(email)
 	if normalizedEmail == "" {
-		return errors.New("planner email is empty")
+		return errors.New("E2E user email is empty")
 	}
 
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
@@ -66,10 +86,10 @@ func ensureRestrictedPlanner(database *gorm.DB, email, password string, now time
 		err := tx.Where("email = ?", normalizedEmail).First(&planner).Error
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			planner = domain.User{
-				FirstName: "E2E",
-				LastName:  "Planner",
+				FirstName: firstName,
+				LastName:  lastName,
 				IsActive:  true,
-				Role:      domain.RolePlaner,
+				Role:      role,
 				Password:  string(passwordHash),
 			}
 			planner.SetEmail(normalizedEmail)
@@ -85,10 +105,10 @@ func ensureRestrictedPlanner(database *gorm.DB, email, password string, now time
 			return fmt.Errorf("find planner: %w", err)
 		}
 
-		planner.FirstName = "E2E"
-		planner.LastName = "Planner"
+		planner.FirstName = firstName
+		planner.LastName = lastName
 		planner.IsActive = true
-		planner.Role = domain.RolePlaner
+		planner.Role = role
 		planner.Password = string(passwordHash)
 		planner.DisabledAt = nil
 		planner.DeletedAt = nil

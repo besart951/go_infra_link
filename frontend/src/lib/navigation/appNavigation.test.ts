@@ -120,4 +120,21 @@ describe('app navigation', () => {
 
     expect(items.find((item) => item.url === '/timeline')).toBeUndefined();
   });
+
+  it('provides a contextual icon for every expandable navigation entry', () => {
+    const items = buildAppNavItems({
+      pathname: '/facility/buildings',
+      user: {
+        ...baseUser,
+        role: 'admin_fzag',
+        can_access_user_directory: true
+      } as User,
+      translate,
+      canPerform: () => true
+    });
+
+    const childItems = items.flatMap((item) => item.items ?? []);
+    expect(childItems).not.toHaveLength(0);
+    expect(childItems.every((item) => item.icon)).toBe(true);
+  });
 });

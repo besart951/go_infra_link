@@ -81,7 +81,7 @@ export async function createTeam(req: CreateTeamRequest): Promise<Team> {
  */
 export async function updateTeam(teamId: string, req: Partial<CreateTeamRequest>): Promise<Team> {
   return api<Team>(`/teams/${teamId}`, {
-    method: 'PATCH',
+    method: 'PUT',
     body: JSON.stringify(req)
   });
 }

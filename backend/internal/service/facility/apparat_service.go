@@ -15,21 +15,27 @@ type ApparatService struct {
 	systemPartReader domain.Reader[domainFacility.SystemPart]
 	objectDataReader domain.Reader[domainFacility.ObjectData]
 	deleteGuard      bacnetReferenceDeleteGuard
+	deleteImpact     *DeleteImpactService
 }
 
 func NewApparatService(
 	repo domainFacility.ApparatRepository,
 	systemPartReader domain.Reader[domainFacility.SystemPart],
 	objectDataReader domain.Reader[domainFacility.ObjectData],
-	usageRepos ...domainFacility.BacnetReferenceUsageRepository,
+	usageRepo domainFacility.BacnetReferenceUsageRepository,
+	deleteImpact ...domainFacility.DeleteImpactRepository,
 ) *ApparatService {
-	return &ApparatService{
+	service := &ApparatService{
 		baseService:      newBase(repo, 10),
 		extRepo:          repo,
 		systemPartReader: systemPartReader,
 		objectDataReader: objectDataReader,
-		deleteGuard:      newBacnetReferenceDeleteGuard(domainFacility.BacnetReferenceResourceApparat, usageRepos...),
+		deleteGuard:      newBacnetReferenceDeleteGuard(domainFacility.BacnetReferenceResourceApparat, usageRepo),
 	}
+	if len(deleteImpact) > 0 {
+		service.deleteImpact = NewDeleteImpactService(deleteImpact[0])
+	}
+	return service
 }
 
 func (s *ApparatService) Create(ctx context.Context, apparat *domainFacility.Apparat) error {
@@ -92,6 +98,11 @@ func (s *ApparatService) Update(ctx context.Context, apparat *domainFacility.App
 }
 
 func (s *ApparatService) DeleteByID(ctx context.Context, id uuid.UUID) error {
+	if s.deleteImpact != nil {
+		if err := s.deleteImpact.EnsureDeleteAllowed(ctx, domainFacility.DeleteImpactResourceApparat, id); err != nil {
+			return err
+		}
+	}
 	if err := s.deleteGuard.ensureDeleteAllowed(ctx, id); err != nil {
 		return err
 	}

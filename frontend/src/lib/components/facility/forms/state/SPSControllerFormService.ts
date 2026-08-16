@@ -37,6 +37,13 @@ export const spsControllerFormService = {
     return spsControllerSystemTypeRepository.list(params);
   },
 
+  updateSystemType(
+    id: string,
+    data: Pick<SPSControllerSystemType, 'number' | 'document_name'>
+  ): Promise<SPSControllerSystemType> {
+    return spsControllerSystemTypeRepository.update(id, data);
+  },
+
   deleteSystemType(id: string): Promise<void> {
     return spsControllerSystemTypeRepository.delete(id);
   },

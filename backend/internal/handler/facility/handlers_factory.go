@@ -24,12 +24,17 @@ type FacilityReferenceDataBroadcaster interface {
 	BroadcastFacilityReferenceDataChange(ctx context.Context, resources ...string)
 }
 
+type FacilityChangeBroadcaster interface {
+	BroadcastFacilityChange(ctx context.Context, resource, action string, ids []uuid.UUID, actorID *uuid.UUID)
+}
+
 type FacilityReferenceDataStreamer interface {
-	Stream(w http.ResponseWriter, r *http.Request, userID uuid.UUID)
+	Stream(w http.ResponseWriter, r *http.Request, userID uuid.UUID, readableResources map[string]struct{})
 }
 
 type FacilityReferenceDataRealtime interface {
 	FacilityReferenceDataBroadcaster
+	FacilityChangeBroadcaster
 	FacilityReferenceDataStreamer
 }
 
@@ -55,6 +60,7 @@ type ServiceDeps struct {
 	AlarmTypeField          AlarmTypeFieldService
 	BacnetAlarm             BacnetAlarmValueService
 	BacnetReferenceUsage    BacnetReferenceUsageService
+	DeleteImpact            DeleteImpactService
 	CopyJobs                *facilityservice.CopyJobManager
 	Collaboration           ProjectRefreshBroadcaster
 	ReferenceData           FacilityReferenceDataRealtime
@@ -83,13 +89,16 @@ type Handlers struct {
 	AlarmTypeField          *AlarmTypeFieldHandler
 	BacnetAlarm             *BacnetAlarmHandler
 	BacnetReferenceUsage    *BacnetReferenceUsageHandler
+	DeleteImpact            *DeleteImpactHandler
 	CopyJob                 *CopyJobHandler
 	ReferenceData           *FacilityReferenceDataStreamHandler
+	Realtime                FacilityChangeBroadcaster
 }
 
 // NewHandlers creates facility handlers using service dependencies.
 func NewHandlers(deps ServiceDeps) *Handlers {
 	handlers := &Handlers{}
+	handlers.Realtime = deps.ReferenceData
 	registerFacilityHierarchyHandlers(handlers, deps)
 	registerFacilityLookupHandlers(handlers, deps)
 	registerFacilityAlarmHandlers(handlers, deps)
@@ -116,6 +125,7 @@ func registerFacilityLookupHandlers(handlers *Handlers, deps ServiceDeps) {
 	handlers.StateText = NewStateTextHandler(deps.StateText)
 	handlers.NotificationClass = NewNotificationClassHandler(deps.NotificationClass)
 	handlers.BacnetReferenceUsage = NewBacnetReferenceUsageHandler(deps.BacnetReferenceUsage)
+	handlers.DeleteImpact = NewDeleteImpactHandler(deps.DeleteImpact)
 	handlers.CopyJob = NewCopyJobHandler(deps.CopyJobs)
 }
 

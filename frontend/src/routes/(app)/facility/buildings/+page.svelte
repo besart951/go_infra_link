@@ -36,6 +36,7 @@
   description={$t('facility.buildings_desc')}
   createLabel={$t('facility.new_building')}
   permissionResource="building"
+  realtimeResource="buildings"
   store={buildingsStore}
   {actions}
   form={BuildingForm}

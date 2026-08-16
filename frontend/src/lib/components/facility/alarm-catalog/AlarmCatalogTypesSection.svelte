@@ -5,7 +5,7 @@
   import * as Card from '$lib/components/ui/card/index.js';
   import * as Table from '$lib/components/ui/table/index.js';
   import HistoryTimelineDialog from '$lib/components/history/HistoryTimelineDialog.svelte';
-  import { History, Trash2 } from '@lucide/svelte';
+  import { History, Pencil, Trash2 } from '@lucide/svelte';
   import { canPerform } from '$lib/utils/permissions.js';
   import { createTranslator } from '$lib/i18n/translator';
   import type { AlarmType } from '$lib/domain/facility/alarm-type.js';
@@ -41,20 +41,31 @@
     <div class="grid gap-3 md:grid-cols-2">
       <div class="space-y-2">
         <Label for="type-code">{$t('facility.alarm_catalog_page.labels.code')}</Label>
-        <Input id="type-code" bind:value={catalogState.typeForm.code} />
+        <Input
+          id="type-code"
+          bind:value={catalogState.typeForm.code}
+          disabled={Boolean(catalogState.editingTypeID)}
+        />
       </div>
       <div class="space-y-2">
         <Label for="type-name">{$t('common.name')}</Label>
         <Input id="type-name" bind:value={catalogState.typeForm.name} />
       </div>
     </div>
-    <div class="flex justify-end">
-      {#if canPerform('create', 'alarmtype')}
+    <div class="flex justify-end gap-2">
+      {#if catalogState.editingTypeID}
+        <Button variant="outline" onclick={() => catalogState.cancelTypeEdit()}>
+          {$t('common.cancel')}
+        </Button>
+      {/if}
+      {#if catalogState.editingTypeID ? canPerform('update', 'alarmtype') : canPerform('create', 'alarmtype')}
         <Button
           onclick={() => catalogState.createType()}
           disabled={!catalogState.typeForm.code || !catalogState.typeForm.name}
         >
-          {$t('facility.alarm_catalog_page.types.create')}
+          {catalogState.editingTypeID
+            ? $t('common.save')
+            : $t('facility.alarm_catalog_page.types.create')}
         </Button>
       {/if}
     </div>
@@ -97,6 +108,17 @@
                           title={$t('history.open')}
                         >
                           <History class="size-4" />
+                        </Button>
+                      {/if}
+                      {#if canPerform('update', 'alarmtype')}
+                        <Button
+                          size="icon-sm"
+                          variant="ghost"
+                          onclick={() => catalogState.editType(type)}
+                          aria-label={$t('common.edit')}
+                          title={$t('common.edit')}
+                        >
+                          <Pencil class="size-4" />
                         </Button>
                       {/if}
                       {#if canPerform('delete', 'alarmtype')}

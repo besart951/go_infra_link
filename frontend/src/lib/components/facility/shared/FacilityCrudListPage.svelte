@@ -8,7 +8,13 @@
   import { canPerform } from '$lib/utils/permissions.js';
   import { createTranslator } from '$lib/i18n/translator.js';
   import type { BacnetReferenceResource } from '$lib/domain/facility/index.js';
+  import type { FacilityDeleteImpactResource } from '$lib/domain/facility/index.js';
   import { bacnetReferenceUsageRepository } from '$lib/infrastructure/api/bacnetReferenceUsageRepository.js';
+  import { facilityDeleteImpactRepository } from '$lib/infrastructure/api/facilityDeleteImpactRepository.js';
+  import {
+    facilityReferenceDataCache,
+    type FacilityRealtimeResource
+  } from '$lib/services/facilityReferenceDataCache.js';
   import type { CrudPageActions } from './crudPageActions.svelte.js';
 
   const t = createTranslator();
@@ -35,7 +41,9 @@
     emptyMessage: string;
     documentTitle?: string;
     bacnetUsageResource?: BacnetReferenceResource;
+    deleteImpactResource?: FacilityDeleteImpactResource;
     getItemId?: (item: TItem) => string;
+    realtimeResource?: FacilityRealtimeResource;
   }
 
   let {
@@ -52,10 +60,14 @@
     emptyMessage,
     documentTitle = title,
     bacnetUsageResource,
-    getItemId
+    deleteImpactResource,
+    getItemId,
+    realtimeResource
   }: Props = $props();
 
   let usageRequestID = 0;
+  let deleteImpactRequestID = 0;
+  let remoteChangePending = $state(false);
 
   function resolveItemId(item: TItem): string {
     if (getItemId) return getItemId(item);
@@ -81,6 +93,28 @@
     }
   }
 
+  async function loadDeleteImpacts(
+    resource: FacilityDeleteImpactResource,
+    ids: string[],
+    requestID: number
+  ) {
+    try {
+      const impacts = await facilityDeleteImpactRepository.getImpacts(resource, ids);
+      if (requestID !== deleteImpactRequestID) return;
+      actions.setReferenceImpactCounts(
+        Object.fromEntries(
+          impacts.map((impact) => [
+            impact.id,
+            impact.blockers.reduce((count, blocker) => count + blocker.count, 0)
+          ])
+        )
+      );
+    } catch (error) {
+      console.error('Failed to load facility delete impact:', error);
+      if (requestID === deleteImpactRequestID) actions.setReferenceImpactCounts({});
+    }
+  }
+
   async function confirmBacnetImpactUpdate(item: TItem): Promise<boolean> {
     if (bacnetUsageResource) {
       const id = resolveItemId(item);
@@ -98,6 +132,18 @@
 
   onMount(() => {
     store.load();
+
+    return facilityReferenceDataCache.subscribeFacilityChanges((event) => {
+      if (!realtimeResource || (event.resource !== realtimeResource && event.resource !== 'all'))
+        return;
+      if (actions.showForm) {
+        if (!facilityReferenceDataCache.isChangeFromCurrentUser(event)) {
+          remoteChangePending = true;
+        }
+        return;
+      }
+      void store.reload();
+    });
   });
 
   $effect(() => {
@@ -114,6 +160,20 @@
     }
 
     void loadBacnetUsage(bacnetUsageResource, ids, requestID);
+  });
+
+  $effect(() => {
+    if (!deleteImpactResource) {
+      actions.setReferenceImpactCounts({});
+      return;
+    }
+    const ids = ($store.items ?? []).map(resolveItemId).filter(Boolean);
+    const requestID = ++deleteImpactRequestID;
+    if (ids.length === 0) {
+      actions.setReferenceImpactCounts({});
+      return;
+    }
+    void loadDeleteImpacts(deleteImpactResource, ids, requestID);
   });
 </script>
 
@@ -136,6 +196,24 @@
   />
 
   {#if actions.showForm}
+    {#if remoteChangePending}
+      <div
+        class="flex items-center justify-between gap-3 rounded-md border border-warning-border bg-warning-muted px-3 py-2 text-sm text-warning-muted-foreground"
+        role="status"
+      >
+        <span>{$t('facility.realtime_change_pending')}</span>
+        <button
+          class="font-medium underline underline-offset-2"
+          type="button"
+          onclick={() => {
+            remoteChangePending = false;
+            void store.reload();
+          }}
+        >
+          {$t('common.refresh')}
+        </button>
+      </div>
+    {/if}
     <Form
       initialData={actions.editingItem}
       onSuccess={() => actions.success()}

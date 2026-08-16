@@ -63,6 +63,9 @@
   let control_cabinet_id = $state('');
   let system_type_id = $state('');
   let systemTypes: SPSControllerSystemTypeEntry[] = $state([]);
+  let persistedSystemTypeValues = $state<
+    Record<string, Pick<SPSControllerSystemTypeEntry, 'number' | 'document_name'>>
+  >({});
   let systemTypeLabels: Record<string, string> = $state({});
   let systemTypeDetails: Record<string, SystemType> = $state({});
   let systemTypeDetailsLoading = $state(false);
@@ -127,6 +130,7 @@
       lastLoadedSystemTypesFor = null;
       systemTypes = [];
       systemTypeLabels = {};
+      persistedSystemTypeValues = {};
     }
   });
 
@@ -275,6 +279,11 @@
       const labelFallbacks = collectSystemTypeLabelFallbacks(items);
       const uniqueIds = collectUniqueSystemTypeIds(items);
       systemTypes = toSPSControllerSystemTypeEntries(items);
+      persistedSystemTypeValues = Object.fromEntries(
+        systemTypes
+          .filter((item): item is SPSControllerSystemTypeEntry & { id: string } => Boolean(item.id))
+          .map(({ id, number, document_name }) => [id, { number, document_name }])
+      );
       systemTypeLabels = await buildSystemTypeLabels(uniqueIds, labelFallbacks);
       await Promise.all(uniqueIds.map((id) => ensureSystemTypeDetails(id)));
     } catch (e) {
@@ -416,6 +425,41 @@
     );
   }
 
+  function hasNewSystemTypes(): boolean {
+    return systemTypes.some((entry) => !entry.id);
+  }
+
+  function changedPersistedSystemTypes(): Array<SPSControllerSystemTypeEntry & { id: string }> {
+    return systemTypes.filter((entry): entry is SPSControllerSystemTypeEntry & { id: string } => {
+      if (!entry.id) return false;
+      const persisted = persistedSystemTypeValues[entry.id];
+      return (
+        persisted !== undefined &&
+        (persisted.number !== entry.number || persisted.document_name !== entry.document_name)
+      );
+    });
+  }
+
+  async function persistChangedSystemTypes(): Promise<void> {
+    const changed = changedPersistedSystemTypes();
+    if (changed.length === 0) return;
+
+    await Promise.all(
+      changed.map((entry) =>
+        spsControllerFormService.updateSystemType(entry.id, {
+          number: entry.number,
+          document_name: entry.document_name
+        })
+      )
+    );
+    persistedSystemTypeValues = {
+      ...persistedSystemTypeValues,
+      ...Object.fromEntries(
+        changed.map(({ id, number, document_name }) => [id, { number, document_name }])
+      )
+    };
+  }
+
   async function copySystemType(index: number) {
     const entry = systemTypes[index];
     const systemTypeEntryId = entry?.id;
@@ -467,7 +511,6 @@
     try {
       if (initialData) {
         const res = await spsControllerFormService.update(initialData.id, {
-          id: initialData.id,
           ga_device,
           device_name,
           ip_address: ip_address || undefined,
@@ -475,8 +518,11 @@
           gateway: gateway || undefined,
           vlan: vlan || undefined,
           control_cabinet_id,
-          system_types: toSPSControllerSystemTypeInput(systemTypes)
+          ...(hasNewSystemTypes()
+            ? { system_types: toSPSControllerSystemTypeInput(systemTypes) }
+            : {})
         });
+        await persistChangedSystemTypes();
         onSuccess?.(res);
       } else {
         const res = await spsControllerFormService.create({
@@ -692,7 +738,10 @@
       {:else}
         <div class="max-h-80 space-y-2 overflow-y-auto pr-1">
           {#each systemTypes as st, index (index)}
-            <div class="grid grid-cols-1 gap-3 rounded-md border p-3 md:grid-cols-12">
+            <div
+              class="grid grid-cols-1 gap-3 rounded-md border p-3 md:grid-cols-12"
+              data-testid={st.id ? `sps-system-type-${st.id}` : undefined}
+            >
               <div class="md:col-span-4">
                 <div class="text-xs text-muted-foreground">
                   {$t('facility.forms.sps_controller.system_type_label')}

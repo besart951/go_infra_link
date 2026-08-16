@@ -35,6 +35,7 @@
   description={$t('facility.alarm_definitions_desc')}
   createLabel={$t('facility.new_alarm_definition')}
   permissionResource="alarmdefinition"
+  realtimeResource="alarm_definitions"
   store={alarmDefinitionsStore}
   {actions}
   form={AlarmDefinitionForm}

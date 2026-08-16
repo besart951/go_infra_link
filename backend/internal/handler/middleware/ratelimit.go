@@ -2,6 +2,8 @@ package middleware
 
 import (
 	"net/http"
+	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -60,15 +62,26 @@ func (l *loginRateLimiter) cleanup(interval time.Duration) {
 	}
 }
 
+// newApplicationRateLimiter keeps production rate limits active while allowing
+// the isolated E2E stack to create independent browser sessions without all of
+// them sharing Caddy's single backend-facing IP address. APP_ENV=e2e is only
+// configured by docker-compose.e2e.yml and must never be used for deployment.
+func newApplicationRateLimiter(appEnv string, r rate.Limit, b int) *loginRateLimiter {
+	if strings.EqualFold(strings.TrimSpace(appEnv), "e2e") {
+		return newLoginRateLimiter(rate.Inf, 0)
+	}
+	return newLoginRateLimiter(r, b)
+}
+
 // LoginRateLimit allows 5 login attempts per 30 seconds (burst 5) per IP.
 // This is applied only to POST /api/v1/auth/login.
-var loginLimiter = newLoginRateLimiter(rate.Every(6*time.Second), 5)
+var loginLimiter = newApplicationRateLimiter(os.Getenv("APP_ENV"), rate.Every(6*time.Second), 5)
 
 // AuthSensitiveRateLimit allows short bursts for token refresh/logout endpoints.
-var authSensitiveLimiter = newLoginRateLimiter(rate.Every(3*time.Second), 10)
+var authSensitiveLimiter = newApplicationRateLimiter(os.Getenv("APP_ENV"), rate.Every(3*time.Second), 10)
 
 // RegistrationRateLimit allows moderate bursts for public invitation-link checks.
-var registrationLimiter = newLoginRateLimiter(rate.Every(2*time.Second), 20)
+var registrationLimiter = newApplicationRateLimiter(os.Getenv("APP_ENV"), rate.Every(2*time.Second), 20)
 
 // LoginRateLimitMiddleware rejects excessive login attempts with 429.
 func LoginRateLimitMiddleware() gin.HandlerFunc {

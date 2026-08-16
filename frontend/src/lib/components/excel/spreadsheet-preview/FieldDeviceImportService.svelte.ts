@@ -438,7 +438,6 @@ export class FieldDeviceImportService {
       try {
         const mergedInputs = mergeSystemTypeInputs(current, missing);
         await this.backend.updateSpsController(spsController.id, {
-          id: spsController.id,
           control_cabinet_id: spsController.control_cabinet_id,
           ga_device: plan.controller.spsControllerRequest?.ga_device ?? spsController.ga_device,
           device_name:

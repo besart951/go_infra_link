@@ -24,6 +24,43 @@ export interface FacilityCopyJobProgressEvent {
   updated_at: string;
 }
 
+export type FacilityRealtimeResource =
+  | 'all'
+  | 'buildings'
+  | 'system_types'
+  | 'system_parts'
+  | 'apparats'
+  | 'control_cabinets'
+  | 'sps_controllers'
+  | 'sps_controller_system_types'
+  | 'field_devices'
+  | 'bacnet_objects'
+  | 'object_data'
+  | 'state_texts'
+  | 'notification_classes'
+  | 'alarm_definitions'
+  | 'alarm_types'
+  | 'alarm_type_fields'
+  | 'alarm_fields'
+  | 'units';
+
+export interface FacilityChangeEvent {
+  type: 'facility.changed';
+  resource: FacilityRealtimeResource;
+  action:
+    | 'created'
+    | 'updated'
+    | 'deleted'
+    | 'copied'
+    | 'bulk_created'
+    | 'bulk_updated'
+    | 'bulk_deleted'
+    | 'reconnected';
+  ids: string[];
+  actor_id?: string;
+  at: string;
+}
+
 export interface FacilityReferenceData {
   apparats: Apparat[];
   systemParts: SystemPart[];
@@ -44,10 +81,17 @@ interface FacilityReferenceDataCacheOptions {
   createStream?: (
     onChange: () => void,
     onCopyJobProgress: (event: FacilityCopyJobProgressEvent) => void,
-    onOpen: () => void
+    onOpen: () => void,
+    onFacilityChange: (event: FacilityChangeEvent) => void
   ) => FacilityReferenceDataStream;
   ttlMs?: number;
+  stopGraceMs?: number;
   now?: () => number;
+}
+
+export interface FacilityReferenceDataStartOptions {
+  refreshReferenceData?: boolean;
+  currentUserId?: string;
 }
 
 interface FacilityReferenceDataRequest {
@@ -57,6 +101,7 @@ interface FacilityReferenceDataRequest {
 }
 
 export const FACILITY_REFERENCE_DATA_CACHE_TTL_MS = 30 * 60 * 1000;
+export const FACILITY_REFERENCE_DATA_STOP_GRACE_MS = 1500;
 
 const facilityReferenceDataChangedEventSchema = z.object({
   type: z.literal('facility_reference_data.changed'),
@@ -75,9 +120,45 @@ const facilityCopyJobProgressEventSchema = z.object({
   updated_at: z.string()
 });
 
+const facilityChangeEventSchema = z.object({
+  type: z.literal('facility.changed'),
+  resource: z.enum([
+    'buildings',
+    'system_types',
+    'system_parts',
+    'apparats',
+    'control_cabinets',
+    'sps_controllers',
+    'sps_controller_system_types',
+    'field_devices',
+    'bacnet_objects',
+    'object_data',
+    'state_texts',
+    'notification_classes',
+    'alarm_definitions',
+    'alarm_types',
+    'alarm_type_fields',
+    'alarm_fields',
+    'units'
+  ]),
+  action: z.enum([
+    'created',
+    'updated',
+    'deleted',
+    'copied',
+    'bulk_created',
+    'bulk_updated',
+    'bulk_deleted'
+  ]),
+  ids: z.array(z.string().uuid()),
+  actor_id: z.string().uuid().optional(),
+  at: z.string()
+});
+
 const facilityRealtimeEventSchema = z.discriminatedUnion('type', [
   facilityReferenceDataChangedEventSchema,
-  facilityCopyJobProgressEventSchema
+  facilityCopyJobProgressEventSchema,
+  facilityChangeEventSchema
 ]);
 
 export class FacilityReferenceDataCache {
@@ -87,8 +168,10 @@ export class FacilityReferenceDataCache {
   private readonly stream: FacilityReferenceDataStream;
   private readonly listeners = new Set<(data: FacilityReferenceData) => void>();
   private readonly copyJobListeners = new Set<(event: FacilityCopyJobProgressEvent) => void>();
+  private readonly facilityChangeListeners = new Set<(event: FacilityChangeEvent) => void>();
   private readonly realtimeOpenListeners = new Set<() => void>();
   private readonly ttlMs: number;
+  private readonly stopGraceMs: number;
   private readonly now: () => number;
   private data: FacilityReferenceData | null = null;
   private expiresAt = 0;
@@ -96,6 +179,8 @@ export class FacilityReferenceDataCache {
   private cacheGeneration = 0;
   private requestID = 0;
   private refreshReferenceData = false;
+  private currentUserId: string | null = null;
+  private stopTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     dependencies: FacilityReferenceDataDependencies = {
@@ -109,17 +194,20 @@ export class FacilityReferenceDataCache {
     this.listSystemPartsUseCase = new ListEntityUseCase(dependencies.systemParts);
     this.fieldDevices = dependencies.fieldDevices;
     this.ttlMs = options.ttlMs ?? FACILITY_REFERENCE_DATA_CACHE_TTL_MS;
+    this.stopGraceMs = options.stopGraceMs ?? FACILITY_REFERENCE_DATA_STOP_GRACE_MS;
     this.now = options.now ?? Date.now;
     this.stream =
       options.createStream?.(
         () => this.handleReferenceDataChange(),
         (event) => this.notifyCopyJobProgress(event),
-        () => this.notifyRealtimeOpen()
+        () => this.notifyRealtimeOpen(),
+        (event) => this.notifyFacilityChange(event)
       ) ??
       createFacilityReferenceDataStream(
         () => this.handleReferenceDataChange(),
         (event) => this.notifyCopyJobProgress(event),
-        () => this.notifyRealtimeOpen()
+        () => this.notifyRealtimeOpen(),
+        (event) => this.notifyFacilityChange(event)
       );
   }
 
@@ -128,19 +216,45 @@ export class FacilityReferenceDataCache {
    * without both reference-data permissions still receive their own copy-job
    * progress, while reference data is fetched only when it is authorized.
    */
-  start(options: { refreshReferenceData?: boolean } = {}): void {
+  start(options: FacilityReferenceDataStartOptions = {}): void {
+    this.cancelScheduledStop();
     this.refreshReferenceData = options.refreshReferenceData ?? true;
+    this.currentUserId = options.currentUserId ?? null;
     this.stream.connect();
     if (this.refreshReferenceData) this.loadInBackground();
   }
 
-  stop(): void {
+  stop(options: { immediate?: boolean } = {}): void {
+    if (options.immediate) {
+      this.cancelScheduledStop();
+      this.finishStop();
+      return;
+    }
+    if (this.stopTimer) return;
+
+    // SvelteKit can briefly unmount and remount the authenticated layout while
+    // resolving route data. Keep the shared stream alive across that handover
+    // so a single browser never opens a second facility connection.
+    this.stopTimer = setTimeout(() => {
+      this.stopTimer = null;
+      this.finishStop();
+    }, this.stopGraceMs);
+  }
+
+  private finishStop(): void {
     this.refreshReferenceData = false;
+    this.currentUserId = null;
     this.cacheGeneration += 1;
     this.data = null;
     this.expiresAt = 0;
     this.request = null;
     this.stream.disconnect();
+  }
+
+  private cancelScheduledStop(): void {
+    if (!this.stopTimer) return;
+    clearTimeout(this.stopTimer);
+    this.stopTimer = null;
   }
 
   async load(): Promise<FacilityReferenceData> {
@@ -166,6 +280,23 @@ export class FacilityReferenceDataCache {
     return () => {
       this.copyJobListeners.delete(listener);
     };
+  }
+
+  subscribeFacilityChanges(listener: (event: FacilityChangeEvent) => void): () => void {
+    this.facilityChangeListeners.add(listener);
+    return () => {
+      this.facilityChangeListeners.delete(listener);
+    };
+  }
+
+  /**
+   * Returns whether an event was caused by the user of this browser session.
+   * Callers use this only while guarding an unsaved form: the list/detail can
+   * still refresh after the user's own completed mutation, but it must not
+   * present that mutation as a change made by someone else.
+   */
+  isChangeFromCurrentUser(event: FacilityChangeEvent): boolean {
+    return Boolean(this.currentUserId && event.actor_id === this.currentUserId);
   }
 
   subscribeRealtimeOpen(listener: () => void): () => void {
@@ -266,6 +397,12 @@ export class FacilityReferenceDataCache {
       listener();
     }
   }
+
+  private notifyFacilityChange(event: FacilityChangeEvent): void {
+    for (const listener of this.facilityChangeListeners) {
+      listener(event);
+    }
+  }
 }
 
 function resolveReferenceItems<T>(
@@ -306,7 +443,8 @@ export function withOptionRelations(
 function createFacilityReferenceDataStream(
   onChange: () => void,
   onCopyJobProgress: (event: FacilityCopyJobProgressEvent) => void,
-  onOpen: () => void
+  onOpen: () => void,
+  onFacilityChange: (event: FacilityChangeEvent) => void
 ): FacilityReferenceDataStream {
   return new RealtimeJsonStream({
     url: () => buildSameOriginWebSocketUrl('/api/v1/facility/reference-data/stream'),
@@ -316,10 +454,23 @@ function createFacilityReferenceDataStream(
         onChange();
         return;
       }
-      onCopyJobProgress(event);
+      if (event.type === 'facility.copy_job.progress') {
+        onCopyJobProgress(event);
+        return;
+      }
+      onFacilityChange(event);
     },
     onOpen: ({ wasReconnect }) => {
-      if (wasReconnect) onChange();
+      if (wasReconnect) {
+        onChange();
+        onFacilityChange({
+          type: 'facility.changed',
+          resource: 'all',
+          action: 'reconnected',
+          ids: [],
+          at: new Date().toISOString()
+        });
+      }
       onOpen();
     },
     onInvalidMessage: (raw, error) => {
@@ -328,4 +479,17 @@ function createFacilityReferenceDataStream(
   });
 }
 
-export const facilityReferenceDataCache = new FacilityReferenceDataCache();
+const facilityReferenceDataCacheGlobalKey = '__goInfraLinkFacilityReferenceDataCache__';
+
+type FacilityReferenceDataCacheGlobal = typeof globalThis & {
+  [facilityReferenceDataCacheGlobalKey]?: FacilityReferenceDataCache;
+};
+
+function getFacilityReferenceDataCache(): FacilityReferenceDataCache {
+  const globalState = globalThis as FacilityReferenceDataCacheGlobal;
+  return (globalState[facilityReferenceDataCacheGlobalKey] ??= new FacilityReferenceDataCache());
+}
+
+// Lazy project chunks can evaluate their own copy of this module. Persist the
+// cache on the browser global so every chunk still uses one facility stream.
+export const facilityReferenceDataCache = getFacilityReferenceDataCache();

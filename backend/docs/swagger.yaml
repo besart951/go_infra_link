@@ -173,6 +173,19 @@ definitions:
       updated_at:
         type: string
     type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmFieldListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmFieldResponse'
+        type: array
+      page:
+        type: integer
+      total:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmFieldResponse:
     properties:
       data_type:
@@ -734,6 +747,60 @@ definitions:
     required:
     - name
     type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateAlarmFieldRequest:
+    properties:
+      data_type:
+        maxLength: 30
+        type: string
+      default_unit_code:
+        maxLength: 30
+        type: string
+      key:
+        maxLength: 100
+        type: string
+      label:
+        maxLength: 150
+        type: string
+    required:
+    - data_type
+    - key
+    - label
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateAlarmTypeFieldRequest:
+    properties:
+      alarm_field_id:
+        type: string
+      default_unit_id:
+        type: string
+      default_value_json:
+        type: string
+      display_order:
+        minimum: 0
+        type: integer
+      is_required:
+        type: boolean
+      is_user_editable:
+        type: boolean
+      ui_group:
+        maxLength: 80
+        type: string
+      validation_json:
+        type: string
+    required:
+    - alarm_field_id
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateAlarmTypeRequest:
+    properties:
+      code:
+        maxLength: 80
+        type: string
+      name:
+        maxLength: 120
+        type: string
+    required:
+    - code
+    - name
+    type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateApparatRequest:
     properties:
       description:
@@ -1042,6 +1109,47 @@ definitions:
     - name
     - number_max
     - number_min
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateUnitRequest:
+    properties:
+      code:
+        maxLength: 30
+        type: string
+      name:
+        maxLength: 100
+        type: string
+      symbol:
+        maxLength: 20
+        type: string
+    required:
+    - code
+    - name
+    - symbol
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.DeleteImpactBlockerResponse:
+    properties:
+      count:
+        type: integer
+      resource:
+        type: string
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.DeleteImpactListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.DeleteImpactResponse'
+        type: array
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.DeleteImpactResponse:
+    properties:
+      blockers:
+        items:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.DeleteImpactBlockerResponse'
+        type: array
+      id:
+        type: string
+      resource:
+        type: string
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse:
     properties:
@@ -1571,6 +1679,19 @@ definitions:
       updated_at:
         type: string
     type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UnitListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UnitResponse'
+        type: array
+      page:
+        type: integer
+      total:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UnitResponse:
     properties:
       code:
@@ -1589,6 +1710,46 @@ definitions:
       alarm_type_id:
         type: string
       name:
+        type: string
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateAlarmFieldRequest:
+    properties:
+      data_type:
+        maxLength: 30
+        type: string
+      default_unit_code:
+        maxLength: 30
+        type: string
+      key:
+        maxLength: 100
+        type: string
+      label:
+        maxLength: 150
+        type: string
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateAlarmTypeFieldRequest:
+    properties:
+      default_unit_id:
+        type: string
+      default_value_json:
+        type: string
+      display_order:
+        minimum: 0
+        type: integer
+      is_required:
+        type: boolean
+      is_user_editable:
+        type: boolean
+      ui_group:
+        maxLength: 80
+        type: string
+      validation_json:
+        type: string
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateAlarmTypeRequest:
+    properties:
+      name:
+        maxLength: 120
         type: string
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateApparatRequest:
@@ -1807,6 +1968,18 @@ definitions:
         maxLength: 50
         type: string
     type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateSPSControllerSystemTypeRequest:
+    properties:
+      base_version:
+        minimum: 1
+        type: integer
+      document_name:
+        maxLength: 250
+        type: string
+      number:
+        minimum: 1
+        type: integer
+    type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateStateTextRequest:
     properties:
       ref_number:
@@ -1866,6 +2039,18 @@ definitions:
         type: integer
       number_min:
         type: integer
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateUnitRequest:
+    properties:
+      code:
+        maxLength: 30
+        type: string
+      name:
+        maxLength: 100
+        type: string
+      symbol:
+        maxLength: 20
+        type: string
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ValidateBuildingRequest:
     properties:
@@ -4025,6 +4210,148 @@ paths:
       summary: Update an alarm definition
       tags:
       - facility-alarm-definitions
+  /api/v1/facility/alarm-fields:
+    get:
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Items per page
+        in: query
+        name: limit
+        type: integer
+      - description: Search query
+        in: query
+        name: search
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmFieldListResponse'
+      summary: List alarm fields
+      tags:
+      - facility-alarm-fields
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Alarm field data
+        in: body
+        name: field
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateAlarmFieldRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmFieldResponse'
+      summary: Create an alarm field
+      tags:
+      - facility-alarm-fields
+  /api/v1/facility/alarm-fields/{id}:
+    delete:
+      parameters:
+      - description: Alarm Field ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      summary: Delete an alarm field
+      tags:
+      - facility-alarm-fields
+    get:
+      parameters:
+      - description: Alarm Field ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmFieldResponse'
+      summary: Get an alarm field
+      tags:
+      - facility-alarm-fields
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Alarm Field ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Alarm field data
+        in: body
+        name: field
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateAlarmFieldRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmFieldResponse'
+      summary: Update an alarm field
+      tags:
+      - facility-alarm-fields
+  /api/v1/facility/alarm-type-fields/{id}:
+    delete:
+      parameters:
+      - description: Alarm Type Field ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      summary: Delete an alarm type field mapping
+      tags:
+      - facility-alarm-types
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Alarm Type Field ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Alarm type field data
+        in: body
+        name: field
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateAlarmTypeFieldRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmTypeFieldResponse'
+      summary: Update an alarm type field mapping
+      tags:
+      - facility-alarm-types
   /api/v1/facility/alarm-types:
     get:
       parameters:
@@ -4048,6 +4375,82 @@ paths:
       summary: List alarm types
       tags:
       - facility-alarm-types
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Alarm type data
+        in: body
+        name: type
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateAlarmTypeRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmTypeResponse'
+      summary: Create an alarm type
+      tags:
+      - facility-alarm-types
+  /api/v1/facility/alarm-types/{id}:
+    delete:
+      parameters:
+      - description: Alarm Type ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      summary: Delete an alarm type
+      tags:
+      - facility-alarm-types
+    get:
+      parameters:
+      - description: Alarm Type ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmTypeResponse'
+      summary: Get an alarm type
+      tags:
+      - facility-alarm-types
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Alarm Type ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Alarm type data
+        in: body
+        name: type
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateAlarmTypeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmTypeResponse'
+      summary: Update an alarm type
+      tags:
+      - facility-alarm-types
   /api/v1/facility/alarm-types/{id}/fields:
     get:
       parameters:
@@ -4058,10 +4461,142 @@ paths:
         type: string
       produces:
       - application/json
-      responses: {}
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmTypeResponse'
       summary: Get fields for an alarm type
       tags:
       - facility-alarm-types
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Alarm Type ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Alarm type field data
+        in: body
+        name: field
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateAlarmTypeFieldRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmTypeFieldResponse'
+      summary: Add a field to an alarm type
+      tags:
+      - facility-alarm-types
+  /api/v1/facility/alarm-units:
+    get:
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Items per page
+        in: query
+        name: limit
+        type: integer
+      - description: Search query
+        in: query
+        name: search
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UnitListResponse'
+      summary: List alarm units
+      tags:
+      - facility-alarm-units
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Unit data
+        in: body
+        name: unit
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateUnitRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UnitResponse'
+      summary: Create an alarm unit
+      tags:
+      - facility-alarm-units
+  /api/v1/facility/alarm-units/{id}:
+    delete:
+      parameters:
+      - description: Unit ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      summary: Delete an alarm unit
+      tags:
+      - facility-alarm-units
+    get:
+      parameters:
+      - description: Unit ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UnitResponse'
+      summary: Get an alarm unit
+      tags:
+      - facility-alarm-units
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Unit ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Unit data
+        in: body
+        name: unit
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateUnitRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UnitResponse'
+      summary: Update an alarm unit
+      tags:
+      - facility-alarm-units
   /api/v1/facility/apparats:
     get:
       parameters:
@@ -4148,6 +4683,14 @@ paths:
           description: No Content
         "400":
           description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse'
+        "409":
+          description: Conflict
           schema:
             $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse'
         "500":
@@ -4946,6 +5489,44 @@ paths:
       summary: Get a facility copy job
       tags:
       - facility-copy-jobs
+  /api/v1/facility/delete-impacts:
+    get:
+      parameters:
+      - description: Reference resource (apparat or system_part)
+        in: query
+        name: resource
+        required: true
+        type: string
+      - collectionFormat: csv
+        description: Reference IDs
+        in: query
+        items:
+          type: string
+        name: ids
+        required: true
+        type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.DeleteImpactListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse'
+      summary: Preview blocking facility references before deletion
+      tags:
+      - facility-delete-impacts
   /api/v1/facility/field-devices:
     get:
       parameters:
@@ -5711,9 +6292,10 @@ paths:
     get:
       description: Upgrades the authenticated request to the shared facility WebSocket.
         `facility_reference_data.changed` tells authorized clients to refresh cached
-        apparats and system parts. User-scoped `facility.copy_job.progress` events
-        contain a copy job ID, status, stage and 0-100 progress; they are only delivered
-        to the user that started the job.
+        apparats and system parts. `facility.changed` carries authorized facility
+        resource changes with an action, IDs, actor and timestamp. User-scoped `facility.copy_job.progress`
+        events contain a copy job ID, status, stage and 0-100 progress; they are only
+        delivered to the user that started the job.
       responses:
         "101":
           description: Switching Protocols
@@ -5827,6 +6409,47 @@ paths:
           schema:
             $ref: '#/definitions/internal_handler_facility.ErrorResponse'
       summary: Get an SPS controller system type by ID
+      tags:
+      - facility-sps-controller-system-types
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: SPS Controller System Type ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: SPS controller system type data
+        in: body
+        name: system_type
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateSPSControllerSystemTypeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_handler_facility.SPSControllerSystemTypeResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_handler_facility.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_handler_facility.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/internal_handler_facility.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_handler_facility.ErrorResponse'
+      summary: Update an SPS controller system type
       tags:
       - facility-sps-controller-system-types
   /api/v1/facility/sps-controller-system-types/{id}/copy:
@@ -5949,6 +6572,10 @@ paths:
           description: No Content
         "400":
           description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse'
+        "409":
+          description: Conflict
           schema:
             $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse'
         "500":
@@ -6399,6 +7026,14 @@ paths:
           description: No Content
         "400":
           description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse'
+        "409":
+          description: Conflict
           schema:
             $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse'
         "500":

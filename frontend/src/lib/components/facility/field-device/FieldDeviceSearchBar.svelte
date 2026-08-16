@@ -58,6 +58,7 @@
           <Tooltip.Root>
             <Tooltip.Trigger
               class={buttonVariants({ variant: 'outline', size: 'icon-sm' })}
+              aria-label={$t('field_device.search.clear')}
               onclick={() => fieldDeviceState.clearSelection()}
             >
               <X />
@@ -69,6 +70,7 @@
             <Tooltip.Root>
               <Tooltip.Trigger
                 class={buttonVariants({ variant: 'destructive', size: 'icon-sm' })}
+                aria-label={$t('field_device.search.delete')}
                 onclick={() => void fieldDeviceState.bulkDeleteSelected()}
               >
                 <Trash2 />
@@ -84,6 +86,7 @@
                   variant: fieldDeviceState.showBulkEditPanel ? 'secondary' : 'outline',
                   size: 'icon-sm'
                 })}
+                aria-label={$t('field_device.search.bulk_edit')}
                 onclick={() => fieldDeviceState.toggleBulkEditPanel()}
               >
                 <Settings2 />
@@ -99,6 +102,7 @@
               variant: fieldDeviceState.showExportPanel ? 'secondary' : 'outline',
               size: 'icon-sm'
             })}
+            aria-label={$t('field_device.search.table')}
             onclick={() => fieldDeviceState.toggleExportPanel()}
           >
             <TableIcon />
@@ -114,6 +118,7 @@
               variant: fieldDeviceState.showFilterPanel ? 'secondary' : 'outline',
               size: 'icon-sm'
             })} relative`}
+            aria-label={$t('common.filter')}
             onclick={() => fieldDeviceState.toggleFilterPanel()}
           >
             <Filter />
@@ -129,6 +134,7 @@
         <Tooltip.Root>
           <Tooltip.Trigger
             class={buttonVariants({ variant: 'outline', size: 'icon-sm' })}
+            aria-label={$t('field_device.search.refresh')}
             onclick={() => void fieldDeviceState.reload()}
             disabled={fieldDeviceState.loading}
           >

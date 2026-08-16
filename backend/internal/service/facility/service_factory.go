@@ -88,6 +88,7 @@ type Repositories struct {
 	AlarmTypeFields          domainFacility.AlarmTypeFieldRepository
 	BacnetObjectAlarmValues  domainFacility.BacnetObjectAlarmValueRepository
 	BacnetReferenceUsages    domainFacility.BacnetReferenceUsageRepository
+	DeleteImpacts            domainFacility.DeleteImpactRepository
 }
 
 func (r Repositories) FieldDeviceModule() serviceFieldDevice.Repositories {
@@ -175,6 +176,7 @@ type Services struct {
 	AlarmTypeField          *AlarmTypeFieldService
 	BacnetAlarmValue        *BacnetAlarmValueService
 	BacnetReferenceUsage    *BacnetReferenceUsageService
+	DeleteImpact            *DeleteImpactService
 }
 
 // NewServices creates facility services using a factory-style constructor.
@@ -261,8 +263,8 @@ func NewServices(repos Repositories, cfgs ...Config) *Services {
 		HierarchyCopier:   hierarchyCopier,
 		Building:          NewBuildingService(hierarchyRepos.Buildings),
 		SystemType:        NewSystemTypeService(referenceRepos.SystemTypes, repos.BacnetReferenceUsages),
-		SystemPart:        NewSystemPartService(referenceRepos.SystemParts, repos.BacnetReferenceUsages),
-		Apparat:           NewApparatService(referenceRepos.Apparats, referenceRepos.SystemParts, referenceRepos.ObjectData, repos.BacnetReferenceUsages),
+		SystemPart:        NewSystemPartService(referenceRepos.SystemParts, repos.BacnetReferenceUsages, repos.DeleteImpacts),
+		Apparat:           NewApparatService(referenceRepos.Apparats, referenceRepos.SystemParts, referenceRepos.ObjectData, repos.BacnetReferenceUsages, repos.DeleteImpacts),
 		ControlCabinet:    controlCabinetService,
 		FieldDevice:       fieldDeviceService,
 		BacnetObject:      bacnetObjectService,
@@ -285,5 +287,6 @@ func NewServices(repos Repositories, cfgs ...Config) *Services {
 			alarmRepos.BacnetObjects,
 		),
 		BacnetReferenceUsage: NewBacnetReferenceUsageService(repos.BacnetReferenceUsages),
+		DeleteImpact:         NewDeleteImpactService(repos.DeleteImpacts),
 	}
 }

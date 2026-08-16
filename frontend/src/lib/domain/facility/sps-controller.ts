@@ -41,7 +41,6 @@ export interface CreateSPSControllerRequest {
 }
 
 export interface UpdateSPSControllerRequest {
-  id: string;
   ga_device?: string;
   device_name?: string;
   device_description?: string;

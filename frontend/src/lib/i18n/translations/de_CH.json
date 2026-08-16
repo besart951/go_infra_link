@@ -683,7 +683,13 @@
       "save_changes": "Änderungen speichern",
       "phase_required": "Phase ist erforderlich",
       "updated": "Projekt aktualisiert",
-      "update_failed": "Projekt konnte nicht aktualisiert werden"
+      "update_failed": "Projekt konnte nicht aktualisiert werden",
+      "delete_title": "Projekt löschen",
+      "delete_hint": "Das Projekt und seine Zuordnungen werden endgültig gelöscht.",
+      "delete_message": "Projekt \"{name}\" endgültig löschen?",
+      "delete_confirm": "Projekt löschen",
+      "deleted": "Projekt gelöscht",
+      "delete_failed": "Projekt konnte nicht gelöscht werden"
     },
     "users": {
       "search_label": "Benutzer suchen",
@@ -771,6 +777,7 @@
       "connection_interrupted": "Verbindung unterbrochen. Der Kopiervorgang läuft auf dem Server weiter."
     },
     "management": "Anlagenverwaltung",
+    "realtime_change_pending": "Diese Daten wurden von einer anderen Person geändert. Laden Sie nach dem Speichern neu, damit ungespeicherte Eingaben erhalten bleiben.",
     "building": "Gebäude",
     "buildings": "Gebäude",
     "buildings_title": "Gebäude",
@@ -1014,12 +1021,16 @@
       "toasts": {
         "field_created": "Alarmfeld erstellt",
         "field_deleted": "Alarmfeld gelöscht",
+        "field_updated": "Alarmfeld aktualisiert",
         "mapping_created": "Zuordnung erstellt",
         "mapping_deleted": "Zuordnung gelöscht",
+        "mapping_updated": "Zuordnung aktualisiert",
         "type_created": "Alarmtyp erstellt",
         "type_deleted": "Alarmtyp gelöscht",
+        "type_updated": "Alarmtyp aktualisiert",
         "unit_created": "Einheit erstellt",
-        "unit_deleted": "Einheit gelöscht"
+        "unit_deleted": "Einheit gelöscht",
+        "unit_updated": "Einheit aktualisiert"
       }
     },
     "notification_classes": "Benachrichtigungsklassen",
@@ -1112,6 +1123,8 @@
     "object_data_conflict": "Das Objekt ist bereits mit einem anderen Eintrag verknüpft.",
     "referenced_entity_in_use": "Der Eintrag wird noch von anderen Elementen referenziert und kann nicht gelöscht werden.",
     "bacnet_reference_delete_blocked": "Der Eintrag wird von BACnet-Objekten verwendet und kann nicht gelöscht werden.",
+    "reference_delete_blocked": "Der Eintrag wird noch von Feldgeräten, Systemteilen oder Objektdaten verwendet und kann nicht gelöscht werden.",
+    "invalid_delete_impact_resource": "Ungültige Referenz für die Löschvorschau.",
     "invalid_bacnet_reference_resource": "Ungültige BACnet-Referenz.",
     "ids_required": "IDs erforderlich.",
     "control_cabinet_id_required": "Schaltschrank-ID erforderlich.",

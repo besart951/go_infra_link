@@ -217,6 +217,10 @@ func localizedBacnetReferenceInUse() handlerutil.ErrorMapping {
 	return handlerutil.MapError(domainFacility.ErrBacnetReferenceInUse, handlerutil.LocalizedError(http.StatusConflict, "reference_in_use", "facility.bacnet_reference_delete_blocked"))
 }
 
+func localizedReferenceInUse() handlerutil.ErrorMapping {
+	return handlerutil.MapError(domainFacility.ErrReferenceInUse, handlerutil.LocalizedError(http.StatusConflict, "reference_in_use", "facility.reference_delete_blocked"))
+}
+
 func localizedInvalidArgument(translationKey string) handlerutil.ErrorMapping {
 	return handlerutil.MapError(domain.ErrInvalidArgument, handlerutil.LocalizedError(http.StatusBadRequest, "validation_error", translationKey))
 }

@@ -35,6 +35,7 @@
   description={$t('facility.notification_classes_desc')}
   createLabel={$t('facility.new_notification_class')}
   permissionResource="notificationclass"
+  realtimeResource="notification_classes"
   store={notificationClassesStore}
   {actions}
   form={NotificationClassForm}

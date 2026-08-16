@@ -221,6 +221,8 @@ func (h *ApparatHandler) UpdateApparat(c *gin.Context) {
 // @Param id path string true "Apparat ID"
 // @Success 204
 // @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 409 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/facility/apparats/{id} [delete]
 func (h *ApparatHandler) DeleteApparat(c *gin.Context) {
@@ -232,6 +234,7 @@ func (h *ApparatHandler) DeleteApparat(c *gin.Context) {
 	if err := h.service.DeleteByID(c.Request.Context(), id); err != nil {
 		respondLocalizedDomainError(c, err, "deletion_failed", "facility.deletion_failed",
 			localizedNotFound("facility.apparat_not_found"),
+			localizedReferenceInUse(),
 			localizedBacnetReferenceInUse(),
 		)
 		return

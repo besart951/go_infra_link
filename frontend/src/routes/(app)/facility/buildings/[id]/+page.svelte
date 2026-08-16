@@ -7,10 +7,12 @@
   import type { PageData } from './$types.js';
   import { buildingDetailService } from '$lib/components/facility/buildings/BuildingDetailService.js';
   import { goto, invalidateAll } from '$app/navigation';
+  import { onMount } from 'svelte';
   import { useLiveValidation } from '$lib/hooks/useLiveValidation.svelte.js';
   import { getFieldError } from '$lib/api/client.js';
   import { createTranslator } from '$lib/i18n/translator.js';
   import { t as translate } from '$lib/i18n/index.js';
+  import { facilityReferenceDataCache } from '$lib/services/facilityReferenceDataCache.js';
 
   let { data }: { data: PageData } = $props();
 
@@ -19,6 +21,10 @@
   let successMessage = $state('');
   let iwsCode = $state('');
   let buildingGroup = $state(0);
+  let remoteChangePending = $state(false);
+  let hasUnsavedChanges = $derived(
+    iwsCode !== data.building.iws_code || Number(buildingGroup) !== data.building.building_group
+  );
 
   const t = createTranslator();
 
@@ -29,6 +35,24 @@
   const liveValidation = useLiveValidation((data: any) => buildingDetailService.validate(data), {
     debounceMs: 400
   });
+
+  onMount(() =>
+    facilityReferenceDataCache.subscribeFacilityChanges((event) => {
+      if (event.resource !== 'buildings' && event.resource !== 'all') return;
+      if (hasUnsavedChanges || isSubmitting) {
+        if (!facilityReferenceDataCache.isChangeFromCurrentUser(event)) {
+          remoteChangePending = true;
+        }
+        return;
+      }
+      void invalidateAll();
+    })
+  );
+
+  async function reloadRemoteChange(): Promise<void> {
+    await invalidateAll();
+    remoteChangePending = false;
+  }
 
   function triggerValidation() {
     liveValidation.trigger({
@@ -137,6 +161,17 @@
       class="rounded-md border border-success bg-success/10 p-4 text-success-muted-foreground dark:text-success"
     >
       {successMessage}
+    </div>
+  {/if}
+
+  {#if remoteChangePending}
+    <div
+      class="flex items-center justify-between gap-3 rounded-md border border-warning/40 bg-warning/10 p-4 text-sm"
+    >
+      <span>{$t('facility.realtime_change_pending')}</span>
+      <Button variant="outline" size="sm" onclick={reloadRemoteChange}
+        >{$t('common.refresh')}</Button
+      >
     </div>
   {/if}
 

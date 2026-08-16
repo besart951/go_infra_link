@@ -2,11 +2,16 @@
   import { onMount } from 'svelte';
   import { goto, invalidateAll } from '$app/navigation';
   import { api } from '$lib/api/client';
+  import { systemNotificationState } from '$lib/components/notifications/SystemNotificationState.svelte.js';
   import { createTranslator } from '$lib/i18n/translator';
+  import { facilityReferenceDataCache } from '$lib/services/facilityReferenceDataCache.js';
 
   const t = createTranslator();
 
   onMount(async () => {
+    facilityReferenceDataCache.stop({ immediate: true });
+    systemNotificationState.disconnect({ immediate: true });
+
     try {
       await api('/auth/logout', { method: 'POST' });
       await invalidateAll();

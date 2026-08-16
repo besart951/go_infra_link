@@ -35,6 +35,7 @@
   description={$t('facility.system_parts_desc')}
   createLabel={$t('facility.new_system_part')}
   permissionResource="systempart"
+  realtimeResource="system_parts"
   store={systemPartsStore}
   {actions}
   form={SystemPartForm}
@@ -47,6 +48,7 @@
   searchPlaceholder={$t('facility.search_system_parts')}
   emptyMessage={$t('facility.no_system_parts_found')}
   bacnetUsageResource="system_part"
+  deleteImpactResource="system_part"
 >
   {#snippet rowSnippet(item: SystemPart)}
     <Table.Cell class="font-medium">{item.short_name}</Table.Cell>
@@ -88,7 +90,7 @@
             <DropdownMenu.Item
               variant="destructive"
               disabled={actions.isDeleteDisabled(item)}
-              title={actions.getBacnetUsageMessage(item)}
+              title={actions.getDeleteBlockerMessage(item)}
               onclick={() => actions.delete(item)}
             >
               {actions.getDeleteLabel(item, $t('common.delete'))}

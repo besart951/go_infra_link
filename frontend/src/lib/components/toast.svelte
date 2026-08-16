@@ -1,34 +1,14 @@
 <script lang="ts" module>
-  import { writable } from 'svelte/store';
+  import {
+    addToast,
+    removeToast,
+    toasts,
+    type Toast,
+    type ToastType
+  } from './toast.js';
 
-  export type ToastType = 'success' | 'error' | 'warning' | 'info';
-
-  export interface Toast {
-    id: string;
-    message: string;
-    type: ToastType;
-  }
-
-  const toasts = writable<Toast[]>([]);
-
-  export function addToast(message: string, type: ToastType = 'info', duration = 5000) {
-    const id = Math.random().toString(36).substring(2, 9);
-    toasts.update((all) => [...all, { id, message, type }]);
-
-    if (duration > 0) {
-      setTimeout(() => {
-        removeToast(id);
-      }, duration);
-    }
-
-    return id;
-  }
-
-  export function removeToast(id: string) {
-    toasts.update((all) => all.filter((t) => t.id !== id));
-  }
-
-  export { toasts };
+  export { addToast, removeToast, toasts };
+  export type { Toast, ToastType };
 </script>
 
 <script lang="ts">

@@ -5,7 +5,7 @@
   import * as Card from '$lib/components/ui/card/index.js';
   import * as Table from '$lib/components/ui/table/index.js';
   import HistoryTimelineDialog from '$lib/components/history/HistoryTimelineDialog.svelte';
-  import { History, Trash2 } from '@lucide/svelte';
+  import { History, Pencil, Trash2 } from '@lucide/svelte';
   import { canPerform } from '$lib/utils/permissions.js';
   import { createTranslator } from '$lib/i18n/translator';
   import type { Unit } from '$lib/domain/facility/alarm-type.js';
@@ -52,15 +52,22 @@
         <Input id="unit-name" bind:value={catalogState.unitForm.name} />
       </div>
     </div>
-    <div class="flex justify-end">
-      {#if canPerform('create', 'unit')}
+    <div class="flex justify-end gap-2">
+      {#if catalogState.editingUnitID}
+        <Button variant="outline" onclick={() => catalogState.cancelUnitEdit()}>
+          {$t('common.cancel')}
+        </Button>
+      {/if}
+      {#if catalogState.editingUnitID ? canPerform('update', 'unit') : canPerform('create', 'unit')}
         <Button
           onclick={() => catalogState.createUnit()}
           disabled={!catalogState.unitForm.code ||
             !catalogState.unitForm.symbol ||
             !catalogState.unitForm.name}
         >
-          {$t('facility.alarm_catalog_page.units.create')}
+          {catalogState.editingUnitID
+            ? $t('common.save')
+            : $t('facility.alarm_catalog_page.units.create')}
         </Button>
       {/if}
     </div>
@@ -104,6 +111,17 @@
                           title={$t('history.open')}
                         >
                           <History class="size-4" />
+                        </Button>
+                      {/if}
+                      {#if canPerform('update', 'unit')}
+                        <Button
+                          size="icon-sm"
+                          variant="ghost"
+                          onclick={() => catalogState.editUnit(unit)}
+                          aria-label={$t('common.edit')}
+                          title={$t('common.edit')}
+                        >
+                          <Pencil class="size-4" />
                         </Button>
                       {/if}
                       {#if canPerform('delete', 'unit')}

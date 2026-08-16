@@ -7,14 +7,32 @@
   import AlarmCatalogTypesSection from '$lib/components/facility/alarm-catalog/AlarmCatalogTypesSection.svelte';
   import AlarmCatalogMappingsSection from '$lib/components/facility/alarm-catalog/AlarmCatalogMappingsSection.svelte';
   import EntityListHeader from '$lib/components/layout/EntityListHeader.svelte';
+  import { facilityReferenceDataCache } from '$lib/services/facilityReferenceDataCache.js';
 
   const t = createTranslator();
-  const state = new AlarmCatalogState({
+  const catalogState = new AlarmCatalogState({
     translate: (key, params) => $t(key, params)
   });
+  let remoteChangePending = $state(false);
 
   onMount(() => {
-    void state.loadAll();
+    void catalogState.loadAll();
+
+    return facilityReferenceDataCache.subscribeFacilityChanges((event) => {
+      if (
+        event.resource !== 'all' &&
+        !['alarm_types', 'alarm_type_fields', 'alarm_fields', 'units'].includes(event.resource)
+      ) {
+        return;
+      }
+      if (catalogState.hasUnsavedChanges()) {
+        if (!facilityReferenceDataCache.isChangeFromCurrentUser(event)) {
+          remoteChangePending = true;
+        }
+        return;
+      }
+      void catalogState.loadAll();
+    });
   });
 </script>
 
@@ -29,7 +47,7 @@
     backHref="/facility"
     backLabel={$t('common.back')}
   >
-    {#if state.loading}
+    {#if catalogState.loading}
       <span class="text-sm text-muted-foreground">
         {$t('facility.alarm_catalog_page.loading')}
       </span>
@@ -37,12 +55,31 @@
   </EntityListHeader>
 
   <div class="grid gap-6 xl:grid-cols-2">
-    <AlarmCatalogUnitsSection {state} />
-    <AlarmCatalogFieldsSection {state} />
+    <AlarmCatalogUnitsSection state={catalogState} />
+    <AlarmCatalogFieldsSection state={catalogState} />
   </div>
 
+  {#if remoteChangePending}
+    <div
+      class="flex items-center justify-between gap-3 rounded-md border border-warning-border bg-warning-muted px-3 py-2 text-sm text-warning-muted-foreground"
+      role="status"
+    >
+      <span>{$t('facility.realtime_change_pending')}</span>
+      <button
+        class="font-medium underline underline-offset-2"
+        type="button"
+        onclick={() => {
+          remoteChangePending = false;
+          void catalogState.loadAll();
+        }}
+      >
+        {$t('common.refresh')}
+      </button>
+    </div>
+  {/if}
+
   <div class="grid gap-6 xl:grid-cols-2">
-    <AlarmCatalogTypesSection {state} />
-    <AlarmCatalogMappingsSection {state} />
+    <AlarmCatalogTypesSection state={catalogState} />
+    <AlarmCatalogMappingsSection state={catalogState} />
   </div>
 </div>

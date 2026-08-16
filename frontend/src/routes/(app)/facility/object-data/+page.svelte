@@ -35,6 +35,7 @@
   description={$t('facility.object_data_desc')}
   createLabel={$t('facility.new_object_data')}
   permissionResource="objectdata"
+  realtimeResource="object_data"
   store={objectDataStore}
   {actions}
   form={ObjectDataForm}

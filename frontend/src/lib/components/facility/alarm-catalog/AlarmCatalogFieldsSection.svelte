@@ -5,7 +5,7 @@
   import * as Card from '$lib/components/ui/card/index.js';
   import * as Table from '$lib/components/ui/table/index.js';
   import HistoryTimelineDialog from '$lib/components/history/HistoryTimelineDialog.svelte';
-  import { History, Trash2 } from '@lucide/svelte';
+  import { History, Pencil, Trash2 } from '@lucide/svelte';
   import { canPerform } from '$lib/utils/permissions.js';
   import { createTranslator } from '$lib/i18n/translator';
   import type { AlarmField } from '$lib/domain/facility/alarm-type.js';
@@ -73,13 +73,20 @@
         </select>
       </div>
     </div>
-    <div class="flex justify-end">
-      {#if canPerform('create', 'alarmfield')}
+    <div class="flex justify-end gap-2">
+      {#if catalogState.editingFieldID}
+        <Button variant="outline" onclick={() => catalogState.cancelFieldEdit()}>
+          {$t('common.cancel')}
+        </Button>
+      {/if}
+      {#if catalogState.editingFieldID ? canPerform('update', 'alarmfield') : canPerform('create', 'alarmfield')}
         <Button
           onclick={() => catalogState.createField()}
           disabled={!catalogState.fieldForm.key || !catalogState.fieldForm.label}
         >
-          {$t('facility.alarm_catalog_page.fields.create')}
+          {catalogState.editingFieldID
+            ? $t('common.save')
+            : $t('facility.alarm_catalog_page.fields.create')}
         </Button>
       {/if}
     </div>
@@ -125,6 +132,17 @@
                           title={$t('history.open')}
                         >
                           <History class="size-4" />
+                        </Button>
+                      {/if}
+                      {#if canPerform('update', 'alarmfield')}
+                        <Button
+                          size="icon-sm"
+                          variant="ghost"
+                          onclick={() => catalogState.editField(field)}
+                          aria-label={$t('common.edit')}
+                          title={$t('common.edit')}
+                        >
+                          <Pencil class="size-4" />
                         </Button>
                       {/if}
                       {#if canPerform('delete', 'alarmfield')}

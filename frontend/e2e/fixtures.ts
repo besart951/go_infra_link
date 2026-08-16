@@ -27,6 +27,10 @@ export const e2eUsers = {
   planner: {
     email: process.env.E2E_PLANNER_EMAIL ?? 'planner@example.test',
     password: process.env.E2E_PLANNER_PASSWORD ?? 'planner-password'
+  },
+  collaborator: {
+    email: process.env.E2E_COLLABORATOR_EMAIL ?? 'collaborator@example.test',
+    password: process.env.E2E_COLLABORATOR_PASSWORD ?? 'collaborator-password'
   }
 } as const;
 
@@ -81,37 +85,70 @@ export interface SocketObservation {
 }
 
 export interface SocketTracker {
-  activeCount(path: string): number;
-  maximumActiveCount(path: string): number;
+  activeCount(path: string): Promise<number>;
+  maximumActiveCount(path: string): Promise<number>;
 }
 
-export function observeWebSockets(page: Page): SocketTracker {
-  const sockets: SocketObservation[] = [];
-  const maximumActiveCounts = new Map<string, number>();
-
-  page.on('websocket', (socket) => {
-    const observed: SocketObservation = { url: socket.url(), closed: false };
-    sockets.push(observed);
-    const path = new URL(observed.url).pathname;
-    maximumActiveCounts.set(path, Math.max(maximumActiveCounts.get(path) ?? 0, activeCount(path)));
-    socket.on('close', () => {
-      observed.closed = true;
+export async function observeWebSockets(page: Page): Promise<SocketTracker> {
+  await page.addInitScript(() => {
+    const observations: Array<{ url: string; closed: boolean }> = [];
+    const maximums: Record<string, number> = {};
+    Object.defineProperty(window, '__e2eWebSocketObservations', {
+      configurable: true,
+      value: observations
     });
+    Object.defineProperty(window, '__e2eWebSocketMaximums', {
+      configurable: true,
+      value: maximums
+    });
+
+    const NativeWebSocket = window.WebSocket;
+    class ObservedWebSocket extends NativeWebSocket {
+      constructor(url: string | URL, protocols?: string | string[]) {
+        super(url, protocols);
+        const observation = { url: String(url), closed: false };
+        observations.push(observation);
+        const path = new URL(observation.url, window.location.href).pathname;
+        const activeCount = observations.filter(
+          (candidate) =>
+            new URL(candidate.url, window.location.href).pathname === path && !candidate.closed
+        ).length;
+        maximums[path] = Math.max(maximums[path] ?? 0, activeCount);
+        this.addEventListener('close', () => {
+          observation.closed = true;
+        });
+      }
+    }
+    window.WebSocket = ObservedWebSocket;
   });
 
-  function activeCount(path: string): number {
-    return sockets.filter((socket) => socket.url.includes(path) && !socket.closed).length;
+  async function observations(): Promise<SocketObservation[]> {
+    return page.evaluate(
+      () =>
+        (
+          window as typeof window & {
+            __e2eWebSocketObservations?: SocketObservation[];
+          }
+        ).__e2eWebSocketObservations ?? []
+    );
   }
 
   return {
-    activeCount,
-    maximumActiveCount: (path) =>
-      Math.max(
-        0,
-        ...[...maximumActiveCounts.entries()]
-          .filter(([socketPath]) => socketPath.includes(path))
-          .map(([, count]) => count)
-      )
+    activeCount: async (path) =>
+      (await observations()).filter(
+        (socket) => new URL(socket.url).pathname === path && !socket.closed
+      ).length,
+    maximumActiveCount: async (path) => {
+      return page.evaluate(
+        (socketPath) =>
+          (
+            window as typeof window & {
+              __e2eWebSocketMaximums?: Record<string, number>;
+            }
+          ).__e2eWebSocketMaximums?.[socketPath] ?? 0,
+        path
+      );
+    }
   };
 }
 
@@ -123,8 +160,11 @@ export async function expectActiveSocketCount(
   await expect.poll(() => sockets.activeCount(path)).toBe(count);
 }
 
-export function expectNoConcurrentSockets(sockets: SocketTracker, path: string): void {
-  expect(sockets.maximumActiveCount(path)).toBeLessThanOrEqual(1);
+export async function expectNoConcurrentSockets(
+  sockets: SocketTracker,
+  path: string
+): Promise<void> {
+  await expect.poll(() => sockets.maximumActiveCount(path)).toBeLessThanOrEqual(1);
 }
 
 export async function login(
@@ -165,15 +205,8 @@ export async function navigateToFacility(
 }
 
 export async function navigateToProjectList(page: Page): Promise<void> {
-  const projectMenu = page.getByRole('button', { name: 'Projekte', exact: true });
-  if ((await projectMenu.getAttribute('aria-expanded')) !== 'true') {
-    await projectMenu.click();
-  }
-
-  await Promise.all([
-    page.waitForURL((url) => url.pathname === '/projects/list'),
-    page.getByRole('link', { name: 'Projekte', exact: true }).click()
-  ]);
+  await page.goto('/projects/list');
+  await page.waitForURL((url) => url.pathname === '/projects/list');
 }
 
 export async function navigateToProjectOverview(page: Page): Promise<void> {

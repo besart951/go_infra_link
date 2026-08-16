@@ -12,6 +12,19 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// UpdateSPSControllerSystemType godoc
+// @Summary Update an SPS controller system type
+// @Tags facility-sps-controller-system-types
+// @Accept json
+// @Produce json
+// @Param id path string true "SPS Controller System Type ID"
+// @Param system_type body dto.UpdateSPSControllerSystemTypeRequest true "SPS controller system type data"
+// @Success 200 {object} SPSControllerSystemTypeResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 409 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /api/v1/facility/sps-controller-system-types/{id} [put]
 func (h *SPSControllerSystemTypeHandler) UpdateSPSControllerSystemType(c *gin.Context) {
 	id, ok := parseUUIDParam(c, "id")
 	if !ok {

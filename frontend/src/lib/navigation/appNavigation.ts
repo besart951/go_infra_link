@@ -1,10 +1,26 @@
 import type { Component } from 'svelte';
 import {
   BellRingIcon,
+  BookOpen,
+  Boxes,
   Building2Icon,
+  ClipboardList,
+  Component as ComponentIcon,
+  Contact,
+  Cpu,
+  Database,
   FolderKanbanIcon,
   HistoryIcon,
+  LayoutDashboard,
+  List,
+  Mail,
+  PanelTop,
+  RadioTower,
   SheetIcon,
+  ShieldCheck,
+  Siren,
+  Tags,
+  TextCursorInput,
   UsersIcon
 } from '@lucide/svelte';
 import type { User } from '$lib/domain/user/index.js';
@@ -26,6 +42,7 @@ type CanPerform = (action: string, resource: string) => boolean;
 export interface AppNavSubItem {
   title: string;
   url: string;
+  icon: Component;
   dividerAfter?: boolean;
   isActive?: boolean;
 }
@@ -78,6 +95,7 @@ interface NavDefinition {
 interface NavChildDefinition {
   titleKey: string;
   url: string;
+  icon: Component;
   activePaths?: string[];
   dividerAfter?: boolean;
   hasAccess?: (context: NavContext) => boolean;
@@ -87,6 +105,21 @@ const facilityParent = { titleKey: 'navigation.facility', href: '/facility' };
 const projectParent = { titleKey: 'navigation.projects', href: '/projects' };
 const userParent = { titleKey: 'navigation.users', href: '/users' };
 const notificationParent = { titleKey: 'navigation.notifications', href: '/notifications' };
+
+const facilityNavIcons: Record<string, Component> = {
+  '/facility/buildings': Building2Icon,
+  '/facility/control-cabinets': PanelTop,
+  '/facility/sps-controllers': Cpu,
+  '/facility/field-devices': RadioTower,
+  '/facility/system-types': Tags,
+  '/facility/system-parts': ComponentIcon,
+  '/facility/apparats': Boxes,
+  '/facility/object-data': Database,
+  '/facility/state-texts': TextCursorInput,
+  '/facility/alarm-definitions': Siren,
+  '/facility/alarm-catalog': BookOpen,
+  '/facility/notification-classes': BellRingIcon
+};
 
 const breadcrumbRoutes: RouteEntry[] = [
   { path: '/users/directory', titleKey: 'navigation.all_users', parent: userParent },
@@ -167,20 +200,23 @@ const navDefinitions: NavDefinition[] = [
     activePaths: ['/users', '/auth', '/teams'],
     hideWhenOnlyOverview: true,
     children: [
-      { titleKey: 'hub.overview', url: '/users' },
+      { titleKey: 'hub.overview', url: '/users', icon: LayoutDashboard },
       {
         titleKey: 'navigation.all_users',
         url: '/users/directory',
+        icon: Contact,
         hasAccess: ({ user }) => canAccessUserDirectory(user)
       },
       {
         titleKey: 'navigation.teams',
         url: '/teams',
+        icon: UsersIcon,
         hasAccess: ({ canPerform }) => canAccessTeamDirectory(canPerform)
       },
       {
         titleKey: 'navigation.roles_permissions',
         url: '/users/roles',
+        icon: ShieldCheck,
         hasAccess: ({ user }) => canAccessRoleDirectory(user)
       }
     ]
@@ -191,10 +227,11 @@ const navDefinitions: NavDefinition[] = [
     icon: Building2Icon,
     hideWhenOnlyOverview: true,
     children: [
-      { titleKey: 'hub.overview', url: '/facility' },
+      { titleKey: 'hub.overview', url: '/facility', icon: LayoutDashboard },
       ...FACILITY_NAV_ACCESS.map((item) => ({
         titleKey: item.titleKey,
         url: item.url,
+        icon: facilityNavIcons[item.url],
         dividerAfter: item.dividerAfter,
         hasAccess: (context: NavContext) =>
           canPerformAllPermissions(context.canPerform, [
@@ -209,16 +246,18 @@ const navDefinitions: NavDefinition[] = [
     url: '/projects',
     icon: FolderKanbanIcon,
     children: [
-      { titleKey: 'hub.overview', url: '/projects' },
+      { titleKey: 'hub.overview', url: '/projects', icon: LayoutDashboard },
       {
         titleKey: 'navigation.projects',
         url: '/projects/list',
+        icon: FolderKanbanIcon,
         activePaths: ['/projects/list'],
         hasAccess: () => true
       },
       {
         titleKey: 'phase.phases',
         url: '/projects/phases',
+        icon: List,
         hasAccess: ({ canPerform }) => canPerformPermission(canPerform, NAV_PERMISSION.phaseList)
       }
     ]
@@ -241,11 +280,12 @@ const navDefinitions: NavDefinition[] = [
     icon: BellRingIcon,
     activePaths: ['/notifications', '/admin/notifications'],
     children: [
-      { titleKey: 'hub.overview', url: '/notifications' },
-      { titleKey: 'notifications.inbox.page_title', url: '/notifications/inbox' },
+      { titleKey: 'hub.overview', url: '/notifications', icon: LayoutDashboard },
+      { titleKey: 'notifications.inbox.page_title', url: '/notifications/inbox', icon: Mail },
       {
         titleKey: 'notifications.page.title',
         url: '/admin/notifications/smtp',
+        icon: ClipboardList,
         activePaths: ['/admin/notifications'],
         hasAccess: ({ canPerform }) =>
           canPerformPermission(canPerform, NAV_PERMISSION.notificationSMTP)
@@ -299,6 +339,7 @@ export function buildAppNavItems(context: NavContext): AppNavItem[] {
         .map((child) => ({
           title: context.translate(child.titleKey),
           url: child.url,
+          icon: child.icon,
           dividerAfter: child.dividerAfter,
           isActive: childIsActive(context.pathname, child)
         }));

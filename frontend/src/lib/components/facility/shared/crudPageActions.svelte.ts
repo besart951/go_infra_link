@@ -21,6 +21,7 @@ export interface CrudPageActionsOptions<TItem> {
   getDeleteConfirmText: () => string;
   getDeleteCancelText: () => string;
   getBacnetUsageMessage?: (count: number) => string;
+  getReferenceDeleteBlockedMessage?: (count: number) => string;
   getBacnetDeleteBlockedMessage?: (count: number) => string;
   getBacnetUpdateConfirmTitle?: () => string;
   getBacnetUpdateConfirmMessage?: (count: number) => string;
@@ -33,6 +34,7 @@ export class CrudPageActions<TItem> {
   showForm = $state(false);
   editingItem = $state<TItem | undefined>(undefined);
   bacnetUsageCounts = $state<Record<string, number>>({});
+  referenceImpactCounts = $state<Record<string, number>>({});
 
   constructor(private readonly options: CrudPageActionsOptions<TItem>) {}
 
@@ -73,6 +75,15 @@ export class CrudPageActions<TItem> {
     this.bacnetUsageCounts = { ...this.bacnetUsageCounts, ...counts };
   }
 
+  setReferenceImpactCounts(counts: Record<string, number>): void {
+    this.referenceImpactCounts = { ...counts };
+  }
+
+  getReferenceImpactCount(item: TItem): number {
+    const id = this.getItemId(item);
+    return id ? (this.referenceImpactCounts[id] ?? 0) : 0;
+  }
+
   getBacnetUsageCount(item: TItem): number {
     const id = this.getItemId(item);
     return id ? (this.bacnetUsageCounts[id] ?? 0) : 0;
@@ -83,7 +94,7 @@ export class CrudPageActions<TItem> {
   }
 
   isDeleteDisabled(item: TItem): boolean {
-    return this.isBacnetLinked(item);
+    return this.isBacnetLinked(item) || this.getReferenceImpactCount(item) > 0;
   }
 
   getBacnetUsageMessage(item: TItem): string {
@@ -92,7 +103,16 @@ export class CrudPageActions<TItem> {
     return this.options.getBacnetUsageMessage?.(count) ?? '';
   }
 
+  getDeleteBlockerMessage(item: TItem): string {
+    const referenceCount = this.getReferenceImpactCount(item);
+    if (referenceCount > 0) {
+      return this.options.getReferenceDeleteBlockedMessage?.(referenceCount) ?? '';
+    }
+    return this.getBacnetUsageMessage(item);
+  }
+
   getDeleteLabel(item: TItem, fallback: string): string {
+    if (this.getReferenceImpactCount(item) > 0) return fallback;
     const count = this.getBacnetUsageCount(item);
     if (count <= 0) return fallback;
     return this.options.getBacnetDeleteBlockedMessage?.(count) ?? fallback;
@@ -124,6 +144,15 @@ export class CrudPageActions<TItem> {
 
   async delete(item: TItem): Promise<void> {
     if (this.isDeleteDisabled(item)) {
+      const referenceCount = this.getReferenceImpactCount(item);
+      if (referenceCount > 0) {
+        this.options.addToast(
+          this.options.getReferenceDeleteBlockedMessage?.(referenceCount) ??
+            this.options.getDeleteFailureMessage(),
+          'error'
+        );
+        return;
+      }
       const count = this.getBacnetUsageCount(item);
       this.options.addToast(
         this.options.getBacnetDeleteBlockedMessage?.(count) ??

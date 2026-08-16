@@ -37,6 +37,8 @@ services:
       SEED_DUMMY_NOTIFICATIONS: "false"
       E2E_PLANNER_EMAIL: planner@example.test
       E2E_PLANNER_PASSWORD: planner-password
+      E2E_COLLABORATOR_EMAIL: collaborator@example.test
+      E2E_COLLABORATOR_PASSWORD: collaborator-password
     depends_on:
       postgres:
         condition: service_healthy

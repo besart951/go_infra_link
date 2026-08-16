@@ -157,25 +157,37 @@ func (s *FieldDeviceService) Validate(ctx context.Context, fieldDevice *domainFa
 }
 
 func (s *FieldDeviceService) DeleteByID(ctx context.Context, id uuid.UUID) error {
-	if err := s.repo.DeleteByIds(ctx, []uuid.UUID{id}); err != nil {
-		return err
-	}
-	return s.recordFieldDeviceChange(ctx, changecapture.ActionDeleted, id)
+	return s.DeleteByIDs(ctx, []uuid.UUID{id})
 }
 
 func (s *FieldDeviceService) DeleteByIDs(ctx context.Context, ids []uuid.UUID) error {
 	if len(ids) == 0 {
 		return nil
 	}
-	if err := s.repo.DeleteByIds(ctx, ids); err != nil {
-		return err
-	}
-	for _, id := range ids {
-		if err := s.recordFieldDeviceChange(ctx, changecapture.ActionDeleted, id); err != nil {
+	return s.transaction().run(ctx, func(txCtx context.Context, txService *FieldDeviceService) error {
+		// BACnet objects and specifications are owned by their field device. Remove
+		// them explicitly instead of relying on database cascades: deployments can
+		// legitimately still contain older restrictive foreign-key constraints.
+		if txService.bacnetObjectRepo != nil {
+			if err := txService.bacnetObjectRepo.DeleteByFieldDeviceIDs(txCtx, ids); err != nil {
+				return err
+			}
+		}
+		if txService.specificationRepo != nil {
+			if err := txService.specificationRepo.DeleteByFieldDeviceIDs(txCtx, ids); err != nil {
+				return err
+			}
+		}
+		if err := txService.repo.DeleteByIds(txCtx, ids); err != nil {
 			return err
 		}
-	}
-	return nil
+		for _, id := range ids {
+			if err := txService.recordFieldDeviceChange(txCtx, changecapture.ActionDeleted, id); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 func (s *FieldDeviceService) CreateSpecification(ctx context.Context, fieldDeviceID uuid.UUID, specification *domainFacility.Specification) error {
 	return s.writer().createSpecification(ctx, fieldDeviceID, specification)

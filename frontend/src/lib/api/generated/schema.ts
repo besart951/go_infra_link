@@ -1557,6 +1557,227 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/facility/alarm-fields": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List alarm fields */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Items per page */
+                    limit?: number;
+                    /** @description Page number */
+                    page?: number;
+                    /** @description Search query */
+                    search?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmFieldListResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Create an alarm field */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            /** @description Alarm field data */
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateAlarmFieldRequest"];
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmFieldResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/facility/alarm-fields/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get an alarm field */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Alarm Field ID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmFieldResponse"];
+                    };
+                };
+            };
+        };
+        /** Update an alarm field */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Alarm Field ID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            /** @description Alarm field data */
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateAlarmFieldRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmFieldResponse"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        /** Delete an alarm field */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Alarm Field ID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/facility/alarm-type-fields/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update an alarm type field mapping */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Alarm Type Field ID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            /** @description Alarm type field data */
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateAlarmTypeFieldRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmTypeFieldResponse"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        /** Delete an alarm type field mapping */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Alarm Type Field ID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/facility/alarm-types": {
         parameters: {
             query?: never;
@@ -1583,8 +1804,121 @@ export type paths = {
             responses: never;
         };
         put?: never;
-        post?: never;
+        /** Create an alarm type */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            /** @description Alarm type data */
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateAlarmTypeRequest"];
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmTypeResponse"];
+                    };
+                };
+            };
+        };
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/facility/alarm-types/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get an alarm type */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Alarm Type ID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmTypeResponse"];
+                    };
+                };
+            };
+        };
+        /** Update an alarm type */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Alarm Type ID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            /** @description Alarm type data */
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateAlarmTypeRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmTypeResponse"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        /** Delete an alarm type */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Alarm Type ID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
         options?: never;
         head?: never;
         patch?: never;
@@ -1609,11 +1943,205 @@ export type paths = {
                 cookie?: never;
             };
             requestBody?: never;
-            responses: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmTypeResponse"];
+                    };
+                };
+            };
         };
         put?: never;
-        post?: never;
+        /** Add a field to an alarm type */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Alarm Type ID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            /** @description Alarm type field data */
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateAlarmTypeFieldRequest"];
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmTypeFieldResponse"];
+                    };
+                };
+            };
+        };
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/facility/alarm-units": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List alarm units */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Items per page */
+                    limit?: number;
+                    /** @description Page number */
+                    page?: number;
+                    /** @description Search query */
+                    search?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UnitListResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Create an alarm unit */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            /** @description Unit data */
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateUnitRequest"];
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UnitResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/facility/alarm-units/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get an alarm unit */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Unit ID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UnitResponse"];
+                    };
+                };
+            };
+        };
+        /** Update an alarm unit */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Unit ID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            /** @description Unit data */
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateUnitRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UnitResponse"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        /** Delete an alarm unit */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Unit ID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
         options?: never;
         head?: never;
         patch?: never;
@@ -1864,6 +2392,24 @@ export type paths = {
                 };
                 /** @description Bad Request */
                 400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -3240,6 +3786,74 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/facility/delete-impacts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Preview blocking facility references before deletion */
+        get: {
+            parameters: {
+                query: {
+                    /** @description Reference IDs */
+                    ids: string[];
+                    /** @description Reference resource (apparat or system_part) */
+                    resource: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.DeleteImpactListResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/facility/field-devices": {
         parameters: {
             query?: never;
@@ -4575,7 +5189,7 @@ export type paths = {
         };
         /**
          * Stream facility reference-data changes
-         * @description Upgrades the authenticated request to the shared facility WebSocket. `facility_reference_data.changed` tells authorized clients to refresh cached apparats and system parts. User-scoped `facility.copy_job.progress` events contain a copy job ID, status, stage and 0-100 progress; they are only delivered to the user that started the job.
+         * @description Upgrades the authenticated request to the shared facility WebSocket. `facility_reference_data.changed` tells authorized clients to refresh cached apparats and system parts. `facility.changed` carries authorized facility resource changes with an action, IDs, actor and timestamp. User-scoped `facility.copy_job.progress` events contain a copy job ID, status, stage and 0-100 progress; they are only delivered to the user that started the job.
          */
         get: {
             parameters: {
@@ -4744,7 +5358,71 @@ export type paths = {
                 };
             };
         };
-        put?: never;
+        /** Update an SPS controller system type */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description SPS Controller System Type ID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            /** @description SPS controller system type data */
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateSPSControllerSystemTypeRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["internal_handler_facility.SPSControllerSystemTypeResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["internal_handler_facility.ErrorResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["internal_handler_facility.ErrorResponse"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["internal_handler_facility.ErrorResponse"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["internal_handler_facility.ErrorResponse"];
+                    };
+                };
+            };
+        };
         post?: never;
         /** Delete an SPS controller system type */
         delete: {
@@ -5121,6 +5799,15 @@ export type paths = {
                 };
                 /** @description Bad Request */
                 400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -5933,6 +6620,24 @@ export type paths = {
                 };
                 /** @description Bad Request */
                 400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -10331,6 +11036,12 @@ export type components = {
             scope?: string;
             updated_at?: string;
         };
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmFieldListResponse": {
+            items?: components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmFieldResponse"][];
+            page?: number;
+            total?: number;
+            total_pages?: number;
+        };
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmFieldResponse": {
             data_type?: string;
             default_unit_code?: string;
@@ -10587,6 +11298,26 @@ export type components = {
             alarm_type_id?: string;
             name: string;
         };
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateAlarmFieldRequest": {
+            data_type: string;
+            default_unit_code?: string;
+            key: string;
+            label: string;
+        };
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateAlarmTypeFieldRequest": {
+            alarm_field_id: string;
+            default_unit_id?: string;
+            default_value_json?: string;
+            display_order?: number;
+            is_required?: boolean;
+            is_user_editable?: boolean;
+            ui_group?: string;
+            validation_json?: string;
+        };
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateAlarmTypeRequest": {
+            code: string;
+            name: string;
+        };
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateApparatRequest": {
             description?: string;
             name: string;
@@ -10704,6 +11435,23 @@ export type components = {
             name: string;
             number_max: number;
             number_min: number;
+        };
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateUnitRequest": {
+            code: string;
+            name: string;
+            symbol: string;
+        };
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.DeleteImpactBlockerResponse": {
+            count?: number;
+            resource?: string;
+        };
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.DeleteImpactListResponse": {
+            items?: components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.DeleteImpactResponse"][];
+        };
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.DeleteImpactResponse": {
+            blockers?: components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.DeleteImpactBlockerResponse"][];
+            id?: string;
+            resource?: string;
         };
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse": {
             code?: string;
@@ -10968,6 +11716,12 @@ export type components = {
             number_min?: number;
             updated_at?: string;
         };
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UnitListResponse": {
+            items?: components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UnitResponse"][];
+            page?: number;
+            total?: number;
+            total_pages?: number;
+        };
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UnitResponse": {
             code?: string;
             id?: string;
@@ -10977,6 +11731,24 @@ export type components = {
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateAlarmDefinitionRequest": {
             alarm_note?: string;
             alarm_type_id?: string;
+            name?: string;
+        };
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateAlarmFieldRequest": {
+            data_type?: string;
+            default_unit_code?: string;
+            key?: string;
+            label?: string;
+        };
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateAlarmTypeFieldRequest": {
+            default_unit_id?: string;
+            default_value_json?: string;
+            display_order?: number;
+            is_required?: boolean;
+            is_user_editable?: boolean;
+            ui_group?: string;
+            validation_json?: string;
+        };
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateAlarmTypeRequest": {
             name?: string;
         };
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateApparatRequest": {
@@ -11072,6 +11844,11 @@ export type components = {
             system_types?: components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SPSControllerSystemTypeInput"][];
             vlan?: string;
         };
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateSPSControllerSystemTypeRequest": {
+            base_version?: number;
+            document_name?: string;
+            number?: number;
+        };
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateStateTextRequest": {
             ref_number?: number;
             state_text1?: string;
@@ -11100,6 +11877,11 @@ export type components = {
             name?: string;
             number_max?: number;
             number_min?: number;
+        };
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateUnitRequest": {
+            code?: string;
+            name?: string;
+            symbol?: string;
         };
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ValidateBuildingRequest": {
             building_group?: number;

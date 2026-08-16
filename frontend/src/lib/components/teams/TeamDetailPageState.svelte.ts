@@ -7,6 +7,8 @@ import {
 } from '$lib/infrastructure/api/teamRepository.js';
 import { userRepository, type User } from '$lib/infrastructure/api/userRepository.js';
 import { confirm } from '$lib/stores/confirm-dialog.js';
+import { auth } from '$lib/stores/auth.svelte.js';
+import { canPerform } from '$lib/utils/permissions.js';
 
 export class TeamDetailPageState {
   team = $state<Team | null>(null);
@@ -19,6 +21,10 @@ export class TeamDetailPageState {
   addMemberSearch = $state('');
   addMemberResults = $state<User[]>([]);
   addMemberLoading = $state(false);
+  editOpen = $state(false);
+  editBusy = $state(false);
+  editName = $state('');
+  editDescription = $state('');
 
   private debounceTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -34,6 +40,14 @@ export class TeamDetailPageState {
 
   memberUserIds(): Set<string> {
     return new Set(this.members.map((member) => member.user_id));
+  }
+
+  canUpdateTeam(): boolean {
+    if (canPerform('update', 'team')) return true;
+
+    const currentUserId = auth.user?.id;
+    const memberRole = this.members.find((member) => member.user_id === currentUserId)?.role;
+    return memberRole === 'owner' || memberRole === 'manager';
   }
 
   async load(): Promise<void> {
@@ -83,7 +97,7 @@ export class TeamDetailPageState {
   }
 
   async handleAddMember(userId: string): Promise<void> {
-    if (!this.teamId) return;
+    if (!this.teamId || !this.canUpdateTeam()) return;
     this.busy = true;
     try {
       await teamRepository.addMember(this.teamId, { user_id: userId, role: 'member' });
@@ -102,8 +116,39 @@ export class TeamDetailPageState {
     }
   }
 
+  openEdit(): void {
+    if (!this.team || !this.canUpdateTeam()) return;
+
+    this.editName = this.team.name;
+    this.editDescription = this.team.description ?? '';
+    this.editOpen = true;
+  }
+
+  canSubmitEdit(): boolean {
+    return this.editName.trim().length > 0 && !this.editBusy;
+  }
+
+  async submitEdit(): Promise<void> {
+    if (!this.teamId || !this.canUpdateTeam() || !this.canSubmitEdit()) return;
+
+    this.editBusy = true;
+    try {
+      const team = await teamRepository.update(this.teamId, {
+        name: this.editName.trim(),
+        description: this.editDescription.trim() || null
+      });
+      this.team = team;
+      this.editOpen = false;
+      addToast(translate('messages.team_updated'), 'success');
+    } catch (error) {
+      addToast(error instanceof Error ? error.message : translate('errors.unknown_error'), 'error');
+    } finally {
+      this.editBusy = false;
+    }
+  }
+
   async changeRole(userId: string, role: 'member' | 'manager' | 'owner'): Promise<void> {
-    if (!this.teamId) return;
+    if (!this.teamId || !this.canUpdateTeam()) return;
     this.busy = true;
     try {
       await teamRepository.addMember(this.teamId, { user_id: userId, role });
@@ -120,7 +165,7 @@ export class TeamDetailPageState {
   }
 
   async remove(userId: string): Promise<void> {
-    if (!this.teamId) return;
+    if (!this.teamId || !this.canUpdateTeam()) return;
     const user = this.userById(userId);
     const ok = await confirm({
       title: translate('teams.confirm.remove_title'),

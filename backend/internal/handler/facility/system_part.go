@@ -289,6 +289,8 @@ func (h *SystemPartHandler) UpdateSystemPart(c *gin.Context) {
 // @Param id path string true "System Part ID"
 // @Success 204
 // @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 409 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/facility/system-parts/{id} [delete]
 func (h *SystemPartHandler) DeleteSystemPart(c *gin.Context) {
@@ -300,6 +302,7 @@ func (h *SystemPartHandler) DeleteSystemPart(c *gin.Context) {
 	if err := h.service.DeleteByID(c.Request.Context(), id); err != nil {
 		respondLocalizedDomainError(c, err, "deletion_failed", "facility.deletion_failed",
 			localizedNotFound("facility.system_part_not_found"),
+			localizedReferenceInUse(),
 			localizedBacnetReferenceInUse(),
 		)
 		return

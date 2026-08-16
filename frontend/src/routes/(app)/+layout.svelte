@@ -33,6 +33,7 @@
     initAppearance(data.user?.id ?? null);
     copyOperation.initialize(data.user?.id);
     facilityReferenceDataCache.start({
+      currentUserId: data.user?.id,
       refreshReferenceData:
         hasUserPermission(data.user, 'apparat.read') &&
         hasUserPermission(data.user, 'systempart.read')

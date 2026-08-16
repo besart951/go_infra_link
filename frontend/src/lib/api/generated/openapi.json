@@ -1398,6 +1398,240 @@
         }
       }
     },
+    "/api/v1/facility/alarm-fields": {
+      "get": {
+        "tags": [
+          "facility-alarm-fields"
+        ],
+        "summary": "List alarm fields",
+        "parameters": [
+          {
+            "description": "Page number",
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "description": "Items per page",
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            }
+          },
+          {
+            "description": "Search query",
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmFieldListResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "facility-alarm-fields"
+        ],
+        "summary": "Create an alarm field",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateAlarmFieldRequest"
+              }
+            }
+          },
+          "description": "Alarm field data",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmFieldResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/facility/alarm-fields/{id}": {
+      "get": {
+        "tags": [
+          "facility-alarm-fields"
+        ],
+        "summary": "Get an alarm field",
+        "parameters": [
+          {
+            "description": "Alarm Field ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmFieldResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "facility-alarm-fields"
+        ],
+        "summary": "Update an alarm field",
+        "parameters": [
+          {
+            "description": "Alarm Field ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateAlarmFieldRequest"
+              }
+            }
+          },
+          "description": "Alarm field data",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmFieldResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "facility-alarm-fields"
+        ],
+        "summary": "Delete an alarm field",
+        "parameters": [
+          {
+            "description": "Alarm Field ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
+    "/api/v1/facility/alarm-type-fields/{id}": {
+      "put": {
+        "tags": [
+          "facility-alarm-types"
+        ],
+        "summary": "Update an alarm type field mapping",
+        "parameters": [
+          {
+            "description": "Alarm Type Field ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateAlarmTypeFieldRequest"
+              }
+            }
+          },
+          "description": "Alarm type field data",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmTypeFieldResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "facility-alarm-types"
+        ],
+        "summary": "Delete an alarm type field mapping",
+        "parameters": [
+          {
+            "description": "Alarm Type Field ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
     "/api/v1/facility/alarm-types": {
       "get": {
         "tags": [
@@ -1433,6 +1667,128 @@
           }
         ],
         "responses": {}
+      },
+      "post": {
+        "tags": [
+          "facility-alarm-types"
+        ],
+        "summary": "Create an alarm type",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateAlarmTypeRequest"
+              }
+            }
+          },
+          "description": "Alarm type data",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmTypeResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/facility/alarm-types/{id}": {
+      "get": {
+        "tags": [
+          "facility-alarm-types"
+        ],
+        "summary": "Get an alarm type",
+        "parameters": [
+          {
+            "description": "Alarm Type ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmTypeResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "facility-alarm-types"
+        ],
+        "summary": "Update an alarm type",
+        "parameters": [
+          {
+            "description": "Alarm Type ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateAlarmTypeRequest"
+              }
+            }
+          },
+          "description": "Alarm type data",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmTypeResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "facility-alarm-types"
+        ],
+        "summary": "Delete an alarm type",
+        "parameters": [
+          {
+            "description": "Alarm Type ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
       }
     },
     "/api/v1/facility/alarm-types/{id}/fields": {
@@ -1452,7 +1808,228 @@
             }
           }
         ],
-        "responses": {}
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmTypeResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "facility-alarm-types"
+        ],
+        "summary": "Add a field to an alarm type",
+        "parameters": [
+          {
+            "description": "Alarm Type ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateAlarmTypeFieldRequest"
+              }
+            }
+          },
+          "description": "Alarm type field data",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmTypeFieldResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/facility/alarm-units": {
+      "get": {
+        "tags": [
+          "facility-alarm-units"
+        ],
+        "summary": "List alarm units",
+        "parameters": [
+          {
+            "description": "Page number",
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "description": "Items per page",
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            }
+          },
+          {
+            "description": "Search query",
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UnitListResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "facility-alarm-units"
+        ],
+        "summary": "Create an alarm unit",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateUnitRequest"
+              }
+            }
+          },
+          "description": "Unit data",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UnitResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/facility/alarm-units/{id}": {
+      "get": {
+        "tags": [
+          "facility-alarm-units"
+        ],
+        "summary": "Get an alarm unit",
+        "parameters": [
+          {
+            "description": "Unit ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UnitResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "facility-alarm-units"
+        ],
+        "summary": "Update an alarm unit",
+        "parameters": [
+          {
+            "description": "Unit ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateUnitRequest"
+              }
+            }
+          },
+          "description": "Unit data",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UnitResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "facility-alarm-units"
+        ],
+        "summary": "Delete an alarm unit",
+        "parameters": [
+          {
+            "description": "Unit ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
       }
     },
     "/api/v1/facility/apparats": {
@@ -1791,6 +2368,26 @@
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
             "content": {
               "application/json": {
                 "schema": {
@@ -3100,6 +3697,81 @@
           },
           "404": {
             "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/facility/delete-impacts": {
+      "get": {
+        "tags": [
+          "facility-delete-impacts"
+        ],
+        "summary": "Preview blocking facility references before deletion",
+        "parameters": [
+          {
+            "description": "Reference resource (apparat or system_part)",
+            "name": "resource",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Reference IDs",
+            "name": "ids",
+            "in": "query",
+            "required": true,
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.DeleteImpactListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
@@ -4541,7 +5213,7 @@
     },
     "/api/v1/facility/reference-data/stream": {
       "get": {
-        "description": "Upgrades the authenticated request to the shared facility WebSocket. `facility_reference_data.changed` tells authorized clients to refresh cached apparats and system parts. User-scoped `facility.copy_job.progress` events contain a copy job ID, status, stage and 0-100 progress; they are only delivered to the user that started the job.",
+        "description": "Upgrades the authenticated request to the shared facility WebSocket. `facility_reference_data.changed` tells authorized clients to refresh cached apparats and system parts. `facility.changed` carries authorized facility resource changes with an action, IDs, actor and timestamp. User-scoped `facility.copy_job.progress` events contain a copy job ID, status, stage and 0-100 progress; they are only delivered to the user that started the job.",
         "tags": [
           "facility-reference-data"
         ],
@@ -4697,6 +5369,86 @@
           },
           "404": {
             "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/internal_handler_facility.ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/internal_handler_facility.ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "facility-sps-controller-system-types"
+        ],
+        "summary": "Update an SPS controller system type",
+        "parameters": [
+          {
+            "description": "SPS Controller System Type ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateSPSControllerSystemTypeRequest"
+              }
+            }
+          },
+          "description": "SPS controller system type data",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/internal_handler_facility.SPSControllerSystemTypeResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/internal_handler_facility.ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/internal_handler_facility.ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
             "content": {
               "application/json": {
                 "schema": {
@@ -5300,6 +6052,16 @@
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
             "content": {
               "application/json": {
                 "schema": {
@@ -5985,6 +6747,26 @@
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
             "content": {
               "application/json": {
                 "schema": {
@@ -11094,6 +11876,26 @@
           }
         }
       },
+      "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmFieldListResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmFieldResponse"
+            }
+          },
+          "page": {
+            "type": "integer"
+          },
+          "total": {
+            "type": "integer"
+          },
+          "total_pages": {
+            "type": "integer"
+          }
+        }
+      },
       "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmFieldResponse": {
         "type": "object",
         "properties": {
@@ -11937,6 +12739,83 @@
           }
         }
       },
+      "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateAlarmFieldRequest": {
+        "type": "object",
+        "required": [
+          "data_type",
+          "key",
+          "label"
+        ],
+        "properties": {
+          "data_type": {
+            "type": "string",
+            "maxLength": 30
+          },
+          "default_unit_code": {
+            "type": "string",
+            "maxLength": 30
+          },
+          "key": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 150
+          }
+        }
+      },
+      "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateAlarmTypeFieldRequest": {
+        "type": "object",
+        "required": [
+          "alarm_field_id"
+        ],
+        "properties": {
+          "alarm_field_id": {
+            "type": "string"
+          },
+          "default_unit_id": {
+            "type": "string"
+          },
+          "default_value_json": {
+            "type": "string"
+          },
+          "display_order": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "is_required": {
+            "type": "boolean"
+          },
+          "is_user_editable": {
+            "type": "boolean"
+          },
+          "ui_group": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "validation_json": {
+            "type": "string"
+          }
+        }
+      },
+      "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateAlarmTypeRequest": {
+        "type": "object",
+        "required": [
+          "code",
+          "name"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 120
+          }
+        }
+      },
       "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateApparatRequest": {
         "type": "object",
         "required": [
@@ -12377,6 +13256,67 @@
           },
           "number_min": {
             "type": "integer"
+          }
+        }
+      },
+      "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateUnitRequest": {
+        "type": "object",
+        "required": [
+          "code",
+          "name",
+          "symbol"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "maxLength": 30
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "symbol": {
+            "type": "string",
+            "maxLength": 20
+          }
+        }
+      },
+      "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.DeleteImpactBlockerResponse": {
+        "type": "object",
+        "properties": {
+          "count": {
+            "type": "integer"
+          },
+          "resource": {
+            "type": "string"
+          }
+        }
+      },
+      "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.DeleteImpactListResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.DeleteImpactResponse"
+            }
+          }
+        }
+      },
+      "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.DeleteImpactResponse": {
+        "type": "object",
+        "properties": {
+          "blockers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.DeleteImpactBlockerResponse"
+            }
+          },
+          "id": {
+            "type": "string"
+          },
+          "resource": {
+            "type": "string"
           }
         }
       },
@@ -13179,6 +14119,26 @@
           }
         }
       },
+      "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UnitListResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UnitResponse"
+            }
+          },
+          "page": {
+            "type": "integer"
+          },
+          "total": {
+            "type": "integer"
+          },
+          "total_pages": {
+            "type": "integer"
+          }
+        }
+      },
       "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UnitResponse": {
         "type": "object",
         "properties": {
@@ -13207,6 +14167,64 @@
           },
           "name": {
             "type": "string"
+          }
+        }
+      },
+      "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateAlarmFieldRequest": {
+        "type": "object",
+        "properties": {
+          "data_type": {
+            "type": "string",
+            "maxLength": 30
+          },
+          "default_unit_code": {
+            "type": "string",
+            "maxLength": 30
+          },
+          "key": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 150
+          }
+        }
+      },
+      "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateAlarmTypeFieldRequest": {
+        "type": "object",
+        "properties": {
+          "default_unit_id": {
+            "type": "string"
+          },
+          "default_value_json": {
+            "type": "string"
+          },
+          "display_order": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "is_required": {
+            "type": "boolean"
+          },
+          "is_user_editable": {
+            "type": "boolean"
+          },
+          "ui_group": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "validation_json": {
+            "type": "string"
+          }
+        }
+      },
+      "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateAlarmTypeRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 120
           }
         }
       },
@@ -13525,6 +14543,23 @@
           }
         }
       },
+      "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateSPSControllerSystemTypeRequest": {
+        "type": "object",
+        "properties": {
+          "base_version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "document_name": {
+            "type": "string",
+            "maxLength": 250
+          },
+          "number": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      },
       "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateStateTextRequest": {
         "type": "object",
         "properties": {
@@ -13611,6 +14646,23 @@
           },
           "number_min": {
             "type": "integer"
+          }
+        }
+      },
+      "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateUnitRequest": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "maxLength": 30
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "symbol": {
+            "type": "string",
+            "maxLength": 20
           }
         }
       },

@@ -277,7 +277,7 @@ func newTestApparatService(
 	if objectDataReader == nil {
 		objectDataReader = &apparatServiceObjectDataReaderFake{}
 	}
-	return NewApparatService(repo, systemPartReader, objectDataReader)
+	return NewApparatService(repo, systemPartReader, objectDataReader, nil)
 }
 
 type apparatServiceRepoFake struct {

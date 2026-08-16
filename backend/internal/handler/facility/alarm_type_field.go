@@ -15,6 +15,15 @@ func NewAlarmTypeFieldHandler(service AlarmTypeFieldService) *AlarmTypeFieldHand
 	return &AlarmTypeFieldHandler{service: service}
 }
 
+// CreateAlarmTypeField godoc
+// @Summary Add a field to an alarm type
+// @Tags facility-alarm-types
+// @Accept json
+// @Produce json
+// @Param id path string true "Alarm Type ID"
+// @Param field body dto.CreateAlarmTypeFieldRequest true "Alarm type field data"
+// @Success 201 {object} dto.AlarmTypeFieldResponse
+// @Router /api/v1/facility/alarm-types/{id}/fields [post]
 func (h *AlarmTypeFieldHandler) CreateAlarmTypeField(c *gin.Context) {
 	alarmTypeID, ok := parseUUIDParam(c, "id")
 	if !ok {
@@ -31,6 +40,15 @@ func (h *AlarmTypeFieldHandler) CreateAlarmTypeField(c *gin.Context) {
 	c.JSON(http.StatusCreated, toAlarmTypeFieldResponse(*item))
 }
 
+// UpdateAlarmTypeField godoc
+// @Summary Update an alarm type field mapping
+// @Tags facility-alarm-types
+// @Accept json
+// @Produce json
+// @Param id path string true "Alarm Type Field ID"
+// @Param field body dto.UpdateAlarmTypeFieldRequest true "Alarm type field data"
+// @Success 200 {object} dto.AlarmTypeFieldResponse
+// @Router /api/v1/facility/alarm-type-fields/{id} [put]
 func (h *AlarmTypeFieldHandler) UpdateAlarmTypeField(c *gin.Context) {
 	id, ok := parseUUIDParam(c, "id")
 	if !ok {
@@ -56,6 +74,12 @@ func (h *AlarmTypeFieldHandler) UpdateAlarmTypeField(c *gin.Context) {
 	c.JSON(http.StatusOK, toAlarmTypeFieldResponse(*item))
 }
 
+// DeleteAlarmTypeField godoc
+// @Summary Delete an alarm type field mapping
+// @Tags facility-alarm-types
+// @Param id path string true "Alarm Type Field ID"
+// @Success 204
+// @Router /api/v1/facility/alarm-type-fields/{id} [delete]
 func (h *AlarmTypeFieldHandler) DeleteAlarmTypeField(c *gin.Context) {
 	id, ok := parseUUIDParam(c, "id")
 	if !ok {

@@ -45,6 +45,7 @@ export class RolesPageState {
   permissions = $state<Permission[]>([]);
   phases = $state<Phase[]>([]);
   phasePermissions = $state<PhasePermission[]>([]);
+  phaseRulesLoaded = $state(false);
   isLoading = $state(true);
   error = $state<string | null>(null);
   activeTab = $state('roles');
@@ -74,9 +75,7 @@ export class RolesPageState {
   uniqueResources = $derived(
     new Set(this.permissions.map((permission) => permission.resource)).size
   );
-  canEditSelectedRole = $derived(
-    this.selectedRole ? this.canEditRole(this.selectedRole) : false
-  );
+  canEditSelectedRole = $derived(this.selectedRole ? this.canEditRole(this.selectedRole) : false);
 
   get currentUser(): User | null | undefined {
     return this.resolveUser();
@@ -89,12 +88,13 @@ export class RolesPageState {
   loadData = async (): Promise<void> => {
     this.isLoading = true;
     this.error = null;
+    const loadPhaseRules = this.canManagePhaseRules;
 
     try {
-      const phaseDataRequest = this.canManagePhaseRules
+      const phaseDataRequest = loadPhaseRules
         ? listPhases({ page: 1, limit: 100 })
         : Promise.resolve(emptyPhaseResponse());
-      const phasePermissionDataRequest = this.canManagePhaseRules
+      const phasePermissionDataRequest = loadPhaseRules
         ? listPhasePermissions()
         : Promise.resolve({ items: [] });
 
@@ -112,6 +112,9 @@ export class RolesPageState {
     } catch (err) {
       this.error = err instanceof Error ? err.message : translate('roles.errors.load_failed');
     } finally {
+      if (loadPhaseRules) {
+        this.phaseRulesLoaded = true;
+      }
       this.isLoading = false;
     }
   };

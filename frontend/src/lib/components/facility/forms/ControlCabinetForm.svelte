@@ -19,7 +19,7 @@
     onCancel?: () => void;
   }
 
-  let { initialData, projectId, onSuccess, onCancel }: Props = $props();
+  let { initialData, onSuccess, onCancel }: Props = $props();
 
   const t = createTranslator();
 
@@ -75,17 +75,14 @@
     try {
       if (initialData) {
         const res = await manageControlCabinet.update(initialData.id, {
-          id: initialData.id,
           control_cabinet_nr,
-          building_id,
-          project_id: projectId || undefined
+          building_id
         });
         onSuccess?.(res);
       } else {
         const res = await manageControlCabinet.create({
           control_cabinet_nr,
-          building_id,
-          project_id: projectId || undefined
+          building_id
         });
         onSuccess?.(res);
       }

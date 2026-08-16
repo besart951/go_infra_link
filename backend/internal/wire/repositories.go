@@ -81,6 +81,7 @@ type Repositories struct {
 	FacilityAlarmTypeFields         domainFacility.AlarmTypeFieldRepository
 	FacilityBacnetObjectAlarmValues domainFacility.BacnetObjectAlarmValueRepository
 	FacilityBacnetReferenceUsages   domainFacility.BacnetReferenceUsageRepository
+	FacilityDeleteImpacts           domainFacility.DeleteImpactRepository
 }
 
 type HistoryRepository interface {
@@ -133,6 +134,7 @@ type (
 		FacilityAlarmTypeFields          domainFacility.AlarmTypeFieldRepository
 		FacilityBacnetObjectAlarmValues  domainFacility.BacnetObjectAlarmValueRepository
 		FacilityBacnetReferenceUsages    domainFacility.BacnetReferenceUsageRepository
+		FacilityDeleteImpacts            domainFacility.DeleteImpactRepository
 	}
 
 	notificationRepositoryGroup struct {
@@ -233,6 +235,7 @@ func newFacilityRepositories(gormDB *gorm.DB, history *historyrepo.Store) facili
 		FacilityAlarmTypeFields:          historycapture.WrapRepository("alarm_type_fields", facilityrepo.NewAlarmTypeFieldRepository(gormDB), history),
 		FacilityBacnetObjectAlarmValues:  historycapture.WrapBacnetObjectAlarmValue(facilityrepo.NewBacnetObjectAlarmValueRepository(gormDB), history),
 		FacilityBacnetReferenceUsages:    facilityrepo.NewBacnetReferenceUsageRepository(gormDB),
+		FacilityDeleteImpacts:            facilityrepo.NewDeleteImpactRepository(gormDB),
 	}
 }
 
@@ -305,6 +308,7 @@ func composeRepositories(
 		FacilityAlarmTypeFields:          facilities.FacilityAlarmTypeFields,
 		FacilityBacnetObjectAlarmValues:  facilities.FacilityBacnetObjectAlarmValues,
 		FacilityBacnetReferenceUsages:    facilities.FacilityBacnetReferenceUsages,
+		FacilityDeleteImpacts:            facilities.FacilityDeleteImpacts,
 	}
 }
 

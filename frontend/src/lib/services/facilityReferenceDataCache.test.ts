@@ -1,4 +1,7 @@
-import { FacilityReferenceDataCache } from './facilityReferenceDataCache.js';
+import {
+  FacilityReferenceDataCache,
+  type FacilityChangeEvent
+} from './facilityReferenceDataCache.js';
 import type { Apparat, FieldDeviceOptions, SystemPart } from '$lib/domain/facility/index.js';
 
 const systemPart: SystemPart = {
@@ -79,7 +82,7 @@ describe('FacilityReferenceDataCache', () => {
     );
 
     await cache.load();
-    cache.stop();
+    cache.stop({ immediate: true });
     await cache.load();
 
     expect(apparats.list).toHaveBeenCalledTimes(2);
@@ -106,8 +109,34 @@ describe('FacilityReferenceDataCache', () => {
       systemParts: [systemPart]
     });
 
-    cache.stop();
+    cache.stop({ immediate: true });
     expect(stream.disconnect).toHaveBeenCalledOnce();
+  });
+
+  it('keeps the shared stream and cache during a transient authenticated-layout handover', async () => {
+    vi.useFakeTimers();
+    try {
+      const apparats = repository(() => [apparat]);
+      const systemParts = repository(() => [systemPart]);
+      const fieldDevices = { getOptions: vi.fn().mockResolvedValue(options()) };
+      const stream = { connect: vi.fn(), disconnect: vi.fn() };
+      const cache = new FacilityReferenceDataCache(
+        { apparats, systemParts, fieldDevices },
+        { createStream: () => stream, stopGraceMs: 100 }
+      );
+
+      cache.start();
+      await cache.load();
+      cache.stop();
+      cache.start();
+      await vi.advanceTimersByTimeAsync(100);
+      await cache.load();
+
+      expect(stream.disconnect).not.toHaveBeenCalled();
+      expect(apparats.list).toHaveBeenCalledOnce();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('keeps the realtime stream open for copy progress without fetching unauthorized reference data', () => {
@@ -160,5 +189,65 @@ describe('FacilityReferenceDataCache', () => {
       expect(updates).toHaveLength(2);
     });
     expect(updates[1]).toEqual([{ ...updatedApparat, system_parts: [updatedSystemPart] }]);
+  });
+
+  it('forwards resource-scoped facility changes from the shared realtime stream', () => {
+    const apparats = repository(() => [apparat]);
+    const systemParts = repository(() => [systemPart]);
+    const fieldDevices = { getOptions: vi.fn().mockResolvedValue(options()) };
+    let notifyFacilityChange: ((event: FacilityChangeEvent) => void) | undefined;
+    const cache = new FacilityReferenceDataCache(
+      { apparats, systemParts, fieldDevices },
+      {
+        createStream: (_onChange, _onCopyJobProgress, _onOpen, onFacilityChange) => {
+          notifyFacilityChange = onFacilityChange;
+          return { connect: vi.fn(), disconnect: vi.fn() };
+        }
+      }
+    );
+    const events: FacilityChangeEvent[] = [];
+    cache.subscribeFacilityChanges((event) => events.push(event));
+
+    const change: FacilityChangeEvent = {
+      type: 'facility.changed',
+      resource: 'field_devices',
+      action: 'bulk_updated',
+      ids: ['3fa85f64-5717-4562-b3fc-2c963f66afa6'],
+      at: '2026-08-15T00:00:00Z'
+    };
+    notifyFacilityChange?.(change);
+
+    expect(events).toEqual([change]);
+  });
+
+  it('identifies events from the current user without suppressing other users', () => {
+    const apparats = repository(() => [apparat]);
+    const systemParts = repository(() => [systemPart]);
+    const fieldDevices = { getOptions: vi.fn().mockResolvedValue(options()) };
+    const cache = new FacilityReferenceDataCache(
+      { apparats, systemParts, fieldDevices },
+      { createStream: () => ({ connect: vi.fn(), disconnect: vi.fn() }) }
+    );
+    const ownChange: FacilityChangeEvent = {
+      type: 'facility.changed',
+      resource: 'sps_controllers',
+      action: 'updated',
+      ids: ['3fa85f64-5717-4562-b3fc-2c963f66afa6'],
+      actor_id: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+      at: '2026-08-16T00:00:00Z'
+    };
+
+    cache.start({ currentUserId: ownChange.actor_id });
+
+    expect(cache.isChangeFromCurrentUser(ownChange)).toBe(true);
+    expect(
+      cache.isChangeFromCurrentUser({
+        ...ownChange,
+        actor_id: '550e8400-e29b-41d4-a716-446655440000'
+      })
+    ).toBe(false);
+
+    cache.stop({ immediate: true });
+    expect(cache.isChangeFromCurrentUser(ownChange)).toBe(false);
   });
 });

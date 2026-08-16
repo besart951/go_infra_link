@@ -157,7 +157,8 @@ func (r *fakeFieldDeviceStore) GetUsedApparatNumbers(
 }
 
 type fakeSpecificationStore struct {
-	items map[uuid.UUID]*domainFacility.Specification
+	items                    map[uuid.UUID]*domainFacility.Specification
+	deleteByFieldDeviceCalls int
 }
 
 func (r *fakeSpecificationStore) GetByIds(_ context.Context, ids []uuid.UUID) ([]*domainFacility.Specification, error) {
@@ -237,6 +238,7 @@ func (r *fakeSpecificationStore) GetByFieldDeviceIDs(_ context.Context, fieldDev
 }
 
 func (r *fakeSpecificationStore) DeleteByFieldDeviceIDs(_ context.Context, fieldDeviceIDs []uuid.UUID) error {
+	r.deleteByFieldDeviceCalls++
 	set := make(map[uuid.UUID]struct{}, len(fieldDeviceIDs))
 	for _, id := range fieldDeviceIDs {
 		set[id] = struct{}{}
@@ -811,6 +813,57 @@ func TestFieldDeviceService_DeleteByIDs_UsesSingleRepositoryDelete(t *testing.T)
 	}
 	if len(fieldDeviceRepo.items) != 0 {
 		t.Fatalf("expected all field devices to be deleted, got %d remaining", len(fieldDeviceRepo.items))
+	}
+}
+
+func TestFieldDeviceService_DeleteByIDs_DeletesOwnedBacnetObjectsAndSpecifications(t *testing.T) {
+	fieldDeviceID := uuid.New()
+	apparatID := uuid.New()
+	systemPartID := uuid.New()
+	spsSystemTypeID := uuid.New()
+	specificationID := uuid.New()
+	bacnetObjectID := uuid.New()
+
+	fieldDeviceRepo := &fakeFieldDeviceStore{items: map[uuid.UUID]*domainFacility.FieldDevice{
+		fieldDeviceID: newFieldDevice(fieldDeviceID, spsSystemTypeID, apparatID, systemPartID, 1),
+	}}
+	specificationRepo := &fakeSpecificationStore{items: map[uuid.UUID]*domainFacility.Specification{
+		specificationID: {
+			Base:          domain.Base{ID: specificationID},
+			FieldDeviceID: &fieldDeviceID,
+		},
+	}}
+	bacnetObjectRepo := &fakeBacnetObjectStore{items: map[uuid.UUID]*domainFacility.BacnetObject{
+		bacnetObjectID: {
+			Base:          domain.Base{ID: bacnetObjectID},
+			FieldDeviceID: &fieldDeviceID,
+		},
+	}}
+
+	svc := facility.NewFieldDeviceService(
+		fieldDeviceRepo,
+		nil,
+		nil,
+		nil,
+		nil,
+		specificationRepo,
+		bacnetObjectRepo,
+		nil,
+		nil,
+		nil,
+	)
+
+	if err := svc.DeleteByIDs(context.Background(), []uuid.UUID{fieldDeviceID}); err != nil {
+		t.Fatalf("expected delete to succeed, got %v", err)
+	}
+	if bacnetObjectRepo.deleteByFieldDeviceCalls != 1 {
+		t.Fatalf("expected owned BACnet objects to be deleted once, got %d calls", bacnetObjectRepo.deleteByFieldDeviceCalls)
+	}
+	if specificationRepo.deleteByFieldDeviceCalls != 1 {
+		t.Fatalf("expected owned specifications to be deleted once, got %d calls", specificationRepo.deleteByFieldDeviceCalls)
+	}
+	if len(bacnetObjectRepo.items) != 0 || len(specificationRepo.items) != 0 || len(fieldDeviceRepo.items) != 0 {
+		t.Fatalf("expected all owned records to be deleted, got bacnet=%d specifications=%d field_devices=%d", len(bacnetObjectRepo.items), len(specificationRepo.items), len(fieldDeviceRepo.items))
 	}
 }
 

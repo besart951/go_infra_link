@@ -256,7 +256,25 @@ func (s *SPSControllerService) UpdateWithSystemTypes(ctx context.Context, spsCon
 }
 
 func (s *SPSControllerService) DeleteByID(ctx context.Context, id uuid.UUID) error {
-	return s.repo.DeleteByIds(ctx, []uuid.UUID{id})
+	return s.transaction().run(ctx, func(txCtx context.Context, txService *SPSControllerService) error {
+		systemTypeIDs, err := txService.spsControllerSystemTyper.GetIDsBySPSControllerIDs(txCtx, []uuid.UUID{id})
+		if err != nil {
+			return err
+		}
+
+		fieldDeviceIDs, err := txService.fieldDeviceRepo.GetIDsBySPSControllerSystemTypeIDs(txCtx, systemTypeIDs)
+		if err != nil {
+			return err
+		}
+		if len(fieldDeviceIDs) > 0 {
+			return domainFacility.ErrReferenceInUse
+		}
+
+		if err := txService.spsControllerSystemTyper.DeleteBySPSControllerIDs(txCtx, []uuid.UUID{id}); err != nil {
+			return err
+		}
+		return txService.repo.DeleteByIds(txCtx, []uuid.UUID{id})
+	})
 }
 func (s *SPSControllerService) ensureControlCabinetExists(ctx context.Context, controlCabinetID uuid.UUID) error {
 	return validateChecks(referenceFieldExists(ctx, s.controlCabinetRepo, controlCabinetID, spsControllerControlCabinetField))

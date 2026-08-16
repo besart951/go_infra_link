@@ -5,6 +5,7 @@ import {
   expectNoConcurrentSockets,
   login,
   observeWebSockets,
+  e2eUsers,
   test,
   uniqueName
 } from './fixtures';
@@ -19,11 +20,11 @@ test.describe('project activity realtime', () => {
     const projectID = await createProject(editorPage, projectName);
 
     const { page: viewerPage } = await createContext();
-    const viewerSockets = observeWebSockets(viewerPage);
-    await login(viewerPage);
+    const viewerSockets = await observeWebSockets(viewerPage);
+    await login(viewerPage, e2eUsers.collaborator);
     await viewerPage.goto(`/projects/${projectID}`);
     await expectActiveSocketCount(viewerSockets, `/api/v1/projects/${projectID}/collaboration`, 1);
-    expectNoConcurrentSockets(viewerSockets, `/api/v1/projects/${projectID}/collaboration`);
+    await expectNoConcurrentSockets(viewerSockets, `/api/v1/projects/${projectID}/collaboration`);
     await viewerPage.getByLabel('Verlauf', { exact: true }).click();
     await expect(viewerPage.getByRole('dialog')).toContainText('Projektverlauf');
 

@@ -213,4 +213,53 @@ describe('AlarmCatalogState', () => {
       'error'
     );
   });
+
+  it('updates existing catalog entries instead of creating duplicates', async () => {
+    const { state, fieldRepository, type1, typeRepository, unitRepository } = createState();
+
+    state.editUnit(unit);
+    state.unitForm.name = 'Celsius updated';
+    await state.createUnit();
+    expect(unitRepository.update).toHaveBeenCalledWith(unit.id, {
+      code: 'C',
+      symbol: '°C',
+      name: 'Celsius updated'
+    });
+    expect(unitRepository.create).not.toHaveBeenCalled();
+
+    state.editField(field);
+    state.fieldForm.label = 'Temperature updated';
+    await state.createField();
+    expect(fieldRepository.update).toHaveBeenCalledWith(field.id, {
+      key: 'temperature',
+      label: 'Temperature updated',
+      data_type: 'number',
+      default_unit_code: 'C'
+    });
+
+    state.editType(type1);
+    state.typeForm.name = 'Type updated';
+    await state.createType();
+    expect(typeRepository.update).toHaveBeenCalledWith(type1.id, { name: 'Type updated' });
+  });
+
+  it('updates an existing mapping without allowing its alarm field to change', async () => {
+    const { state, typeRepository } = createState();
+    state.selectedTypeId = 'type-1';
+    const existing = mapping('mapping-1', 'type-1');
+    state.editMapping(existing);
+    state.mapForm.display_order = 7;
+    state.mapForm.ui_group = 'limits';
+
+    await state.createMapping();
+
+    expect(typeRepository.updateField).toHaveBeenCalledWith('mapping-1', {
+      display_order: 7,
+      is_required: true,
+      is_user_editable: true,
+      ui_group: 'limits',
+      default_unit_id: undefined
+    });
+    expect(typeRepository.createField).not.toHaveBeenCalled();
+  });
 });

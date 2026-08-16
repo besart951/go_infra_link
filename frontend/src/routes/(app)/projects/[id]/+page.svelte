@@ -512,7 +512,12 @@
       {#if canOpenProjectSettings}
         <Tooltip.Root>
           <Tooltip.Trigger>
-            <Button variant="ghost" href={`/projects/${projectId}/settings`} size="icon">
+            <Button
+              variant="ghost"
+              href={`/projects/${projectId}/settings`}
+              size="icon"
+              aria-label={$t('projects.detail.settings')}
+            >
               <Settings />
             </Button>
           </Tooltip.Trigger>

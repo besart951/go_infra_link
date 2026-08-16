@@ -2,6 +2,8 @@
   import { onMount } from 'svelte';
   import { page } from '$app/stores';
   import { Button } from '$lib/components/ui/button/index.js';
+  import { Input } from '$lib/components/ui/input/index.js';
+  import * as Dialog from '$lib/components/ui/dialog/index.js';
   import StaticCombobox from '$lib/components/ui/combobox/StaticCombobox.svelte';
   import * as Table from '$lib/components/ui/table/index.js';
   import * as Popover from '$lib/components/ui/popover/index.js';
@@ -9,7 +11,7 @@
   import ConfirmDialog from '$lib/components/confirm-dialog.svelte';
   import EntityListHeader from '$lib/components/layout/EntityListHeader.svelte';
   import UserAvatar from '$lib/components/user-avatar.svelte';
-  import { UserMinus, UserPlus } from '@lucide/svelte';
+  import { Pencil, UserMinus, UserPlus } from '@lucide/svelte';
   import { createTranslator } from '$lib/i18n/translator.js';
   import { TeamDetailPageState } from '$lib/components/teams/TeamDetailPageState.svelte.js';
 
@@ -50,52 +52,65 @@
     backHref="/teams"
     backLabel={$t('common.back')}
   >
-    <Popover.Root bind:open={state.addMemberOpen}>
-      <Popover.Trigger>
-        {#snippet child({ props })}
-          <Button
-            {...props}
-            size="icon"
-            class="bg-primary text-primary-foreground shadow-xs hover:bg-primary/90"
-            aria-label={$t('teams.detail.add_member')}
-          >
-            <UserPlus class="h-4 w-4" />
-          </Button>
-        {/snippet}
-      </Popover.Trigger>
-      <Popover.Content class="w-72 p-0" align="end">
-        <Command.Root shouldFilter={false}>
-          <Command.Input
-            placeholder={$t('teams.detail.search_users_placeholder')}
-            bind:value={state.addMemberSearch}
-          />
-          <Command.List>
-            <Command.Empty>
-              {state.addMemberLoading
-                ? $t('teams.detail.searching')
-                : $t('teams.detail.no_users_found')}
-            </Command.Empty>
-            <Command.Group>
-              {#each state.addMemberResults as user (user.id)}
-                <Command.Item value={user.id} onSelect={() => state.handleAddMember(user.id)}>
-                  <div class="flex items-center gap-2">
-                    <UserAvatar
-                      firstName={user.first_name}
-                      lastName={user.last_name}
-                      class="h-6 w-6"
-                    />
-                    <div class="flex flex-col">
-                      <span class="text-sm">{user.first_name} {user.last_name}</span>
-                      <span class="text-xs text-muted-foreground">{user.email}</span>
+    {#if state.canUpdateTeam()}
+      <Button
+        variant="outline"
+        size="icon"
+        aria-label={$t('common.edit')}
+        onclick={() => state.openEdit()}
+      >
+        <Pencil class="h-4 w-4" />
+      </Button>
+    {/if}
+
+    {#if state.canUpdateTeam()}
+      <Popover.Root bind:open={state.addMemberOpen}>
+        <Popover.Trigger>
+          {#snippet child({ props })}
+            <Button
+              {...props}
+              size="icon"
+              class="bg-primary text-primary-foreground shadow-xs hover:bg-primary/90"
+              aria-label={$t('teams.detail.add_member')}
+            >
+              <UserPlus class="h-4 w-4" />
+            </Button>
+          {/snippet}
+        </Popover.Trigger>
+        <Popover.Content class="w-72 p-0" align="end">
+          <Command.Root shouldFilter={false}>
+            <Command.Input
+              placeholder={$t('teams.detail.search_users_placeholder')}
+              bind:value={state.addMemberSearch}
+            />
+            <Command.List>
+              <Command.Empty>
+                {state.addMemberLoading
+                  ? $t('teams.detail.searching')
+                  : $t('teams.detail.no_users_found')}
+              </Command.Empty>
+              <Command.Group>
+                {#each state.addMemberResults as user (user.id)}
+                  <Command.Item value={user.id} onSelect={() => state.handleAddMember(user.id)}>
+                    <div class="flex items-center gap-2">
+                      <UserAvatar
+                        firstName={user.first_name}
+                        lastName={user.last_name}
+                        class="h-6 w-6"
+                      />
+                      <div class="flex flex-col">
+                        <span class="text-sm">{user.first_name} {user.last_name}</span>
+                        <span class="text-xs text-muted-foreground">{user.email}</span>
+                      </div>
                     </div>
-                  </div>
-                </Command.Item>
-              {/each}
-            </Command.Group>
-          </Command.List>
-        </Command.Root>
-      </Popover.Content>
-    </Popover.Root>
+                  </Command.Item>
+                {/each}
+              </Command.Group>
+            </Command.List>
+          </Command.Root>
+        </Popover.Content>
+      </Popover.Root>
+    {/if}
   </EntityListHeader>
 
   {#if state.team?.description}
@@ -159,30 +174,36 @@
                 {/if}
               </Table.Cell>
               <Table.Cell>
-                <StaticCombobox
-                  items={roleOptions}
-                  value={m.role}
-                  labelKey="label"
-                  width="h-8 w-32 px-2"
-                  popupWidth="w-40"
-                  searchPlaceholder={$t('teams.detail.search_roles_placeholder')}
-                  emptyText={$t('teams.detail.no_roles_found')}
-                  disabled={state.busy}
-                  onValueChange={(role) => {
-                    if (role === m.role) return;
-                    void state.changeRole(m.user_id, role as TeamRole);
-                  }}
-                />
+                {#if state.canUpdateTeam()}
+                  <StaticCombobox
+                    items={roleOptions}
+                    value={m.role}
+                    labelKey="label"
+                    width="h-8 w-32 px-2"
+                    popupWidth="w-40"
+                    searchPlaceholder={$t('teams.detail.search_roles_placeholder')}
+                    emptyText={$t('teams.detail.no_roles_found')}
+                    disabled={state.busy}
+                    onValueChange={(role) => {
+                      if (role === m.role) return;
+                      void state.changeRole(m.user_id, role as TeamRole);
+                    }}
+                  />
+                {:else}
+                  <span class="text-sm text-muted-foreground">{m.role}</span>
+                {/if}
               </Table.Cell>
               <Table.Cell class="text-right">
-                <Button
-                  variant="outline"
-                  onclick={() => state.remove(m.user_id)}
-                  disabled={state.busy}
-                >
-                  <UserMinus class="mr-2 h-4 w-4" />
-                  {$t('teams.detail.remove_member')}
-                </Button>
+                {#if state.canUpdateTeam()}
+                  <Button
+                    variant="outline"
+                    onclick={() => state.remove(m.user_id)}
+                    disabled={state.busy}
+                  >
+                    <UserMinus class="mr-2 h-4 w-4" />
+                    {$t('teams.detail.remove_member')}
+                  </Button>
+                {/if}
               </Table.Cell>
             </Table.Row>
           {/each}
@@ -191,3 +212,48 @@
     </Table.Root>
   </div>
 </div>
+
+<Dialog.Root bind:open={state.editOpen}>
+  <Dialog.Content class="sm:max-w-xl">
+    <Dialog.Header>
+      <Dialog.Title>{$t('common.edit')} {$t('team.team')}</Dialog.Title>
+      <Dialog.Description>{$t('teams.detail.description')}</Dialog.Description>
+    </Dialog.Header>
+
+    <form
+      class="grid gap-4"
+      onsubmit={(event) => {
+        event.preventDefault();
+        void state.submitEdit();
+      }}
+    >
+      <div class="grid gap-2">
+        <label class="text-sm font-medium" for="team_edit_name">{$t('common.name')}</label>
+        <Input id="team_edit_name" bind:value={state.editName} disabled={state.editBusy} />
+      </div>
+      <div class="grid gap-2">
+        <label class="text-sm font-medium" for="team_edit_description">
+          {$t('common.description')}
+        </label>
+        <Input
+          id="team_edit_description"
+          bind:value={state.editDescription}
+          disabled={state.editBusy}
+        />
+      </div>
+      <Dialog.Footer>
+        <Button
+          type="button"
+          variant="outline"
+          onclick={() => (state.editOpen = false)}
+          disabled={state.editBusy}
+        >
+          {$t('common.cancel')}
+        </Button>
+        <Button type="submit" disabled={!state.canSubmitEdit()}>
+          {state.editBusy ? $t('common.saving') : $t('common.save_changes')}
+        </Button>
+      </Dialog.Footer>
+    </form>
+  </Dialog.Content>
+</Dialog.Root>

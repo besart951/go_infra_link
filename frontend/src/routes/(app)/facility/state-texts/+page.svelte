@@ -35,6 +35,7 @@
   description={$t('facility.state_texts_desc')}
   createLabel={$t('facility.new_state_text')}
   permissionResource="statetext"
+  realtimeResource="state_texts"
   store={stateTextsStore}
   {actions}
   form={StateTextForm}

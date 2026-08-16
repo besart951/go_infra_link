@@ -25,7 +25,13 @@
   const state = new RolesPageState({ user: () => data.user });
 
   onMount(() => {
-    state.loadData();
+    void state.loadData();
+  });
+
+  $effect(() => {
+    if (state.canManagePhaseRules && !state.phaseRulesLoaded && !state.isLoading) {
+      void state.loadData();
+    }
   });
 </script>
 
@@ -191,7 +197,9 @@
           permissions={state.permissions}
           onEdit={state.canManagePermissionDefinitions ? state.openEditPermission : undefined}
           onDelete={state.canManagePermissionDefinitions ? state.deletePermission : undefined}
-          onCreate={state.canManagePermissionDefinitions ? state.openCreatePermissionDialog : undefined}
+          onCreate={state.canManagePermissionDefinitions
+            ? state.openCreatePermissionDialog
+            : undefined}
           canManage={state.canManagePermissionDefinitions}
         />
       {/if}

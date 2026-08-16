@@ -1,4 +1,4 @@
-import { addToast } from '$lib/components/toast.svelte';
+import { addToast } from '$lib/components/toast.js';
 import { getErrorMessage } from '$lib/api/client.js';
 import { alarmUnitRepository } from '$lib/infrastructure/api/alarmUnitRepository.js';
 import { alarmFieldRepository } from '$lib/infrastructure/api/alarmFieldRepository.js';
@@ -58,6 +58,10 @@ export class AlarmCatalogState {
   fieldForm = $state(emptyFieldForm());
   typeForm = $state(emptyTypeForm());
   mapForm = $state(emptyMapForm());
+  editingUnitID = $state<string | null>(null);
+  editingFieldID = $state<string | null>(null);
+  editingTypeID = $state<string | null>(null);
+  editingMappingID = $state<string | null>(null);
 
   readonly dataTypeOptions: AlarmField['data_type'][] = [
     'number',
@@ -132,13 +136,32 @@ export class AlarmCatalogState {
 
   async createUnit(): Promise<void> {
     try {
-      await this.unitRepository.create(this.unitForm);
-      this.unitForm = emptyUnitForm();
+      if (this.editingUnitID) {
+        await this.unitRepository.update(this.editingUnitID, this.unitForm);
+      } else {
+        await this.unitRepository.create(this.unitForm);
+      }
+      const updated = this.editingUnitID !== null;
+      this.cancelUnitEdit();
       await this.loadAll();
-      this.success('facility.alarm_catalog_page.toasts.unit_created');
+      this.success(
+        updated
+          ? 'facility.alarm_catalog_page.toasts.unit_updated'
+          : 'facility.alarm_catalog_page.toasts.unit_created'
+      );
     } catch (error) {
       this.notify(this.formatError(error), 'error');
     }
+  }
+
+  editUnit(unit: Unit): void {
+    this.editingUnitID = unit.id;
+    this.unitForm = { code: unit.code, symbol: unit.symbol, name: unit.name };
+  }
+
+  cancelUnitEdit(): void {
+    this.editingUnitID = null;
+    this.unitForm = emptyUnitForm();
   }
 
   async deleteUnit(id: string): Promise<void> {
@@ -153,18 +176,43 @@ export class AlarmCatalogState {
 
   async createField(): Promise<void> {
     try {
-      await this.fieldRepository.create({
+      const payload = {
         key: this.fieldForm.key,
         label: this.fieldForm.label,
         data_type: this.fieldForm.data_type,
         default_unit_code: this.fieldForm.default_unit_code || undefined
-      });
-      this.fieldForm = emptyFieldForm();
+      };
+      if (this.editingFieldID) {
+        await this.fieldRepository.update(this.editingFieldID, payload);
+      } else {
+        await this.fieldRepository.create(payload);
+      }
+      const updated = this.editingFieldID !== null;
+      this.cancelFieldEdit();
       await this.loadAll();
-      this.success('facility.alarm_catalog_page.toasts.field_created');
+      this.success(
+        updated
+          ? 'facility.alarm_catalog_page.toasts.field_updated'
+          : 'facility.alarm_catalog_page.toasts.field_created'
+      );
     } catch (error) {
       this.notify(this.formatError(error), 'error');
     }
+  }
+
+  editField(field: AlarmField): void {
+    this.editingFieldID = field.id;
+    this.fieldForm = {
+      key: field.key,
+      label: field.label,
+      data_type: field.data_type,
+      default_unit_code: field.default_unit_code ?? ''
+    };
+  }
+
+  cancelFieldEdit(): void {
+    this.editingFieldID = null;
+    this.fieldForm = emptyFieldForm();
   }
 
   async deleteField(id: string): Promise<void> {
@@ -179,14 +227,35 @@ export class AlarmCatalogState {
 
   async createType(): Promise<void> {
     try {
-      const created = await this.typeRepository.create(this.typeForm);
-      this.typeForm = emptyTypeForm();
-      this.selectedTypeId = created.id;
+      let selectedTypeID = this.editingTypeID;
+      if (this.editingTypeID) {
+        await this.typeRepository.update(this.editingTypeID, { name: this.typeForm.name });
+      } else {
+        const created = await this.typeRepository.create(this.typeForm);
+        selectedTypeID = created.id;
+      }
+      const updated = this.editingTypeID !== null;
+      this.cancelTypeEdit();
+      this.selectedTypeId = selectedTypeID ?? '';
       await this.loadAll();
-      this.success('facility.alarm_catalog_page.toasts.type_created');
+      this.success(
+        updated
+          ? 'facility.alarm_catalog_page.toasts.type_updated'
+          : 'facility.alarm_catalog_page.toasts.type_created'
+      );
     } catch (error) {
       this.notify(this.formatError(error), 'error');
     }
+  }
+
+  editType(type: AlarmType): void {
+    this.editingTypeID = type.id;
+    this.typeForm = { code: type.code, name: type.name };
+  }
+
+  cancelTypeEdit(): void {
+    this.editingTypeID = null;
+    this.typeForm = emptyTypeForm();
   }
 
   async deleteType(id: string): Promise<void> {
@@ -235,17 +304,45 @@ export class AlarmCatalogState {
     if (!this.selectedTypeId) return;
 
     try {
-      await this.typeRepository.createField(this.selectedTypeId, {
+      const payload = {
         ...this.mapForm,
         default_unit_id: this.mapForm.default_unit_id || undefined,
         ui_group: this.mapForm.ui_group || undefined
-      });
-      this.mapForm = emptyMapForm();
+      };
+      if (this.editingMappingID) {
+        const { alarm_field_id: _alarmFieldID, ...updatePayload } = payload;
+        await this.typeRepository.updateField(this.editingMappingID, updatePayload);
+      } else {
+        await this.typeRepository.createField(this.selectedTypeId, payload);
+      }
+      const updated = this.editingMappingID !== null;
+      this.cancelMappingEdit();
       await this.loadTypeFields(this.selectedTypeId);
-      this.success('facility.alarm_catalog_page.toasts.mapping_created');
+      this.success(
+        updated
+          ? 'facility.alarm_catalog_page.toasts.mapping_updated'
+          : 'facility.alarm_catalog_page.toasts.mapping_created'
+      );
     } catch (error) {
       this.notify(this.formatError(error), 'error');
     }
+  }
+
+  editMapping(mapping: AlarmTypeField): void {
+    this.editingMappingID = mapping.id;
+    this.mapForm = {
+      alarm_field_id: mapping.alarm_field_id,
+      display_order: mapping.display_order,
+      is_required: mapping.is_required,
+      is_user_editable: mapping.is_user_editable,
+      ui_group: mapping.ui_group ?? '',
+      default_unit_id: mapping.default_unit_id ?? ''
+    };
+  }
+
+  cancelMappingEdit(): void {
+    this.editingMappingID = null;
+    this.mapForm = emptyMapForm();
   }
 
   async deleteMapping(id: string): Promise<void> {
@@ -256,6 +353,19 @@ export class AlarmCatalogState {
     } catch (error) {
       this.notify(this.formatError(error), 'error');
     }
+  }
+
+  hasUnsavedChanges(): boolean {
+    return (
+      this.editingUnitID !== null ||
+      this.editingFieldID !== null ||
+      this.editingTypeID !== null ||
+      this.editingMappingID !== null ||
+      Boolean(this.unitForm.code || this.unitForm.symbol || this.unitForm.name) ||
+      Boolean(this.fieldForm.key || this.fieldForm.label || this.fieldForm.default_unit_code) ||
+      Boolean(this.typeForm.code || this.typeForm.name) ||
+      Boolean(this.mapForm.alarm_field_id || this.mapForm.ui_group || this.mapForm.default_unit_id)
+    );
   }
 
   private success(key: string): void {

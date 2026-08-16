@@ -67,17 +67,28 @@
       <Table.Cell>
         <div class="flex items-center gap-2">
           {#if canPerform('update', 'phase')}
-            <Button variant="ghost" size="icon" onclick={() => state.handleEdit(phase)}>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={$t('common.edit')}
+              onclick={() => state.handleEdit(phase)}
+            >
               <Pencil class="size-4" />
             </Button>
           {/if}
-          <Button variant="ghost" size="icon" href="/projects/phases/{phase.id}">
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label={$t('messages.view')}
+            href="/projects/phases/{phase.id}"
+          >
             <Eye class="size-4" />
           </Button>
           {#if canPerform('delete', 'phase')}
             <Button
               variant="ghost"
               size="icon"
+              aria-label={$t('common.delete')}
               disabled={state.deleting}
               onclick={() => state.handleDelete(phase)}
             >

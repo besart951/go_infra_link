@@ -47,6 +47,7 @@ func buildFacilityRepositories(repos *Repositories) facilityservice.Repositories
 		AlarmTypeFields:          repos.FacilityAlarmTypeFields,
 		BacnetObjectAlarmValues:  repos.FacilityBacnetObjectAlarmValues,
 		BacnetReferenceUsages:    repos.FacilityBacnetReferenceUsages,
+		DeleteImpacts:            repos.FacilityDeleteImpacts,
 	}
 }
 
