@@ -145,6 +145,9 @@ func (h *ControlCabinetHandler) CopyControlCabinet(c *gin.Context) {
 	if !ok {
 		return
 	}
+	if startPersistedFacilityCopyJob(c, h.copyJobs, facilityservice.CopyJobKindControlCabinet, id) {
+		return
+	}
 	if startFacilityCopyJob(c, h.copyJobs, facilityservice.CopyJobKindControlCabinet, func(ctx context.Context, actorID uuid.UUID) error {
 		copyEntity, err := h.service.CopyByID(ctx, id)
 		if err == nil {

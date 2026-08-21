@@ -7,11 +7,14 @@ import (
 )
 
 type CreateFieldDeviceExportRequest struct {
-	ProjectIDs        []uuid.UUID `json:"project_ids" binding:"omitempty,dive,uuid"`
-	BuildingIDs       []uuid.UUID `json:"buildings_id" binding:"omitempty,dive,uuid"`
-	ControlCabinetIDs []uuid.UUID `json:"control_cabinet_id" binding:"omitempty,dive,uuid"`
-	SPSControllerIDs  []uuid.UUID `json:"sps_controller_id" binding:"omitempty,dive,uuid"`
-	ForceAsync        bool        `json:"force_async"`
+	ProjectIDs                 []uuid.UUID `json:"project_ids" binding:"omitempty,dive,uuid"`
+	BuildingIDs                []uuid.UUID `json:"buildings_id" binding:"omitempty,dive,uuid"`
+	ControlCabinetIDs          []uuid.UUID `json:"control_cabinet_id" binding:"omitempty,dive,uuid"`
+	SPSControllerIDs           []uuid.UUID `json:"sps_controller_id" binding:"omitempty,dive,uuid"`
+	SPSControllerSystemTypeIDs []uuid.UUID `json:"sps_controller_system_type_ids" binding:"omitempty,dive,uuid"`
+	Search                     string      `json:"search" binding:"omitempty,max=200"`
+	ExportAll                  bool        `json:"export_all"`
+	ForceAsync                 bool        `json:"force_async"`
 }
 
 type FieldDeviceExportJobResponse struct {

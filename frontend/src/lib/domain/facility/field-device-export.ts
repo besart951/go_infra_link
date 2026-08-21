@@ -3,6 +3,9 @@ export interface CreateFieldDeviceExportRequest {
   buildings_id?: string[];
   control_cabinet_id?: string[];
   sps_controller_id?: string[];
+  sps_controller_system_type_ids?: string[];
+  search?: string;
+  export_all?: boolean;
   force_async?: boolean;
 }
 

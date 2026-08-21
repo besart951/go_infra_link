@@ -12,9 +12,12 @@ type Handlers struct {
 	ListAvailableApparatNumbers    gin.HandlerFunc
 	ListFieldDevices               gin.HandlerFunc
 	GetFieldDevice                 gin.HandlerFunc
+	CopyFieldDevice                gin.HandlerFunc
 	ListFieldDeviceBacnetObjects   gin.HandlerFunc
 	CreateFieldDeviceSpecification gin.HandlerFunc
+	GetFieldDeviceSpecification    gin.HandlerFunc
 	UpdateFieldDeviceSpecification gin.HandlerFunc
+	DeleteFieldDeviceSpecification gin.HandlerFunc
 	UpdateFieldDevice              gin.HandlerFunc
 	DeleteFieldDevice              gin.HandlerFunc
 	BulkUpdateFieldDevices         gin.HandlerFunc
@@ -31,9 +34,12 @@ func Routes(handlers Handlers) []routing.Definition {
 		routing.Get("/field-devices/available-apparat-nr", domainUser.PermissionFieldDeviceRead, handlers.ListAvailableApparatNumbers),
 		routing.Get("/field-devices", domainUser.PermissionFieldDeviceRead, handlers.ListFieldDevices),
 		routing.Get("/field-devices/:id", domainUser.PermissionFieldDeviceRead, handlers.GetFieldDevice),
+		routing.Post("/field-devices/:id/copy", domainUser.PermissionFieldDeviceCreate, handlers.CopyFieldDevice),
 		routing.Get("/field-devices/:id/bacnet-objects", domainUser.PermissionFieldDeviceRead, handlers.ListFieldDeviceBacnetObjects),
+		routing.Get("/field-devices/:id/specification", domainUser.PermissionSpecificationRead, handlers.GetFieldDeviceSpecification),
 		routing.Post("/field-devices/:id/specification", domainUser.PermissionSpecificationCreate, handlers.CreateFieldDeviceSpecification),
 		routing.Put("/field-devices/:id/specification", domainUser.PermissionSpecificationUpdate, handlers.UpdateFieldDeviceSpecification),
+		routing.Delete("/field-devices/:id/specification", domainUser.PermissionSpecificationDelete, handlers.DeleteFieldDeviceSpecification),
 		routing.Patch("/field-devices/:id", domainUser.PermissionFieldDeviceUpdate, handlers.UpdateFieldDevice),
 		routing.Put("/field-devices/:id", domainUser.PermissionFieldDeviceUpdate, handlers.UpdateFieldDevice),
 		routing.Delete("/field-devices/:id", domainUser.PermissionFieldDeviceDelete, handlers.DeleteFieldDevice),

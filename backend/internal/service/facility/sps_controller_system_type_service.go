@@ -60,6 +60,16 @@ func (s *SPSControllerSystemTypeService) GetByID(ctx context.Context, id uuid.UU
 	return domain.GetByID(ctx, s.repo, id)
 }
 
+func (s *SPSControllerSystemTypeService) Create(ctx context.Context, item *domainFacility.SPSControllerSystemType) error {
+	if item == nil {
+		return domain.ErrInvalidArgument
+	}
+	if err := item.Validate("spscontroller.system_types"); err != nil {
+		return err
+	}
+	return s.repo.Create(ctx, item)
+}
+
 func (s *SPSControllerSystemTypeService) CopyByID(ctx context.Context, id uuid.UUID) (*domainFacility.SPSControllerSystemType, error) {
 	return s.hierarchyCopier.CopySPSControllerSystemTypeByID(ctx, id)
 }

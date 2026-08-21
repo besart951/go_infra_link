@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { onDestroy } from 'svelte';
   import { Button } from '$lib/components/ui/button/index.js';
   import { Checkbox } from '$lib/components/ui/checkbox/index.js';
   import { Label } from '$lib/components/ui/label/index.js';
@@ -16,25 +15,25 @@
   import { buildingRepository } from '$lib/infrastructure/api/buildingRepository.js';
   import { controlCabinetRepository } from '$lib/infrastructure/api/controlCabinetRepository.js';
   import { spsControllerRepository } from '$lib/infrastructure/api/spsControllerRepository.js';
+  import { facilityJobState } from '$lib/state/copyOperation.svelte.js';
+  import type { FieldDeviceFilters } from './state/types.js';
+  import { buildFieldDeviceExportRequest, hasExportScope } from './exportRequest.js';
 
   import { projectRepository } from '$lib/infrastructure/api/projectRepository.js';
 
-  import type {
-    Building,
-    ControlCabinet,
-    FieldDeviceExportJobResponse,
-    SPSController
-  } from '$lib/domain/facility/index.js';
+  import type { Building, ControlCabinet, SPSController } from '$lib/domain/facility/index.js';
   import type { Project } from '$lib/domain/project/index.js';
   import { Download, FileSpreadsheet, LoaderCircle, Play } from '@lucide/svelte';
 
   interface Props {
     projectId?: string;
+    filters?: FieldDeviceFilters;
+    searchText?: string;
   }
 
   type OptionItem = { id: string; label: string };
 
-  let { projectId }: Props = $props();
+  let { projectId, filters, searchText }: Props = $props();
 
   const t = createTranslator();
 
@@ -51,13 +50,7 @@
   let forceAsync = $state(false);
 
   let submitting = $state(false);
-  let polling = $state(false);
-  let activeJob = $state<FieldDeviceExportJobResponse | null>(null);
-  let pollingTimer: ReturnType<typeof setInterval> | null = null;
-  let pollingFailureCount = 0;
-  let pollingError = $state<string | null>(null);
-  let refreshingJobStatus = false;
-  const maxPollingFailures = 3;
+  let activeJobId = $state<string | null>(null);
 
   $effect(() => {
     if (projectId && selectedProjectIds.length === 0) {
@@ -65,15 +58,26 @@
     }
   });
 
-  const canStartExport = $derived(
-    selectedProjectIds.length > 0 ||
-      selectedBuildingIds.length > 0 ||
-      selectedControlCabinetIds.length > 0 ||
-      selectedSPSControllerIds.length > 0
+  const exportRequest = $derived(
+    buildFieldDeviceExportRequest({
+      projectId,
+      filters,
+      search: searchText,
+      selectedProjectIds,
+      selectedBuildingIds,
+      selectedControlCabinetIds,
+      selectedSPSControllerIds
+    })
   );
+  const canStartExport = $derived(hasExportScope(exportRequest));
 
+  const activeJob = $derived(
+    facilityJobState.jobs.find((job) => job.jobId === activeJobId) ??
+      facilityJobState.exportJobs[0] ??
+      null
+  );
   const progressWidth = $derived(`${Math.min(100, Math.max(0, activeJob?.progress ?? 0))}%`);
-  const isRunning = $derived(activeJob?.status === 'queued' || activeJob?.status === 'processing');
+  const isRunning = $derived(activeJob?.status === 'queued' || activeJob?.status === 'running');
   const isCompleted = $derived(activeJob?.status === 'completed');
   const isFailed = $derived(activeJob?.status === 'failed');
 
@@ -146,67 +150,6 @@
     return items.map(toControllerOption);
   }
 
-  function stopPolling() {
-    if (pollingTimer) {
-      clearInterval(pollingTimer);
-      pollingTimer = null;
-    }
-    polling = false;
-  }
-
-  async function refreshJobStatus() {
-    if (!activeJob?.job_id) return;
-    if (refreshingJobStatus) return;
-
-    refreshingJobStatus = true;
-    try {
-      const next = await exportUseCase.getExportJob(activeJob.job_id);
-      pollingFailureCount = 0;
-      pollingError = null;
-      activeJob = next;
-      if (next.status === 'completed') {
-        stopPolling();
-        addToast(translate('field_device.export.toasts.completed_ready'), 'success');
-      }
-      if (next.status === 'failed') {
-        stopPolling();
-        addToast(next.error || translate('field_device.export.toasts.failed'), 'error');
-      }
-    } catch (error) {
-      pollingFailureCount += 1;
-      const message =
-        error instanceof Error
-          ? error.message
-          : translate('field_device.export.toasts.refresh_failed');
-      pollingError = translate('field_device.export.toasts.refresh_retrying', {
-        count: Math.max(0, maxPollingFailures - pollingFailureCount),
-        message
-      });
-
-      if (pollingFailureCount >= maxPollingFailures) {
-        stopPolling();
-        addToast(
-          translate('field_device.export.toasts.refresh_failed_after_retries', {
-            count: maxPollingFailures
-          }),
-          'error'
-        );
-      }
-    } finally {
-      refreshingJobStatus = false;
-    }
-  }
-
-  function startPolling() {
-    stopPolling();
-    pollingFailureCount = 0;
-    pollingError = null;
-    polling = true;
-    pollingTimer = setInterval(() => {
-      void refreshJobStatus();
-    }, 2000);
-  }
-
   async function handleStartExport() {
     if (!canStartExport) {
       addToast(translate('field_device.export.toasts.select_filter'), 'error');
@@ -214,16 +157,18 @@
     }
     submitting = true;
     try {
-      const job = await exportUseCase.createExport({
-        project_ids: selectedProjectIds,
-        buildings_id: selectedBuildingIds,
-        control_cabinet_id: selectedControlCabinetIds,
-        sps_controller_id: selectedSPSControllerIds,
-        force_async: forceAsync
+      const job = await exportUseCase.createExport({ ...exportRequest, force_async: forceAsync });
+      activeJobId = job.job_id;
+      facilityJobState.track({
+        jobId: job.job_id,
+        kind: 'field_device',
+        type: 'export',
+        class: 'export',
+        status: job.status === 'processing' ? 'running' : job.status,
+        progress: job.progress,
+        stage: job.message
       });
-      activeJob = job;
       if (job.status === 'queued' || job.status === 'processing') {
-        startPolling();
         addToast(translate('field_device.export.toasts.started'), 'success');
       }
       if (job.status === 'completed') {
@@ -242,13 +187,10 @@
   }
 
   function handleDownload() {
-    if (!activeJob?.job_id) return;
-    window.location.href = exportUseCase.getExportDownloadUrl(activeJob.job_id);
+    if (!activeJob) return;
+    window.location.href =
+      activeJob.result?.download_url ?? exportUseCase.getExportDownloadUrl(activeJob.jobId);
   }
-
-  onDestroy(() => {
-    stopPolling();
-  });
 </script>
 
 <Card.Root>
@@ -344,7 +286,7 @@
         <Button variant="outline" onclick={handleDownload}>
           <Download class="mr-2 size-4" />
           {$t('field_device.export.actions.download', {
-            type: activeJob?.output_type === 'zip' ? 'ZIP' : 'Excel'
+            type: activeJob?.result?.output_type === 'zip' ? 'ZIP' : 'Excel'
           })}
         </Button>
       {/if}
@@ -362,10 +304,7 @@
         <div class="h-2 w-full overflow-hidden rounded-md bg-muted">
           <div class="h-full bg-primary transition-all" style={`width: ${progressWidth};`}></div>
         </div>
-        <p class="text-xs text-muted-foreground">{activeJob.message}</p>
-        {#if pollingError && isRunning}
-          <p class="text-xs text-warning-muted-foreground">{pollingError}</p>
-        {/if}
+        <p class="text-xs text-muted-foreground">{activeJob.stage}</p>
         {#if isFailed && activeJob.error}
           <p class="text-sm text-destructive">{activeJob.error}</p>
         {/if}

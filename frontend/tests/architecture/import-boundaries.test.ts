@@ -56,7 +56,6 @@ describe('route import boundaries', () => {
   it('limits direct api client imports to auth and load-module composition points', () => {
     expect(findMatchingImports(/\$lib\/api\/client/)).toEqual([
       'src/routes/(app)/+layout.ts',
-      'src/routes/(app)/facility/buildings/[id]/+page.svelte',
       'src/routes/(app)/logout/+page.svelte',
       'src/routes/(auth)/login/+page.svelte'
     ]);

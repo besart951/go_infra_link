@@ -86,9 +86,16 @@ vi.mock('$lib/i18n/translator.js', () => ({
 }));
 
 vi.mock('$lib/utils/permissions.js', () => ({
-  can: (permission: string) => state.canPerform(permission.slice(permission.lastIndexOf('.') + 1), permission.slice(0, permission.lastIndexOf('.'))),
+  can: (permission: string) =>
+    state.canPerform(
+      permission.slice(permission.lastIndexOf('.') + 1),
+      permission.slice(0, permission.lastIndexOf('.'))
+    ),
   canProject: (_capabilities: unknown, permission: string) =>
-    state.canPerform(permission.slice(permission.lastIndexOf('.') + 1), permission.slice(0, permission.lastIndexOf('.'))),
+    state.canPerform(
+      permission.slice(permission.lastIndexOf('.') + 1),
+      permission.slice(0, permission.lastIndexOf('.'))
+    ),
   canPerform: (action: string, resource: string) => state.canPerform(action, resource)
 }));
 
@@ -96,26 +103,33 @@ vi.mock('$lib/components/project/ProjectDetailService.js', () => ({
   projectDetailService: state.projectDetailService
 }));
 
-vi.mock('$lib/services/projectCollaboration.svelte.js', () => ({
-  ProjectCollaborationState: class {
-    socketStatus = 'connected';
-    onlineUsers = [];
-    connect = vi.fn();
-    disconnect = vi.fn();
-    buildFieldDeviceEditorsByDevice = vi.fn(() => new Map());
-    publishFieldDeviceDraftState = vi.fn();
-    publishFieldDeviceDelta = vi.fn();
-  },
-  provideProjectSyncCoordinator: () => ({
+vi.mock('$lib/services/projectCollaboration.svelte.js', () => {
+  const coordinator = {
     socketStatus: 'connected',
     onlineUsers: [],
     connect: vi.fn(),
     disconnect: vi.fn(),
+    subscribeProjectChanges: vi.fn(() => () => {}),
+    subscribeResetRequired: vi.fn(() => () => {}),
     buildFieldDeviceEditorsByDevice: vi.fn(() => new Map()),
     publishFieldDeviceDraftState: vi.fn(),
     publishFieldDeviceDelta: vi.fn()
-  })
-}));
+  };
+
+  return {
+    ProjectCollaborationState: class {
+      socketStatus = 'connected';
+      onlineUsers = [];
+      connect = vi.fn();
+      disconnect = vi.fn();
+      buildFieldDeviceEditorsByDevice = vi.fn(() => new Map());
+      publishFieldDeviceDraftState = vi.fn();
+      publishFieldDeviceDelta = vi.fn();
+    },
+    provideProjectSyncCoordinator: () => coordinator,
+    useProjectSyncCoordinator: () => coordinator
+  };
+});
 
 vi.mock('$lib/components/history/HistoryTimelineDialog.svelte', async () => {
   const { default: SlotContainer } = await import('../../setup/stubs/SlotContainer.svelte');

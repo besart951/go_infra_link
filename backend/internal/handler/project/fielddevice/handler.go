@@ -5,12 +5,14 @@ import (
 	"net/http"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
+	domainExport "github.com/besart951/go_infra_link/backend/internal/domain/exporting"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	facilitydto "github.com/besart951/go_infra_link/backend/internal/handler/dto/facility"
 	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/project"
 	facilityfielddevice "github.com/besart951/go_infra_link/backend/internal/handler/facility/fielddevice"
+	"github.com/besart951/go_infra_link/backend/internal/handler/middleware"
 	sharedpresenter "github.com/besart951/go_infra_link/backend/internal/handler/presenter/shared"
 	projectshared "github.com/besart951/go_infra_link/backend/internal/handler/project/shared"
 	"github.com/besart951/go_infra_link/backend/internal/handlerutil"
@@ -36,6 +38,11 @@ type Handler struct {
 	facilityLink FacilityLinkService
 	notify       projectshared.ProjectChangeNotifier
 	notifyDelta  ProjectFieldDeviceDeltaNotifier
+	export       ExportService
+}
+
+type ExportService interface {
+	Create(context.Context, uuid.UUID, uuid.UUID, domainExport.Request) (domainExport.Job, error)
 }
 
 type OptionsHandler struct {
@@ -51,6 +58,54 @@ func NewHandler(access projectshared.AccessPolicyService, facilityLink FacilityL
 		delta = notifyDelta[0]
 	}
 	return &Handler{access: access, facilityLink: facilityLink, notify: notify, notifyDelta: delta}
+}
+
+func (h *Handler) ConfigureExport(service ExportService) {
+	h.export = service
+}
+
+func (h *Handler) CreateProjectFieldDeviceExport(c *gin.Context) {
+	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+	if !projectshared.EnsureProjectAccessAndPermission(c, h.access, projectID, domainUser.PermissionProjectFieldDeviceRead) {
+		return
+	}
+	if h.export == nil {
+		handlerutil.RespondLocalizedError(c, http.StatusServiceUnavailable, "service_unavailable", "errors.service_unavailable")
+		return
+	}
+	var request facilitydto.CreateFieldDeviceExportRequest
+	if err := c.ShouldBindJSON(&request); err != nil {
+		handlerutil.RespondLocalizedError(c, http.StatusBadRequest, "invalid_request", "errors.invalid_request")
+		return
+	}
+	ownerID, ok := middleware.GetUserID(c)
+	if !ok {
+		handlerutil.RespondLocalizedError(c, http.StatusUnauthorized, "unauthorized", "errors.unauthorized")
+		return
+	}
+	operationID, err := handlerutil.ParseCopyOperationID(c)
+	if err != nil {
+		handlerutil.RespondLocalizedError(c, http.StatusBadRequest, "invalid_operation_id", "errors.invalid_request")
+		return
+	}
+	job, err := h.export.Create(c.Request.Context(), ownerID, operationID, domainExport.Request{
+		ProjectIDs: []uuid.UUID{projectID}, BuildingIDs: request.BuildingIDs,
+		ControlCabinetIDs: request.ControlCabinetIDs, SPSControllerIDs: request.SPSControllerIDs,
+		SPSControllerSystemTypeIDs: request.SPSControllerSystemTypeIDs, Search: request.Search,
+	})
+	if err != nil {
+		handlerutil.RespondLocalizedError(c, http.StatusServiceUnavailable, "export_creation_failed", "errors.service_unavailable")
+		return
+	}
+	response := facilitydto.FieldDeviceExportJobResponse{
+		JobID: job.ID, Status: string(job.Status), Progress: job.Progress, Message: job.Message,
+		OutputType: string(job.OutputType), FileName: job.FileName, ContentType: job.ContentType,
+		Error: job.Error, CreatedAt: job.CreatedAt, UpdatedAt: job.UpdatedAt,
+	}
+	c.JSON(http.StatusAccepted, response)
 }
 
 func NewOptionsHandler(access projectshared.AccessPolicyService, service OptionsService) *OptionsHandler {

@@ -192,6 +192,9 @@ export interface BulkUpdateFieldDeviceRequest {
 export interface BulkOperationResultItem {
   id: string;
   success: boolean;
+  version?: number;
+  merged?: boolean;
+  field_device?: FieldDevice;
   error?: string;
   fields?: Record<string, string>;
   suggestions?: Record<string, number>;

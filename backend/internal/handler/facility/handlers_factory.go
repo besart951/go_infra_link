@@ -120,9 +120,9 @@ func registerFacilityHierarchyHandlers(handlers *Handlers, deps ServiceDeps) {
 	handlers.ControlCabinet = NewControlCabinetHandler(deps.ControlCabinet, deps.Collaboration, deps.CopyJobs)
 	handlers.SPSController = NewSPSControllerHandler(deps.SPSController, deps.Collaboration, deps.CopyJobs)
 	handlers.SPSControllerSystemType = NewSPSControllerSystemTypeHandlerWithCopyJobs(deps.SPSControllerSystemType, deps.Collaboration, deps.CopyJobs)
-	handlers.FieldDevice = NewFieldDeviceHandler(deps.FieldDevice, deps.Collaboration)
+	handlers.FieldDevice = NewFieldDeviceHandlerWithCopyJobs(deps.FieldDevice, deps.Collaboration, deps.CopyJobs)
 	handlers.BacnetObject = NewBacnetObjectHandler(deps.BacnetObject, deps.Collaboration)
-	handlers.ObjectData = NewObjectDataHandler(deps.ObjectData, deps.BacnetObject, deps.Apparat)
+	handlers.ObjectData = NewObjectDataHandlerWithCopyJobs(deps.ObjectData, deps.BacnetObject, deps.Apparat, deps.CopyJobs)
 	handlers.Validation = NewValidationHandler(deps.Building, deps.ControlCabinet, deps.SPSController)
 	handlers.Details = NewFacilityDetailHandler(
 		deps.Building,

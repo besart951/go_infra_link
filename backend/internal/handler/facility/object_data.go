@@ -1,11 +1,13 @@
 package facility
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/facility"
+	facilityservice "github.com/besart951/go_infra_link/backend/internal/service/facility"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -14,6 +16,13 @@ type ObjectDataHandler struct {
 	service        ObjectDataService
 	bacnetService  BacnetObjectService
 	apparatService ApparatService
+	copyJobs       *facilityservice.CopyJobManager
+}
+
+func NewObjectDataHandlerWithCopyJobs(service ObjectDataService, bacnetService BacnetObjectService, apparatService ApparatService, copyJobs *facilityservice.CopyJobManager) *ObjectDataHandler {
+	handler := NewObjectDataHandler(service, bacnetService, apparatService)
+	handler.copyJobs = copyJobs
+	return handler
 }
 
 func NewObjectDataHandler(service ObjectDataService, bacnetService BacnetObjectService, apparatService ApparatService) *ObjectDataHandler {
@@ -76,6 +85,33 @@ func (h *ObjectDataHandler) GetObjectData(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, toObjectDataResponse(*obj))
+}
+
+// CopyObjectData godoc
+// @Summary Deep-copy an object data template
+// @Tags facility-object-data
+// @Produce json
+// @Param id path string true "Object Data ID"
+// @Param Idempotency-Key header string false "Client-generated operation UUID"
+// @Success 202 {object} dto.FacilityJobResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 503 {object} dto.ErrorResponse
+// @Router /api/v1/facility/object-data/{id}/copy [post]
+func (h *ObjectDataHandler) CopyObjectData(c *gin.Context) {
+	id, ok := parseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+	if startPersistedFacilityCopyJob(c, h.copyJobs, facilityservice.CopyJobKindObjectData, id) {
+		return
+	}
+	if startFacilityCopyJob(c, h.copyJobs, facilityservice.CopyJobKindObjectData, func(ctx context.Context, _ uuid.UUID) error {
+		_, err := h.service.CopyByID(ctx, id)
+		return err
+	}) {
+		return
+	}
+	respondLocalizedError(c, http.StatusServiceUnavailable, "service_unavailable", "errors.service_unavailable")
 }
 
 // ListObjectData godoc

@@ -14,12 +14,18 @@ import {
 import { z } from 'zod';
 
 export interface FacilityCopyJobProgressEvent {
-  type: 'facility.copy_job.progress';
+  type: 'facility.copy_job.progress' | 'facility.job.progress';
   job_id: string;
   kind: CopyJobKind;
   status: CopyJobStatus;
   progress: number;
   stage: string;
+  job_type?: 'copy' | 'export' | 'bulk' | 'delete' | 'restore';
+  class?: 'mutation' | 'export';
+  processed?: number;
+  total?: number;
+  success_count?: number;
+  failure_count?: number;
   error?: string;
   updated_at: string;
 }
@@ -110,12 +116,24 @@ const facilityReferenceDataChangedEventSchema = z.object({
 });
 
 const facilityCopyJobProgressEventSchema = z.object({
-  type: z.literal('facility.copy_job.progress'),
+  type: z.union([z.literal('facility.copy_job.progress'), z.literal('facility.job.progress')]),
   job_id: z.string().uuid(),
-  kind: z.enum(['control_cabinet', 'sps_controller', 'sps_controller_system_type']),
+  kind: z.enum([
+    'control_cabinet',
+    'sps_controller',
+    'sps_controller_system_type',
+    'field_device',
+    'object_data'
+  ]),
+  job_type: z.enum(['copy', 'export', 'bulk', 'delete', 'restore']).optional(),
+  class: z.enum(['mutation', 'export']).optional(),
   status: z.enum(['queued', 'running', 'completed', 'failed']),
   progress: z.number().int().min(0).max(100),
   stage: z.string(),
+  processed: z.number().int().nonnegative().optional(),
+  total: z.number().int().nonnegative().optional(),
+  success_count: z.number().int().nonnegative().optional(),
+  failure_count: z.number().int().nonnegative().optional(),
   error: z.string().optional(),
   updated_at: z.string()
 });
@@ -155,7 +173,7 @@ const facilityChangeEventSchema = z.object({
   at: z.string()
 });
 
-const facilityRealtimeEventSchema = z.discriminatedUnion('type', [
+const facilityRealtimeEventSchema = z.union([
   facilityReferenceDataChangedEventSchema,
   facilityCopyJobProgressEventSchema,
   facilityChangeEventSchema
@@ -454,11 +472,13 @@ function createFacilityReferenceDataStream(
         onChange();
         return;
       }
-      if (event.type === 'facility.copy_job.progress') {
+      if (event.type === 'facility.copy_job.progress' || event.type === 'facility.job.progress') {
         onCopyJobProgress(event);
         return;
       }
-      onFacilityChange(event);
+      if (event.type === 'facility.changed') {
+        onFacilityChange(event);
+      }
     },
     onOpen: ({ wasReconnect }) => {
       if (wasReconnect) {

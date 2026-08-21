@@ -99,14 +99,14 @@ func TestDataProviderListFieldDevicesByControllerHydratesExportRelations(t *test
 		t.Fatalf("expected project field device link create to succeed, got %v", err)
 	}
 
-	items, total, err := provider.ListFieldDevicesByController(ctx, controller.ID, domainExport.Request{
+	items, err := provider.ListFieldDevicesByControllerAfter(ctx, controller.ID, domainExport.Request{
 		ProjectIDs: []uuid.UUID{projectID},
-	}, 1, 10)
+	}, uuid.Nil, 10)
 	if err != nil {
 		t.Fatalf("expected export field device list to succeed, got %v", err)
 	}
-	if total != 1 || len(items) != 1 {
-		t.Fatalf("expected one export field device, got total=%d items=%d", total, len(items))
+	if len(items) != 1 {
+		t.Fatalf("expected one export field device, got items=%d", len(items))
 	}
 
 	item := items[0]

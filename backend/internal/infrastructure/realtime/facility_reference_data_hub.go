@@ -56,10 +56,16 @@ type facilityCopyJobEvent struct {
 	Type      string    `json:"type"`
 	JobID     uuid.UUID `json:"job_id"`
 	Kind      string    `json:"kind"`
+	JobType   string    `json:"job_type,omitempty"`
+	Class     string    `json:"class,omitempty"`
 	Status    string    `json:"status"`
 	Progress  int       `json:"progress"`
 	Stage     string    `json:"stage"`
 	Error     string    `json:"error,omitempty"`
+	Processed int64     `json:"processed,omitempty"`
+	Total     *int64    `json:"total,omitempty"`
+	Succeeded int64     `json:"success_count,omitempty"`
+	Failed    int64     `json:"failure_count,omitempty"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
@@ -175,8 +181,8 @@ func (h *FacilityReferenceDataHub) BroadcastCopyJobProgress(_ context.Context, p
 	}
 	payload, err := json.Marshal(facilityCopyJobEvent{
 		Type: facilityCopyJobProgressEvent, JobID: progress.JobID, Kind: progress.Kind,
-		Status: progress.Status, Progress: progress.Progress, Stage: progress.Stage,
-		Error: progress.Error, UpdatedAt: progress.UpdatedAt.UTC(),
+		JobType: progress.JobType, Class: progress.Class, Status: progress.Status, Progress: progress.Progress, Stage: progress.Stage,
+		Error: progress.Error, Processed: progress.Processed, Total: progress.Total, Succeeded: progress.Succeeded, Failed: progress.Failed, UpdatedAt: progress.UpdatedAt.UTC(),
 	})
 	if err != nil {
 		return

@@ -19,17 +19,18 @@ type BacnetObject struct {
 	HardwareType     BacnetHardwareType `gorm:"type:varchar(50)"`
 	HardwareQuantity uint8
 
-	FieldDeviceID       *uuid.UUID         `gorm:"type:uuid;index;index:idx_field_device_textfix"`
-	FieldDevice         *FieldDevice       `gorm:"foreignKey:FieldDeviceID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
-	SoftwareReferenceID *uuid.UUID         `gorm:"type:uuid;index"`
-	SoftwareReference   *BacnetObject      `gorm:"foreignKey:SoftwareReferenceID"`
-	StateTextID         *uuid.UUID         `gorm:"type:uuid;index"`
-	StateText           *StateText         `gorm:"foreignKey:StateTextID"`
-	NotificationClassID *uuid.UUID         `gorm:"type:uuid;index"`
-	NotificationClass   *NotificationClass `gorm:"foreignKey:NotificationClassID"`
-	AlarmTypeID         *uuid.UUID         `gorm:"type:uuid;index"`
-	AlarmType           *AlarmType         `gorm:"foreignKey:AlarmTypeID"`
-	AlarmDefinitionID   *uuid.UUID         `gorm:"-:all"`
+	FieldDeviceID       *uuid.UUID               `gorm:"type:uuid;index;index:idx_field_device_textfix"`
+	FieldDevice         *FieldDevice             `gorm:"foreignKey:FieldDeviceID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	SoftwareReferenceID *uuid.UUID               `gorm:"type:uuid;index"`
+	SoftwareReference   *BacnetObject            `gorm:"foreignKey:SoftwareReferenceID"`
+	StateTextID         *uuid.UUID               `gorm:"type:uuid;index"`
+	StateText           *StateText               `gorm:"foreignKey:StateTextID"`
+	NotificationClassID *uuid.UUID               `gorm:"type:uuid;index"`
+	NotificationClass   *NotificationClass       `gorm:"foreignKey:NotificationClassID"`
+	AlarmTypeID         *uuid.UUID               `gorm:"type:uuid;index"`
+	AlarmType           *AlarmType               `gorm:"foreignKey:AlarmTypeID"`
+	AlarmDefinitionID   *uuid.UUID               `gorm:"-:all"`
+	AlarmValues         []BacnetObjectAlarmValue `gorm:"-:all"`
 }
 
 // BacnetObjectPatch represents a partial update for a bacnet object.

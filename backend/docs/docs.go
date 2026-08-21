@@ -2061,6 +2061,38 @@ const docTemplate = `{
             }
         },
         "/api/v1/facility/bacnet-objects/{id}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "facility-bacnet-objects"
+                ],
+                "summary": "Get a BACnet instance or template by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "BACnet Object ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BacnetObjectResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                        }
+                    }
+                }
+            },
             "put": {
                 "consumes": [
                     "application/json"
@@ -3902,6 +3934,52 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/facility/field-devices/{id}/copy": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "facility-field-devices"
+                ],
+                "summary": "Deep-copy a field device",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Field Device ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Client-generated operation UUID",
+                        "name": "Idempotency-Key",
+                        "in": "header"
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Accepted",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FacilityJobResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/facility/field-devices/{id}/detail": {
             "get": {
                 "produces": [
@@ -3943,6 +4021,38 @@ const docTemplate = `{
             }
         },
         "/api/v1/facility/field-devices/{id}/specification": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "facility-field-devices"
+                ],
+                "summary": "Get the specification owned by a field device",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Field Device ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SpecificationResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                        }
+                    }
+                }
+            },
             "put": {
                 "consumes": [
                     "application/json"
@@ -4055,6 +4165,57 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "facility-field-devices"
+                ],
+                "summary": "Delete the specification owned by a field device",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Field Device ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/facility/jobs": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "facility-jobs"
+                ],
+                "summary": "List the current user's facility jobs",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FacilityJobListResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
                         "schema": {
                             "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
@@ -4589,6 +4750,52 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/facility/object-data/{id}/copy": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "facility-object-data"
+                ],
+                "summary": "Deep-copy an object data template",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Object Data ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Client-generated operation UUID",
+                        "name": "Idempotency-Key",
+                        "in": "header"
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Accepted",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FacilityJobResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/facility/reference-data/stream": {
             "get": {
                 "description": "Upgrades the authenticated request to the shared facility WebSocket. ` + "`" + `facility_reference_data.changed` + "`" + ` tells authorized clients to refresh cached apparats and system parts. ` + "`" + `facility.changed` + "`" + ` carries authorized facility resource changes with an action, IDs, actor and timestamp. User-scoped ` + "`" + `facility.copy_job.progress` + "`" + ` events contain a copy job ID, status, stage and 0-100 progress; they are only delivered to the user that started the job.",
@@ -4667,6 +4874,55 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler_facility.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler_facility.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "facility-sps-controller-system-types"
+                ],
+                "summary": "Create an SPS controller system type assignment",
+                "parameters": [
+                    {
+                        "description": "SPS controller system type data",
+                        "name": "system_type",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateSPSControllerSystemTypeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler_facility.SPSControllerSystemTypeResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler_facility.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
                         "schema": {
                             "$ref": "#/definitions/internal_handler_facility.ErrorResponse"
                         }
@@ -11188,6 +11444,7 @@ const docTemplate = `{
             "properties": {
                 "ids": {
                     "type": "array",
+                    "maxItems": 500,
                     "minItems": 1,
                     "items": {
                         "type": "string"
@@ -11311,6 +11568,7 @@ const docTemplate = `{
             "properties": {
                 "updates": {
                     "type": "array",
+                    "maxItems": 500,
                     "minItems": 1,
                     "items": {
                         "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BulkUpdateFieldDeviceItem"
@@ -11450,11 +11708,27 @@ const docTemplate = `{
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CopyJobResponse": {
             "type": "object",
             "properties": {
+                "attempts": {
+                    "type": "integer"
+                },
+                "class": {
+                    "type": "string",
+                    "enum": [
+                        "mutation",
+                        "export"
+                    ]
+                },
+                "completed_at": {
+                    "type": "string"
+                },
                 "created_at": {
                     "type": "string"
                 },
                 "error": {
                     "type": "string"
+                },
+                "failure_count": {
+                    "type": "integer"
                 },
                 "job_id": {
                     "type": "string"
@@ -11464,13 +11738,24 @@ const docTemplate = `{
                     "enum": [
                         "control_cabinet",
                         "sps_controller",
-                        "sps_controller_system_type"
+                        "sps_controller_system_type",
+                        "field_device",
+                        "object_data"
                     ]
+                },
+                "processed": {
+                    "type": "integer"
                 },
                 "progress": {
                     "type": "integer",
                     "maximum": 100,
                     "minimum": 0
+                },
+                "result": {
+                    "type": "object"
+                },
+                "retryable": {
+                    "type": "boolean"
                 },
                 "stage": {
                     "type": "string"
@@ -11482,6 +11767,22 @@ const docTemplate = `{
                         "running",
                         "completed",
                         "failed"
+                    ]
+                },
+                "success_count": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "type": {
+                    "type": "string",
+                    "enum": [
+                        "copy",
+                        "export",
+                        "bulk",
+                        "delete",
+                        "restore"
                     ]
                 },
                 "updated_at": {
@@ -11925,6 +12226,29 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateSPSControllerSystemTypeRequest": {
+            "type": "object",
+            "required": [
+                "sps_controller_id",
+                "system_type_id"
+            ],
+            "properties": {
+                "document_name": {
+                    "type": "string",
+                    "maxLength": 250
+                },
+                "number": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "sps_controller_id": {
+                    "type": "string"
+                },
+                "system_type_id": {
+                    "type": "string"
+                }
+            }
+        },
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateStateTextRequest": {
             "type": "object",
             "required": [
@@ -12175,6 +12499,108 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FacilityJobListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FacilityJobResponse"
+                    }
+                },
+                "next_cursor": {
+                    "type": "string"
+                },
+                "previous_cursor": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FacilityJobResponse": {
+            "type": "object",
+            "properties": {
+                "attempts": {
+                    "type": "integer"
+                },
+                "class": {
+                    "type": "string",
+                    "enum": [
+                        "mutation",
+                        "export"
+                    ]
+                },
+                "completed_at": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "error": {
+                    "type": "string"
+                },
+                "failure_count": {
+                    "type": "integer"
+                },
+                "job_id": {
+                    "type": "string"
+                },
+                "kind": {
+                    "type": "string",
+                    "enum": [
+                        "control_cabinet",
+                        "sps_controller",
+                        "sps_controller_system_type",
+                        "field_device",
+                        "object_data"
+                    ]
+                },
+                "processed": {
+                    "type": "integer"
+                },
+                "progress": {
+                    "type": "integer",
+                    "maximum": 100,
+                    "minimum": 0
+                },
+                "result": {
+                    "type": "object"
+                },
+                "retryable": {
+                    "type": "boolean"
+                },
+                "stage": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "queued",
+                        "running",
+                        "completed",
+                        "failed"
+                    ]
+                },
+                "success_count": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "type": {
+                    "type": "string",
+                    "enum": [
+                        "copy",
+                        "export",
+                        "bulk",
+                        "delete",
+                        "restore"
+                    ]
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FieldDeviceCreateResultResponse": {
             "type": "object",
             "properties": {
@@ -12356,6 +12782,7 @@ const docTemplate = `{
             "properties": {
                 "field_devices": {
                     "type": "array",
+                    "maxItems": 500,
                     "minItems": 1,
                     "items": {
                         "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateFieldDeviceRequest"

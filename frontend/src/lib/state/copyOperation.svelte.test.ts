@@ -31,12 +31,13 @@ const realtime = vi.hoisted(() => {
 });
 
 const getCopyJob = vi.hoisted(() => vi.fn());
+const listCopyJobs = vi.hoisted(() => vi.fn());
 
 vi.mock('$lib/services/facilityReferenceDataCache.js', () => ({
   facilityReferenceDataCache: realtime.facilityReferenceDataCache
 }));
 vi.mock('$lib/infrastructure/api/copyJobRepository.js', () => ({
-  copyJobRepository: { get: getCopyJob }
+  copyJobRepository: { get: getCopyJob, list: listCopyJobs }
 }));
 
 import { CopyOperation } from './copyOperation.svelte.js';
@@ -46,8 +47,30 @@ const jobId = 'c7c1eaa6-21bb-4a2a-b0b7-2d809f313018';
 describe('CopyOperation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    listCopyJobs.mockResolvedValue([]);
     sessionStorage.clear();
     vi.stubGlobal('crypto', { randomUUID: () => jobId });
+  });
+
+  it('recovers an active job from the server after login without session state', async () => {
+    listCopyJobs.mockResolvedValue([
+      {
+        jobId,
+        kind: 'object_data',
+        status: 'running',
+        progress: 37,
+        stage: 'copying_root'
+      }
+    ]);
+    const operation = new CopyOperation();
+
+    operation.initialize('user-a');
+
+    await vi.waitFor(() => expect(operation.isPending).toBe(true));
+    expect(operation.progress).toBe(37);
+    expect(operation.jobs).toHaveLength(1);
+    expect(sessionStorage.getItem('facility-copy-job')).toContain(jobId);
+    operation.dispose();
   });
 
   it('tracks websocket progress and keeps duplicate submissions disabled until completion', async () => {

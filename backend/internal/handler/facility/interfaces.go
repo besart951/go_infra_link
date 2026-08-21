@@ -68,6 +68,7 @@ type FieldDeviceService interface {
 	CreateWithBacnetObjects(ctx context.Context, fieldDevice *domainFacility.FieldDevice, objectDataID *uuid.UUID, bacnetObjects []domainFacility.BacnetObject) error
 	MultiCreate(ctx context.Context, items []domainFacility.FieldDeviceCreateItem) *domainFacility.FieldDeviceMultiCreateResult
 	GetByID(ctx context.Context, id uuid.UUID) (*domainFacility.FieldDevice, error)
+	CopyByID(ctx context.Context, id uuid.UUID) (*domainFacility.FieldDevice, error)
 	List(ctx context.Context, page, limit int, search string) (*domain.PaginatedList[domainFacility.FieldDevice], error)
 	ListWithFilters(ctx context.Context, params domain.PaginationParams, filters domainFacility.FieldDeviceFilterParams) (*domain.PaginatedList[domainFacility.FieldDevice], error)
 	ListAvailableApparatNumbers(ctx context.Context, spsControllerSystemTypeID uuid.UUID, systemPartID uuid.UUID, apparatID uuid.UUID) ([]int, error)
@@ -77,7 +78,9 @@ type FieldDeviceService interface {
 	DeleteByID(ctx context.Context, id uuid.UUID) error
 	ListBacnetObjects(ctx context.Context, fieldDeviceID uuid.UUID) ([]domainFacility.BacnetObject, error)
 	CreateSpecification(ctx context.Context, fieldDeviceID uuid.UUID, specification *domainFacility.Specification) error
+	GetSpecification(ctx context.Context, fieldDeviceID uuid.UUID) (*domainFacility.Specification, error)
 	UpdateSpecificationPatch(ctx context.Context, fieldDeviceID uuid.UUID, patch *domainFacility.SpecificationPatch) (*domainFacility.Specification, error)
+	DeleteSpecification(ctx context.Context, fieldDeviceID uuid.UUID) error
 	BulkUpdate(ctx context.Context, updates []domainFacility.BulkFieldDeviceUpdate) *domainFacility.BulkOperationResult
 	BulkDelete(ctx context.Context, ids []uuid.UUID) *domainFacility.BulkOperationResult
 }
@@ -138,6 +141,7 @@ type ObjectDataService interface {
 	Create(ctx context.Context, objectData *domainFacility.ObjectData) error
 	CreateTemplate(ctx context.Context, input domainFacility.ObjectDataTemplateCreate) (*domainFacility.ObjectData, error)
 	GetByID(ctx context.Context, id uuid.UUID) (*domainFacility.ObjectData, error)
+	CopyByID(ctx context.Context, id uuid.UUID) (*domainFacility.ObjectData, error)
 	List(ctx context.Context, page, limit int, search string) (*domain.PaginatedList[domainFacility.ObjectData], error)
 	ListByApparatID(ctx context.Context, page, limit int, search string, apparatID uuid.UUID) (*domain.PaginatedList[domainFacility.ObjectData], error)
 	ListBySystemPartID(ctx context.Context, page, limit int, search string, systemPartID uuid.UUID) (*domain.PaginatedList[domainFacility.ObjectData], error)
@@ -151,6 +155,7 @@ type ObjectDataService interface {
 }
 
 type SPSControllerSystemTypeService interface {
+	Create(ctx context.Context, item *domainFacility.SPSControllerSystemType) error
 	List(ctx context.Context, page, limit int, search string) (*domain.PaginatedList[domainFacility.SPSControllerSystemType], error)
 	ListBySPSControllerID(ctx context.Context, spsControllerID uuid.UUID, page, limit int, search string) (*domain.PaginatedList[domainFacility.SPSControllerSystemType], error)
 	ListBySPSControllerIDs(ctx context.Context, spsControllerIDs []uuid.UUID, page, limit int, search string) (*domain.PaginatedList[domainFacility.SPSControllerSystemType], error)
@@ -162,8 +167,8 @@ type SPSControllerSystemTypeService interface {
 }
 
 type ExportService interface {
-	Create(ctx context.Context, req domainExport.Request) (domainExport.Job, error)
-	Get(ctx context.Context, id uuid.UUID) (domainExport.Job, error)
+	Create(ctx context.Context, ownerID, operationID uuid.UUID, req domainExport.Request) (domainExport.Job, error)
+	Get(ctx context.Context, ownerID, id uuid.UUID) (domainExport.Job, error)
 }
 
 type AlarmTypeService interface {

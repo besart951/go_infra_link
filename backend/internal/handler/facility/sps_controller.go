@@ -146,6 +146,9 @@ func (h *SPSControllerHandler) CopySPSController(c *gin.Context) {
 	if !ok {
 		return
 	}
+	if startPersistedFacilityCopyJob(c, h.copyJobs, facilityservice.CopyJobKindSPSController, id) {
+		return
+	}
 	if startFacilityCopyJob(c, h.copyJobs, facilityservice.CopyJobKindSPSController, func(ctx context.Context, actorID uuid.UUID) error {
 		copyEntity, err := h.service.CopyByID(ctx, id)
 		if err == nil {

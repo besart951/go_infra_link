@@ -14,10 +14,16 @@ type CopyJobProgressEvent struct {
 	JobID     uuid.UUID
 	OwnerID   uuid.UUID
 	Kind      string
+	JobType   string
+	Class     string
 	Status    string
 	Progress  int
 	Stage     string
 	Error     string
+	Processed int64
+	Total     *int64
+	Succeeded int64
+	Failed    int64
 	UpdatedAt time.Time
 }
 

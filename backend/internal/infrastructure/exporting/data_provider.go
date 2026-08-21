@@ -2,6 +2,7 @@ package exporting
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	domainFieldDevice "github.com/besart951/go_infra_link/backend/internal/domain/facility/fielddevice"
 	domainObjectData "github.com/besart951/go_infra_link/backend/internal/domain/facility/objectdata"
@@ -9,7 +10,6 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainExport "github.com/besart951/go_infra_link/backend/internal/domain/exporting"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/google/uuid"
@@ -17,10 +17,33 @@ import (
 
 type DataProvider struct {
 	fieldDevices    domainFieldDevice.FieldDeviceStore
+	exportReader    fieldDeviceExportReader
 	specifications  domainFieldDevice.SpecificationStore
 	bacnetObjects   domainObjectData.BacnetObjectStore
 	spsControllers  domainFacility.SPSControllerRepository
 	controlCabinets domainFacility.ControlCabinetRepository
+	alarmValues     alarmValueExportReader
+	snapshotRunner  func(context.Context, func(domainExport.DataProvider) error) error
+}
+
+type fieldDeviceExportReader interface {
+	GetExportPage(context.Context, domainFacility.FieldDeviceFilterParams, uuid.UUID, int) ([]domainFacility.FieldDevice, error)
+	GetExportControllerIDs(context.Context, domainFacility.FieldDeviceFilterParams, string) ([]uuid.UUID, error)
+}
+
+type alarmValueExportReader interface {
+	GetByBacnetObjectIDs(context.Context, []uuid.UUID) ([]domainFacility.BacnetObjectAlarmValue, error)
+}
+
+func (p *DataProvider) SetSnapshotRunner(runner func(context.Context, func(domainExport.DataProvider) error) error) {
+	p.snapshotRunner = runner
+}
+
+func (p *DataProvider) WithinSnapshot(ctx context.Context, consume func(domainExport.DataProvider) error) error {
+	if p.snapshotRunner == nil {
+		return consume(p)
+	}
+	return p.snapshotRunner(ctx, consume)
 }
 
 func NewDataProvider(
@@ -29,62 +52,34 @@ func NewDataProvider(
 	bacnetObjects domainObjectData.BacnetObjectStore,
 	spsControllers domainFacility.SPSControllerRepository,
 	controlCabinets domainFacility.ControlCabinetRepository,
+	alarmValues ...domainFacility.BacnetObjectAlarmValueRepository,
 ) *DataProvider {
-	return &DataProvider{
+	provider := &DataProvider{
 		fieldDevices:    fieldDevices,
 		specifications:  specifications,
 		bacnetObjects:   bacnetObjects,
 		spsControllers:  spsControllers,
 		controlCabinets: controlCabinets,
 	}
+	provider.exportReader, _ = fieldDevices.(fieldDeviceExportReader)
+	if len(alarmValues) > 0 {
+		provider.alarmValues, _ = alarmValues[0].(alarmValueExportReader)
+	}
+	return provider
 }
 
 func (p *DataProvider) ResolveControllers(ctx context.Context, req domainExport.Request) ([]domainExport.Controller, error) {
-	controllerSet := map[uuid.UUID]struct{}{}
-
-	for _, id := range req.SPSControllerIDs {
-		controllerSet[id] = struct{}{}
+	filters := domainFacility.FieldDeviceFilterParams{
+		BuildingIDs: req.BuildingIDs, ControlCabinetIDs: req.ControlCabinetIDs,
+		SPSControllerIDs: req.SPSControllerIDs, SPSControllerSystemTypeIDs: req.SPSControllerSystemTypeIDs,
+		ProjectIDs: req.ProjectIDs,
 	}
-
-	cabinetIDs := append([]uuid.UUID{}, req.ControlCabinetIDs...)
-	for _, buildingID := range req.BuildingIDs {
-		ids, err := p.controlCabinets.GetIDsByBuildingID(ctx, buildingID)
-		if err != nil {
-			return nil, err
-		}
-		cabinetIDs = append(cabinetIDs, ids...)
+	if p.exportReader == nil {
+		return nil, errors.New("field-device export reader is unavailable")
 	}
-
-	if len(cabinetIDs) > 0 {
-		ids, err := p.spsControllers.GetIDsByControlCabinetIDs(ctx, uniqueUUIDs(cabinetIDs))
-		if err != nil {
-			return nil, err
-		}
-		for _, id := range ids {
-			controllerSet[id] = struct{}{}
-		}
-	}
-
-	if len(controllerSet) == 0 {
-		page := 1
-		for {
-			list, err := p.spsControllers.GetPaginatedList(ctx, domain.PaginationParams{Page: page, Limit: 1000})
-			if err != nil {
-				return nil, err
-			}
-			for _, item := range list.Items {
-				controllerSet[item.ID] = struct{}{}
-			}
-			if page >= list.TotalPages {
-				break
-			}
-			page++
-		}
-	}
-
-	ids := make([]uuid.UUID, 0, len(controllerSet))
-	for id := range controllerSet {
-		ids = append(ids, id)
+	ids, err := p.exportReader.GetExportControllerIDs(ctx, filters, req.Search)
+	if err != nil {
+		return nil, err
 	}
 
 	controllers, err := p.spsControllers.GetByIdsForExport(ctx, ids)
@@ -100,25 +95,31 @@ func (p *DataProvider) ResolveControllers(ctx context.Context, req domainExport.
 	return out, nil
 }
 
-func (p *DataProvider) ListFieldDevicesByController(ctx context.Context, controllerID uuid.UUID, req domainExport.Request, page, limit int) ([]domainFacility.FieldDevice, int64, error) {
-	params := domain.PaginationParams{Page: page, Limit: limit}
-	filters := domainFacility.FieldDeviceFilterParams{SPSControllerID: &controllerID}
+func (p *DataProvider) ListFieldDevicesByControllerAfter(ctx context.Context, controllerID uuid.UUID, req domainExport.Request, afterID uuid.UUID, limit int) ([]domainFacility.FieldDevice, error) {
+	filters := domainFacility.FieldDeviceFilterParams{
+		Search: req.Search, SPSControllerID: &controllerID,
+		BuildingIDs: req.BuildingIDs, ControlCabinetIDs: req.ControlCabinetIDs,
+		SPSControllerSystemTypeIDs: req.SPSControllerSystemTypeIDs,
+	}
 
 	if len(req.ProjectIDs) > 0 {
 		filters.ProjectIDs = req.ProjectIDs
 	}
 
-	result, err := p.fieldDevices.GetPaginatedListWithFilters(ctx, params, filters)
+	if p.exportReader == nil {
+		return nil, errors.New("field-device export reader is unavailable")
+	}
+	items, err := p.exportReader.GetExportPage(ctx, filters, afterID, limit)
 	if err != nil {
-		return nil, 0, err
+		return nil, err
 	}
 
-	items, err := p.hydrateFieldDevicesForExport(ctx, result.Items)
+	items, err = p.hydrateFieldDevicesForExport(ctx, items)
 	if err != nil {
-		return nil, 0, err
+		return nil, err
 	}
 
-	return items, result.Total, nil
+	return items, nil
 }
 
 func (p *DataProvider) hydrateFieldDevicesForExport(ctx context.Context, items []domainFacility.FieldDevice) ([]domainFacility.FieldDevice, error) {
@@ -148,14 +149,32 @@ func (p *DataProvider) hydrateFieldDevicesForExport(ctx context.Context, items [
 		return nil, err
 	}
 	bacnetObjectsByFieldDeviceID := make(map[uuid.UUID][]domainFacility.BacnetObject, len(items))
+	bacnetObjectIDs := make([]uuid.UUID, 0, len(bacnetObjects))
 	for _, bacnetObject := range bacnetObjects {
 		if bacnetObject == nil || bacnetObject.FieldDeviceID == nil {
 			continue
 		}
+		bacnetObjectIDs = append(bacnetObjectIDs, bacnetObject.ID)
 		bacnetObjectsByFieldDeviceID[*bacnetObject.FieldDeviceID] = append(
 			bacnetObjectsByFieldDeviceID[*bacnetObject.FieldDeviceID],
 			*bacnetObject,
 		)
+	}
+	if p.alarmValues != nil && len(bacnetObjectIDs) > 0 {
+		values, err := p.alarmValues.GetByBacnetObjectIDs(ctx, bacnetObjectIDs)
+		if err != nil {
+			return nil, err
+		}
+		valuesByObject := make(map[uuid.UUID][]domainFacility.BacnetObjectAlarmValue)
+		for _, value := range values {
+			valuesByObject[value.BacnetObjectID] = append(valuesByObject[value.BacnetObjectID], value)
+		}
+		for fieldDeviceID, objects := range bacnetObjectsByFieldDeviceID {
+			for i := range objects {
+				objects[i].AlarmValues = valuesByObject[objects[i].ID]
+			}
+			bacnetObjectsByFieldDeviceID[fieldDeviceID] = objects
+		}
 	}
 
 	for i := range items {

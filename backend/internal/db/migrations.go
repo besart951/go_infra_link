@@ -157,6 +157,12 @@ var migrations = []migration{
 		blueGreenCompatible: true,
 		apply:               migrateObjectDataOptimisticLocking,
 	},
+	{
+		version:             "202608210001",
+		description:         "durable_facility_jobs",
+		blueGreenCompatible: true,
+		apply:               migrateFacilityJobs,
+	},
 }
 
 type MigrationOptions struct {

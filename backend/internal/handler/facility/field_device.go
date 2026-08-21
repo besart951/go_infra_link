@@ -1,12 +1,14 @@
 package facility
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/facility"
 	fielddevice "github.com/besart951/go_infra_link/backend/internal/handler/facility/fielddevice"
+	facilityservice "github.com/besart951/go_infra_link/backend/internal/service/facility"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -14,6 +16,13 @@ import (
 type FieldDeviceHandler struct {
 	service       FieldDeviceService
 	collaboration ProjectFieldDeviceChangeBroadcaster
+	copyJobs      *facilityservice.CopyJobManager
+}
+
+func NewFieldDeviceHandlerWithCopyJobs(service FieldDeviceService, broadcaster ProjectRefreshBroadcaster, copyJobs *facilityservice.CopyJobManager) *FieldDeviceHandler {
+	handler := NewFieldDeviceHandler(service, broadcaster)
+	handler.copyJobs = copyJobs
+	return handler
 }
 
 func NewFieldDeviceHandler(service FieldDeviceService, broadcasters ...ProjectRefreshBroadcaster) *FieldDeviceHandler {
@@ -84,6 +93,36 @@ func (h *FieldDeviceHandler) GetFieldDevice(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, toFieldDeviceResponse(*fieldDevice))
+}
+
+// CopyFieldDevice godoc
+// @Summary Deep-copy a field device
+// @Tags facility-field-devices
+// @Produce json
+// @Param id path string true "Field Device ID"
+// @Param Idempotency-Key header string false "Client-generated operation UUID"
+// @Success 202 {object} dto.FacilityJobResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 503 {object} dto.ErrorResponse
+// @Router /api/v1/facility/field-devices/{id}/copy [post]
+func (h *FieldDeviceHandler) CopyFieldDevice(c *gin.Context) {
+	id, ok := parseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+	if startPersistedFacilityCopyJob(c, h.copyJobs, facilityservice.CopyJobKindFieldDevice, id) {
+		return
+	}
+	if startFacilityCopyJob(c, h.copyJobs, facilityservice.CopyJobKindFieldDevice, func(ctx context.Context, actorID uuid.UUID) error {
+		copyDevice, err := h.service.CopyByID(ctx, id)
+		if err == nil && h.collaboration != nil {
+			h.collaboration.BroadcastFieldDeviceChange(ctx, &actorID, copyDevice.ID, "created")
+		}
+		return err
+	}) {
+		return
+	}
+	respondLocalizedError(c, http.StatusServiceUnavailable, "service_unavailable", "errors.service_unavailable")
 }
 
 // ListFieldDevices godoc
@@ -412,6 +451,27 @@ func (h *FieldDeviceHandler) CreateFieldDeviceSpecification(c *gin.Context) {
 	c.JSON(http.StatusCreated, toSpecificationResponse(*spec))
 }
 
+// GetFieldDeviceSpecification godoc
+// @Summary Get the specification owned by a field device
+// @Tags facility-field-devices
+// @Produce json
+// @Param id path string true "Field Device ID"
+// @Success 200 {object} dto.SpecificationResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Router /api/v1/facility/field-devices/{id}/specification [get]
+func (h *FieldDeviceHandler) GetFieldDeviceSpecification(c *gin.Context) {
+	fieldDeviceID, ok := parseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+	specification, err := h.service.GetSpecification(c.Request.Context(), fieldDeviceID)
+	if err != nil {
+		respondLocalizedDomainError(c, err, "fetch_failed", "facility.fetch_failed", localizedNotFound("facility.specification_not_found"))
+		return
+	}
+	c.JSON(http.StatusOK, toSpecificationResponse(*specification))
+}
+
 // UpdateFieldDeviceSpecification godoc
 // @Summary Update specification for a field device
 // @Tags facility-field-devices
@@ -448,6 +508,26 @@ func (h *FieldDeviceHandler) UpdateFieldDeviceSpecification(c *gin.Context) {
 
 	h.broadcastChange(c, fieldDeviceID, "updated", dto.FieldDeviceSpecificationChangedFields()...)
 	c.JSON(http.StatusOK, toSpecificationResponse(*spec))
+}
+
+// DeleteFieldDeviceSpecification godoc
+// @Summary Delete the specification owned by a field device
+// @Tags facility-field-devices
+// @Param id path string true "Field Device ID"
+// @Success 204
+// @Failure 404 {object} dto.ErrorResponse
+// @Router /api/v1/facility/field-devices/{id}/specification [delete]
+func (h *FieldDeviceHandler) DeleteFieldDeviceSpecification(c *gin.Context) {
+	fieldDeviceID, ok := parseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+	if err := h.service.DeleteSpecification(c.Request.Context(), fieldDeviceID); err != nil {
+		respondLocalizedDomainError(c, err, "deletion_failed", "facility.deletion_failed", localizedNotFound("facility.specification_not_found"))
+		return
+	}
+	h.broadcastChange(c, fieldDeviceID, "updated", dto.FieldDeviceSpecificationChangedFields()...)
+	c.Status(http.StatusNoContent)
 }
 
 // BulkUpdateFieldDevices godoc

@@ -125,7 +125,7 @@ describe('useFieldDeviceEditing', () => {
     expect(editing.getFieldError(device.id, 'system_part_id')).toBe('validation.required');
   });
 
-  it('clears successful edit phases while retaining failed phases after partial save success', async () => {
+  it('retains the complete device draft when its atomic bulk item fails', async () => {
     const device = buildFieldDevice();
     const editing = await createEditing();
     const onSuccess = vi.fn();
@@ -152,17 +152,11 @@ describe('useFieldDeviceEditing', () => {
 
     await editing.saveAllPendingEdits([device], onSuccess);
 
-    expect(editing.isFieldDirty(device.id, 'bmk')).toBe(false);
+    expect(editing.isFieldDirty(device.id, 'bmk')).toBe(true);
     expect(editing.isSpecFieldDirty(device.id, 'specification_brand')).toBe(true);
-    expect(editing.getBacnetPendingEdits(device.id).size).toBe(0);
+    expect(editing.getBacnetPendingEdits(device.id).size).toBe(1);
     expect(editing.getFieldError(device.id, 'specification_brand')).toBe('brand rejected');
-
-    const updated = onSuccess.mock.calls[0][0][0];
-    expect(updated.bmk).toBe('FD-PARTIAL');
-    expect(updated.specification.specification_brand).toBe(
-      device.specification?.specification_brand
-    );
-    expect(updated.bacnet_objects[0].text_fix).toBe('TF-PARTIAL');
+    expect(onSuccess).not.toHaveBeenCalled();
   });
 
   it('notifies shared draft state with changed fields and pending values', async () => {

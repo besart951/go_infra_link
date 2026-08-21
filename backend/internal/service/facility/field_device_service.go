@@ -193,6 +193,45 @@ func (s *FieldDeviceService) CreateSpecification(ctx context.Context, fieldDevic
 	return s.writer().createSpecification(ctx, fieldDeviceID, specification)
 }
 
+func (s *FieldDeviceService) GetSpecification(ctx context.Context, fieldDeviceID uuid.UUID) (*domainFacility.Specification, error) {
+	if _, err := domain.GetByID(ctx, s.repo, fieldDeviceID); err != nil {
+		return nil, err
+	}
+	specifications, err := s.specificationRepo.GetByFieldDeviceIDs(ctx, []uuid.UUID{fieldDeviceID})
+	if err != nil {
+		return nil, err
+	}
+	if len(specifications) == 0 || specifications[0] == nil {
+		return nil, domain.ErrNotFound
+	}
+	return specifications[0], nil
+}
+
+func (s *FieldDeviceService) DeleteSpecification(ctx context.Context, fieldDeviceID uuid.UUID) error {
+	return s.transaction().run(ctx, func(txCtx context.Context, txService *FieldDeviceService) error {
+		fieldDevice, err := domain.GetByID(txCtx, txService.repo, fieldDeviceID)
+		if err != nil {
+			return err
+		}
+		specifications, err := txService.specificationRepo.GetByFieldDeviceIDs(txCtx, []uuid.UUID{fieldDeviceID})
+		if err != nil {
+			return err
+		}
+		if len(specifications) == 0 || specifications[0] == nil {
+			return domain.ErrNotFound
+		}
+		fieldDevice.SpecificationID = nil
+		fieldDevice.Specification = nil
+		if err := txService.repo.Update(txCtx, fieldDevice); err != nil {
+			return err
+		}
+		if err := txService.specificationRepo.DeleteByIds(txCtx, []uuid.UUID{specifications[0].ID}); err != nil {
+			return err
+		}
+		return txService.recordFieldDeviceChange(txCtx, changecapture.ActionUpdated, fieldDevice.ID)
+	})
+}
+
 func (s *FieldDeviceService) UpdateSpecificationPatch(ctx context.Context, fieldDeviceID uuid.UUID, patch *domainFacility.SpecificationPatch) (*domainFacility.Specification, error) {
 	return s.writer().updateSpecificationPatch(ctx, fieldDeviceID, patch)
 }

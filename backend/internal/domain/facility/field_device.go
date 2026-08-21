@@ -34,6 +34,7 @@ type FieldDeviceOptions struct {
 
 // FieldDeviceFilterParams contains optional filter parameters for listing field devices
 type FieldDeviceFilterParams struct {
+	Search                     string
 	BuildingID                 *uuid.UUID
 	BuildingIDs                []uuid.UUID
 	ControlCabinetID           *uuid.UUID

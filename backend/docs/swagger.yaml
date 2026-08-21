@@ -559,6 +559,7 @@ definitions:
       ids:
         items:
           type: string
+        maxItems: 500
         minItems: 1
         type: array
     required:
@@ -641,6 +642,7 @@ definitions:
       updates:
         items:
           $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BulkUpdateFieldDeviceItem'
+        maxItems: 500
         minItems: 1
         type: array
     required:
@@ -732,10 +734,21 @@ definitions:
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CopyJobResponse:
     properties:
+      attempts:
+        type: integer
+      class:
+        enum:
+        - mutation
+        - export
+        type: string
+      completed_at:
+        type: string
       created_at:
         type: string
       error:
         type: string
+      failure_count:
+        type: integer
       job_id:
         type: string
       kind:
@@ -743,11 +756,19 @@ definitions:
         - control_cabinet
         - sps_controller
         - sps_controller_system_type
+        - field_device
+        - object_data
         type: string
+      processed:
+        type: integer
       progress:
         maximum: 100
         minimum: 0
         type: integer
+      result:
+        type: object
+      retryable:
+        type: boolean
       stage:
         type: string
       status:
@@ -756,6 +777,18 @@ definitions:
         - running
         - completed
         - failed
+        type: string
+      success_count:
+        type: integer
+      total:
+        type: integer
+      type:
+        enum:
+        - copy
+        - export
+        - bulk
+        - delete
+        - restore
         type: string
       updated_at:
         type: string
@@ -1065,6 +1098,22 @@ definitions:
     - device_name
     - ga_device
     type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateSPSControllerSystemTypeRequest:
+    properties:
+      document_name:
+        maxLength: 250
+        type: string
+      number:
+        minimum: 1
+        type: integer
+      sps_controller_id:
+        type: string
+      system_type_id:
+        type: string
+    required:
+    - sps_controller_id
+    - system_type_id
+    type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateStateTextRequest:
     properties:
       ref_number:
@@ -1234,6 +1283,78 @@ definitions:
       request_id:
         type: string
     type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FacilityJobListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FacilityJobResponse'
+        type: array
+      next_cursor:
+        type: string
+      previous_cursor:
+        type: string
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FacilityJobResponse:
+    properties:
+      attempts:
+        type: integer
+      class:
+        enum:
+        - mutation
+        - export
+        type: string
+      completed_at:
+        type: string
+      created_at:
+        type: string
+      error:
+        type: string
+      failure_count:
+        type: integer
+      job_id:
+        type: string
+      kind:
+        enum:
+        - control_cabinet
+        - sps_controller
+        - sps_controller_system_type
+        - field_device
+        - object_data
+        type: string
+      processed:
+        type: integer
+      progress:
+        maximum: 100
+        minimum: 0
+        type: integer
+      result:
+        type: object
+      retryable:
+        type: boolean
+      stage:
+        type: string
+      status:
+        enum:
+        - queued
+        - running
+        - completed
+        - failed
+        type: string
+      success_count:
+        type: integer
+      total:
+        type: integer
+      type:
+        enum:
+        - copy
+        - export
+        - bulk
+        - delete
+        - restore
+        type: string
+      updated_at:
+        type: string
+    type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FieldDeviceCreateResultResponse:
     properties:
       error:
@@ -1352,6 +1473,7 @@ definitions:
       field_devices:
         items:
           $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateFieldDeviceRequest'
+        maxItems: 500
         minItems: 1
         type: array
     required:
@@ -4932,6 +5054,27 @@ paths:
       tags:
       - facility-bacnet-objects
   /api/v1/facility/bacnet-objects/{id}:
+    get:
+      parameters:
+      - description: BACnet Object ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BacnetObjectResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse'
+      summary: Get a BACnet instance or template by ID
+      tags:
+      - facility-bacnet-objects
     put:
       consumes:
       - application/json
@@ -6002,6 +6145,36 @@ paths:
       summary: List bacnet objects for a field device (hydration)
       tags:
       - facility-field-devices
+  /api/v1/facility/field-devices/{id}/copy:
+    post:
+      parameters:
+      - description: Field Device ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Client-generated operation UUID
+        in: header
+        name: Idempotency-Key
+        type: string
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FacilityJobResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse'
+      summary: Deep-copy a field device
+      tags:
+      - facility-field-devices
   /api/v1/facility/field-devices/{id}/detail:
     get:
       parameters:
@@ -6029,6 +6202,44 @@ paths:
       tags:
       - facility-details
   /api/v1/facility/field-devices/{id}/specification:
+    delete:
+      parameters:
+      - description: Field Device ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse'
+      summary: Delete the specification owned by a field device
+      tags:
+      - facility-field-devices
+    get:
+      parameters:
+      - description: Field Device ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SpecificationResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse'
+      summary: Get the specification owned by a field device
+      tags:
+      - facility-field-devices
     post:
       consumes:
       - application/json
@@ -6254,6 +6465,22 @@ paths:
       summary: Get all metadata needed for creating/editing field devices
       tags:
       - facility-field-devices
+  /api/v1/facility/jobs:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FacilityJobListResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse'
+      summary: List the current user's facility jobs
+      tags:
+      - facility-jobs
   /api/v1/facility/notification-classes:
     get:
       parameters:
@@ -6600,6 +6827,36 @@ paths:
       summary: Get bacnet objects for object data
       tags:
       - facility-object-data
+  /api/v1/facility/object-data/{id}/copy:
+    post:
+      parameters:
+      - description: Object Data ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Client-generated operation UUID
+        in: header
+        name: Idempotency-Key
+        type: string
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FacilityJobResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse'
+      summary: Deep-copy an object data template
+      tags:
+      - facility-object-data
   /api/v1/facility/reference-data/stream:
     get:
       description: Upgrades the authenticated request to the shared facility WebSocket.
@@ -6664,6 +6921,38 @@ paths:
           schema:
             $ref: '#/definitions/internal_handler_facility.ErrorResponse'
       summary: List SPS controller system types with pagination
+      tags:
+      - facility-sps-controller-system-types
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: SPS controller system type data
+        in: body
+        name: system_type
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateSPSControllerSystemTypeRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_handler_facility.SPSControllerSystemTypeResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_handler_facility.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/internal_handler_facility.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_handler_facility.ErrorResponse'
+      summary: Create an SPS controller system type assignment
       tags:
       - facility-sps-controller-system-types
   /api/v1/facility/sps-controller-system-types/{id}:

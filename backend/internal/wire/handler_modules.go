@@ -31,6 +31,7 @@ func newProjectHandlers(services *Services, runtime *RuntimeAdapters, copyJobs *
 		Notifications: services.Notification,
 		Collaboration: runtime.ProjectCollaboration,
 		CopyJobs:      copyJobs,
+		Export:        services.Export,
 	})
 }
 

@@ -47,6 +47,7 @@ type ServiceDeps struct {
 	Notifications      NotificationEventDispatcher
 	Collaboration      *ProjectCollaborationHub
 	CopyJobs           *facilityservice.CopyJobManager
+	Export             fielddevicehandler.ExportService
 }
 
 func NewHandlers(deps ServiceDeps) *Handlers {
@@ -67,13 +68,15 @@ func NewHandlers(deps ServiceDeps) *Handlers {
 	spsControllerHandler := spscontrollerhandler.NewHandler(deps.AccessPolicy, deps.FacilityLink, projectHandler.notifyProjectChange, projectHandler.notifyProjectSPSControllerDelta)
 	spsControllerHandler.ConfigureCopyJobs(deps.CopyJobs, notifyCopy)
 
+	fieldDeviceHandler := fielddevicehandler.NewHandler(deps.AccessPolicy, deps.FacilityLink, projectHandler.notifyProjectChange, projectHandler.notifyProjectFieldDeviceDelta)
+	fieldDeviceHandler.ConfigureExport(deps.Export)
 	return &Handlers{
 		Project:            projectHandler,
 		Changes:            changeshandler.NewHandler(deps.AccessPolicy, deps.Changes),
 		Membership:         membershiphandler.NewHandler(deps.AccessPolicy, workflow, projectHandler.notifyProjectChange),
 		ControlCabinet:     controlCabinetHandler,
 		SPSController:      spsControllerHandler,
-		FieldDevice:        fielddevicehandler.NewHandler(deps.AccessPolicy, deps.FacilityLink, projectHandler.notifyProjectChange, projectHandler.notifyProjectFieldDeviceDelta),
+		FieldDevice:        fieldDeviceHandler,
 		ObjectData:         objectdatahandler.NewHandler(deps.AccessPolicy, deps.FacilityLink, projectHandler.notifyProjectChange),
 		Phase:              phasehandler.NewHandler(deps.Phase),
 		PhasePermission:    phasepermissionhandler.NewHandler(deps.PhasePermission),

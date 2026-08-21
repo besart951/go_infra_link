@@ -7,11 +7,16 @@ import (
 )
 
 type Request struct {
-	ProjectIDs        []uuid.UUID
-	BuildingIDs       []uuid.UUID
-	ControlCabinetIDs []uuid.UUID
-	SPSControllerIDs  []uuid.UUID
-	ForceAsync        bool
+	ProjectIDs                 []uuid.UUID
+	BuildingIDs                []uuid.UUID
+	ControlCabinetIDs          []uuid.UUID
+	SPSControllerIDs           []uuid.UUID
+	SPSControllerSystemTypeIDs []uuid.UUID
+	Search                     string
+	ExportAll                  bool
+	ForceAsync                 bool
+	SnapshotAt                 time.Time
+	SchemaVersion              int
 }
 
 type Status string

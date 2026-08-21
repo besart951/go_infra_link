@@ -17,6 +17,14 @@ type fieldDeviceRepo struct {
 	db *gorm.DB
 }
 
+func (r *fieldDeviceRepo) GetExportPage(ctx context.Context, filters domainFacility.FieldDeviceFilterParams, afterID uuid.UUID, limit int) ([]domainFacility.FieldDevice, error) {
+	return newFieldDeviceQuery(r.db).ExportPage(ctx, filters, afterID, limit)
+}
+
+func (r *fieldDeviceRepo) GetExportControllerIDs(ctx context.Context, filters domainFacility.FieldDeviceFilterParams, search string) ([]uuid.UUID, error) {
+	return newFieldDeviceQuery(r.db).ExportControllerIDs(ctx, filters, search)
+}
+
 func NewFieldDeviceRepository(db *gorm.DB) domainFieldDevice.FieldDeviceStore {
 	return &fieldDeviceRepo{
 		db: db,

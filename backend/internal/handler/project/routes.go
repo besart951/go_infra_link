@@ -40,6 +40,7 @@ func RegisterProjectRoutes(protectedV1 *gin.RouterGroup, handlers *Handlers) {
 		projects.POST("/:id/field-devices", handlers.FieldDevice.CreateProjectFieldDevice)
 		projects.POST("/:id/field-devices/multi-create", handlers.FieldDevice.MultiCreateProjectFieldDevices)
 		projects.GET("/:id/field-devices", handlers.FieldDevice.ListProjectFieldDevices)
+		projects.POST("/:id/exports/field-devices", handlers.FieldDevice.CreateProjectFieldDeviceExport)
 		projects.PUT("/:id/field-devices/:linkId", handlers.FieldDevice.UpdateProjectFieldDevice)
 		projects.DELETE("/:id/field-devices/:linkId", handlers.FieldDevice.DeleteProjectFieldDevice)
 		projects.GET("/:id/users", handlers.Membership.ListProjectUsers)

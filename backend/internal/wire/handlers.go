@@ -21,6 +21,7 @@ func NewHandlers(services *Services, runtime *RuntimeAdapters, cookieSettings au
 		runtime.CopyJobs = facilityservice.NewCopyJobManager(runtime.FacilityReferenceData)
 	}
 	copyJobs := runtime.CopyJobs
+	registerFacilityCopyTasks(copyJobs, services, runtime)
 
 	projectHandlers := newProjectHandlers(services, runtime, copyJobs)
 

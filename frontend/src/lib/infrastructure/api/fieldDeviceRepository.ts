@@ -124,8 +124,13 @@ export const fieldDeviceRepository: FieldDeviceRepository = {
     data: CreateFieldDeviceExportRequest,
     signal?: AbortSignal
   ): Promise<FieldDeviceExportJobResponse> {
-    return api<FieldDeviceExportJobResponse>('/facility/exports/field-devices', {
+    const endpoint =
+      data.project_ids?.length === 1
+        ? `/projects/${data.project_ids[0]}/exports/field-devices`
+        : '/facility/exports/field-devices';
+    return api<FieldDeviceExportJobResponse>(endpoint, {
       method: 'POST',
+      headers: { 'Idempotency-Key': crypto.randomUUID() },
       body: JSON.stringify(data),
       signal
     });

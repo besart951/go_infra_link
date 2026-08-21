@@ -79,7 +79,7 @@ func NewRuntimeAdaptersWithBusAndStore(bus apprealtime.Bus, nodeID string, ownsB
 			realtime.WithSystemNotificationBus(bus, nodeID),
 		),
 		FacilityReferenceData: facilityReferenceData,
-		CopyJobs:              facilityservice.NewCopyJobManager(facilityReferenceData),
+		CopyJobs:              facilityservice.NewCopyJobManagerWithDB(facilityReferenceData, db),
 		bus:                   bus,
 		ownsBus:               ownsBus,
 	}

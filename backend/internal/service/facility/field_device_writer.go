@@ -130,11 +130,21 @@ func (w fieldDeviceWriter) createSpecificationInTx(ctx context.Context, fieldDev
 	}
 
 	fieldDevice.SpecificationID = &specification.ID
-	return w.service.repo.Update(ctx, fieldDevice)
+	if err := w.service.repo.Update(ctx, fieldDevice); err != nil {
+		return err
+	}
+	return w.service.recordFieldDeviceChange(ctx, changecapture.ActionUpdated, fieldDevice.ID)
 }
 
 func (w fieldDeviceWriter) updateSpecificationPatch(ctx context.Context, fieldDeviceID uuid.UUID, patch *domainFacility.SpecificationPatch) (*domainFacility.Specification, error) {
-	if _, err := domain.GetByID(ctx, w.service.repo, fieldDeviceID); err != nil {
+	return runWithFacilityTxResult(ctx, w.service.transaction(), func(txCtx context.Context, txService *FieldDeviceService) (*domainFacility.Specification, error) {
+		return txService.writer().updateSpecificationPatchInTx(txCtx, fieldDeviceID, patch)
+	})
+}
+
+func (w fieldDeviceWriter) updateSpecificationPatchInTx(ctx context.Context, fieldDeviceID uuid.UUID, patch *domainFacility.SpecificationPatch) (*domainFacility.Specification, error) {
+	fieldDevice, err := domain.GetByID(ctx, w.service.repo, fieldDeviceID)
+	if err != nil {
 		return nil, err
 	}
 
@@ -153,6 +163,12 @@ func (w fieldDeviceWriter) updateSpecificationPatch(ctx context.Context, fieldDe
 	}
 
 	if err := w.service.specificationRepo.Update(ctx, spec); err != nil {
+		return nil, err
+	}
+	if err := w.service.repo.Update(ctx, fieldDevice); err != nil {
+		return nil, err
+	}
+	if err := w.service.recordFieldDeviceChange(ctx, changecapture.ActionUpdated, fieldDevice.ID); err != nil {
 		return nil, err
 	}
 	return spec, nil
@@ -440,44 +456,68 @@ func (w fieldDeviceWriter) bulkUpdate(ctx context.Context, updates []domainFacil
 		phaseErrors := make(map[string]string)
 		phaseSuggestions := make(map[string]int)
 		phaseSuggestionOptions := make(map[string][]int)
-		totalPhases := 0
 
-		if hasBaseFieldDeviceUpdates(update) {
-			totalPhases++
-			w.applyBulkBaseUpdate(
-				ctx,
-				proposed,
-				update,
-				ids,
-				existingMap,
-				proposedMap,
-				phaseErrors,
-				phaseSuggestions,
-				phaseSuggestionOptions,
-			)
-		}
+		err := w.service.transaction().run(ctx, func(txCtx context.Context, txService *FieldDeviceService) error {
+			txWriter := txService.writer()
+			totalPhases := 0
 
-		if update.Specification != nil && update.Specification.HasChanges() {
-			totalPhases++
-			if err := w.applySpecificationPatch(ctx, proposed.ID, update.Specification); err != nil {
-				phaseErrors["specification"] = "failed to update specification: " + err.Error()
+			if hasBaseFieldDeviceUpdates(update) {
+				totalPhases++
+				txWriter.validateBulkBaseUpdate(
+					txCtx,
+					proposed,
+					update,
+					ids,
+					existingMap,
+					proposedMap,
+					phaseErrors,
+					phaseSuggestions,
+					phaseSuggestionOptions,
+				)
+				if len(phaseErrors) > 0 {
+					return errBulkUpdateItem
+				}
 			}
-		}
 
-		if update.BacnetObjects != nil {
-			totalPhases++
-			if err := w.service.patchBacnetObjects(ctx, proposed.ID, *update.BacnetObjects); err != nil {
-				addBulkUpdateError(phaseErrors, "bacnet_objects", "failed to update BACnet objects: ", err)
+			if update.Specification != nil && update.Specification.HasChanges() {
+				totalPhases++
+				if err := txWriter.applyBulkSpecificationPatch(txCtx, proposed, update.Specification); err != nil {
+					addBulkUpdateError(phaseErrors, "specification", "failed to update specification: ", err)
+					return errBulkUpdateItem
+				}
 			}
-		}
 
-		if len(phaseErrors) == 0 && totalPhases > 0 && !hasBaseFieldDeviceUpdates(update) {
-			if err := w.service.repo.Update(ctx, proposed); err != nil {
+			if update.BacnetObjects != nil {
+				totalPhases++
+				if err := txService.patchBacnetObjects(txCtx, proposed.ID, *update.BacnetObjects); err != nil {
+					addBulkUpdateError(phaseErrors, "bacnet_objects", "failed to update BACnet objects: ", err)
+					return errBulkUpdateItem
+				}
+			}
+
+			if totalPhases == 0 {
+				phaseErrors["fielddevice"] = "no changes provided"
+				return errBulkUpdateItem
+			}
+
+			// Persist the aggregate root exactly once and only after all owned
+			// children have succeeded. Any error returned after a child write
+			// rolls the complete item back through the facility transaction.
+			if err := txService.repo.Update(txCtx, proposed); err != nil {
+				addBulkUpdateError(phaseErrors, "fielddevice", "", err)
+				return errBulkUpdateItem
+			}
+			if err := txService.recordFieldDeviceChange(txCtx, changecapture.ActionUpdated, proposed.ID); err != nil {
 				phaseErrors["fielddevice"] = err.Error()
+				return errBulkUpdateItem
 			}
+			return nil
+		})
+		if err != nil && len(phaseErrors) == 0 {
+			phaseErrors["fielddevice"] = err.Error()
 		}
 
-		if len(phaseErrors) == 0 && totalPhases > 0 {
+		if err == nil {
 			resultItem.Success = true
 			resultItem.Version = proposed.Version
 			resultItem.FieldDevice = proposed
@@ -501,7 +541,9 @@ func (w fieldDeviceWriter) bulkUpdate(ctx context.Context, updates []domainFacil
 	return result
 }
 
-func (w fieldDeviceWriter) applyBulkBaseUpdate(
+var errBulkUpdateItem = domain.ErrInvalidArgument
+
+func (w fieldDeviceWriter) validateBulkBaseUpdate(
 	ctx context.Context,
 	proposed *domainFacility.FieldDevice,
 	update domainFacility.BulkFieldDeviceUpdate,
@@ -563,13 +605,56 @@ func (w fieldDeviceWriter) applyBulkBaseUpdate(
 		}
 	}
 
-	if err := w.service.repo.Update(ctx, proposed); err != nil {
-		phaseErrors["fielddevice"] = err.Error()
-		return
+}
+
+// applyBulkSpecificationPatch mutates the specification owned by fieldDevice
+// without writing the aggregate root. bulkUpdate persists the root once after
+// every owned child succeeds, which gives the whole item one version change
+// and one transaction boundary.
+func (w fieldDeviceWriter) applyBulkSpecificationPatch(
+	ctx context.Context,
+	fieldDevice *domainFacility.FieldDevice,
+	patch *domainFacility.SpecificationPatch,
+) error {
+	if patch == nil || !patch.HasChanges() {
+		return nil
 	}
-	if err := w.service.recordFieldDeviceChange(ctx, changecapture.ActionUpdated, proposed.ID); err != nil {
-		phaseErrors["fielddevice"] = err.Error()
+
+	specs, err := w.service.specificationRepo.GetByFieldDeviceIDs(ctx, []uuid.UUID{fieldDevice.ID})
+	if err != nil {
+		return err
 	}
+
+	if len(specs) == 0 {
+		if !patch.HasNonNilValues() {
+			return nil
+		}
+
+		fieldDeviceID := fieldDevice.ID
+		spec := &domainFacility.Specification{FieldDeviceID: &fieldDeviceID}
+		applySpecificationPatch(spec, patch)
+		if err := w.service.validateSpecification(spec); err != nil {
+			return err
+		}
+		if err := w.service.specificationRepo.Create(ctx, spec); err != nil {
+			return err
+		}
+		fieldDevice.SpecificationID = &spec.ID
+		fieldDevice.Specification = spec
+		return nil
+	}
+
+	spec := specs[0]
+	applySpecificationPatch(spec, patch)
+	if err := w.service.validateSpecification(spec); err != nil {
+		return err
+	}
+	if err := w.service.specificationRepo.Update(ctx, spec); err != nil {
+		return err
+	}
+	fieldDevice.SpecificationID = &spec.ID
+	fieldDevice.Specification = spec
+	return nil
 }
 
 func buildProposedFieldDevice(existing *domainFacility.FieldDevice, update domainFacility.BulkFieldDeviceUpdate) *domainFacility.FieldDevice {

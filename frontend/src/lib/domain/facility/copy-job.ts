@@ -1,44 +1,117 @@
-import type { components } from '$lib/api/generated/schema.js';
+export type FacilityJobKind =
+  | 'control_cabinet'
+  | 'sps_controller'
+  | 'sps_controller_system_type'
+  | 'field_device'
+  | 'object_data';
+export type FacilityJobStatus = 'queued' | 'running' | 'completed' | 'failed';
+export type FacilityJobType = 'copy' | 'export' | 'bulk' | 'delete' | 'restore';
+export type FacilityJobClass = 'mutation' | 'export';
 
-type GeneratedCopyJob =
-  components['schemas']['github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CopyJobResponse'];
+export interface FacilityJobResult {
+  download_url?: string;
+  file_name?: string;
+  output_type?: 'excel' | 'zip';
+  content_type?: string;
+  size?: number;
+  expires_at?: string;
+  resource_id?: string;
+  [key: string]: unknown;
+}
 
-export type CopyJobKind = NonNullable<GeneratedCopyJob['kind']>;
-export type CopyJobStatus = NonNullable<GeneratedCopyJob['status']>;
-
-export interface CopyJob {
+export interface FacilityJob {
   jobId: string;
-  kind: CopyJobKind;
-  status: CopyJobStatus;
+  kind: FacilityJobKind;
+  type: FacilityJobType;
+  class: FacilityJobClass;
+  status: FacilityJobStatus;
   progress: number;
   stage: string;
   error?: string;
+  attempts: number;
+  processed: number;
+  total?: number;
+  successCount: number;
+  failureCount: number;
+  retryable: boolean;
+  result?: FacilityJobResult;
+  createdAt?: string;
+  updatedAt?: string;
+  completedAt?: string;
 }
 
-export function toCopyJob(response: GeneratedCopyJob): CopyJob {
-  if (
-    !response.job_id ||
-    !response.kind ||
-    !response.status ||
-    response.progress === undefined ||
-    !response.stage
-  ) {
-    throw new Error('Invalid copy job response');
-  }
+interface FacilityJobWire {
+  job_id?: string;
+  kind?: string;
+  type?: string;
+  class?: string;
+  status?: string;
+  progress?: number;
+  stage?: string;
+  error?: string;
+  attempts?: number;
+  processed?: number;
+  total?: number;
+  success_count?: number;
+  failure_count?: number;
+  retryable?: boolean;
+  result?: FacilityJobResult;
+  created_at?: string;
+  updated_at?: string;
+  completed_at?: string;
+}
 
+export function toFacilityJob(response: FacilityJobWire): FacilityJob {
+  if (!response.job_id || !isKind(response.kind) || !isStatus(response.status) || !response.stage) {
+    throw new Error('Invalid facility job response');
+  }
   return {
     jobId: response.job_id,
     kind: response.kind,
-    status: toCopyJobStatus(response.status),
-    progress: Math.min(100, Math.max(0, response.progress)),
+    type: isType(response.type) ? response.type : 'copy',
+    class: response.class === 'export' ? 'export' : 'mutation',
+    status: response.status,
+    progress: Math.min(100, Math.max(0, response.progress ?? 0)),
     stage: response.stage,
-    ...(response.error ? { error: response.error } : {})
+    attempts: response.attempts ?? 0,
+    processed: response.processed ?? 0,
+    ...(response.total !== undefined ? { total: response.total } : {}),
+    successCount: response.success_count ?? 0,
+    failureCount: response.failure_count ?? 0,
+    retryable: response.retryable ?? false,
+    ...(response.error ? { error: response.error } : {}),
+    ...(response.result ? { result: response.result } : {}),
+    ...(response.created_at ? { createdAt: response.created_at } : {}),
+    ...(response.updated_at ? { updatedAt: response.updated_at } : {}),
+    ...(response.completed_at ? { completedAt: response.completed_at } : {})
   };
 }
 
-function toCopyJobStatus(value: string): CopyJobStatus {
-  if (value === 'queued' || value === 'running' || value === 'completed' || value === 'failed') {
-    return value;
-  }
-  throw new Error(`Unsupported copy job status: ${value}`);
+function isKind(value: unknown): value is FacilityJobKind {
+  return (
+    value === 'control_cabinet' ||
+    value === 'sps_controller' ||
+    value === 'sps_controller_system_type' ||
+    value === 'field_device' ||
+    value === 'object_data'
+  );
 }
+
+function isStatus(value: unknown): value is FacilityJobStatus {
+  return value === 'queued' || value === 'running' || value === 'completed' || value === 'failed';
+}
+
+function isType(value: unknown): value is FacilityJobType {
+  return (
+    value === 'copy' ||
+    value === 'export' ||
+    value === 'bulk' ||
+    value === 'delete' ||
+    value === 'restore'
+  );
+}
+
+export type CopyJob = FacilityJob;
+export type CopyJobKind = FacilityJobKind;
+export type CopyJobStatus = FacilityJobStatus;
+export const toCopyJob = toFacilityJob;

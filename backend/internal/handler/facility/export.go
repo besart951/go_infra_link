@@ -6,6 +6,8 @@ import (
 
 	domainExport "github.com/besart951/go_infra_link/backend/internal/domain/exporting"
 	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/facility"
+	"github.com/besart951/go_infra_link/backend/internal/handler/middleware"
+	"github.com/besart951/go_infra_link/backend/internal/handlerutil"
 	"github.com/gin-gonic/gin"
 )
 
@@ -22,13 +24,30 @@ func (h *ExportHandler) CreateFieldDeviceExport(c *gin.Context) {
 	if !bindJSON(c, &req) {
 		return
 	}
+	if len(req.ProjectIDs) == 0 && len(req.BuildingIDs) == 0 && len(req.ControlCabinetIDs) == 0 && len(req.SPSControllerIDs) == 0 && len(req.SPSControllerSystemTypeIDs) == 0 && req.Search == "" && !req.ExportAll {
+		respondLocalizedInvalidArgument(c, "facility.export_scope_required")
+		return
+	}
 
-	job, err := h.service.Create(c.Request.Context(), domainExport.Request{
-		ProjectIDs:        req.ProjectIDs,
-		BuildingIDs:       req.BuildingIDs,
-		ControlCabinetIDs: req.ControlCabinetIDs,
-		SPSControllerIDs:  req.SPSControllerIDs,
-		ForceAsync:        req.ForceAsync,
+	ownerID, ok := middleware.GetUserID(c)
+	if !ok {
+		respondLocalizedError(c, http.StatusUnauthorized, "unauthorized", "errors.unauthorized")
+		return
+	}
+	operationID, err := handlerutil.ParseCopyOperationID(c)
+	if err != nil {
+		respondLocalizedInvalidArgument(c, "facility.invalid_id")
+		return
+	}
+	job, err := h.service.Create(c.Request.Context(), ownerID, operationID, domainExport.Request{
+		ProjectIDs:                 req.ProjectIDs,
+		BuildingIDs:                req.BuildingIDs,
+		ControlCabinetIDs:          req.ControlCabinetIDs,
+		SPSControllerIDs:           req.SPSControllerIDs,
+		SPSControllerSystemTypeIDs: req.SPSControllerSystemTypeIDs,
+		Search:                     req.Search,
+		ExportAll:                  req.ExportAll,
+		ForceAsync:                 req.ForceAsync,
 	})
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "export_creation_failed", err.Error())
@@ -44,7 +63,12 @@ func (h *ExportHandler) GetExportStatus(c *gin.Context) {
 		return
 	}
 
-	job, err := h.service.Get(c.Request.Context(), jobID)
+	ownerID, ok := middleware.GetUserID(c)
+	if !ok {
+		respondLocalizedError(c, http.StatusUnauthorized, "unauthorized", "errors.unauthorized")
+		return
+	}
+	job, err := h.service.Get(c.Request.Context(), ownerID, jobID)
 	if err != nil {
 		respondNotFound(c, "Export job not found")
 		return
@@ -54,12 +78,21 @@ func (h *ExportHandler) GetExportStatus(c *gin.Context) {
 }
 
 func (h *ExportHandler) DownloadExport(c *gin.Context) {
-	jobID, ok := parseUUIDParam(c, "jobId")
+	parameter := "jobId"
+	if c.Param(parameter) == "" {
+		parameter = "id"
+	}
+	jobID, ok := parseUUIDParam(c, parameter)
 	if !ok {
 		return
 	}
 
-	job, err := h.service.Get(c.Request.Context(), jobID)
+	ownerID, ok := middleware.GetUserID(c)
+	if !ok {
+		respondLocalizedError(c, http.StatusUnauthorized, "unauthorized", "errors.unauthorized")
+		return
+	}
+	job, err := h.service.Get(c.Request.Context(), ownerID, jobID)
 	if err != nil {
 		respondNotFound(c, "Export job not found")
 		return

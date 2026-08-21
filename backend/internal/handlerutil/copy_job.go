@@ -8,12 +8,18 @@ import (
 	"github.com/google/uuid"
 )
 
-const CopyOperationIDHeader = "X-Copy-Operation-ID"
+const (
+	IdempotencyKeyHeader  = "Idempotency-Key"
+	CopyOperationIDHeader = "X-Copy-Operation-ID"
+)
 
 // ParseCopyOperationID reads the client-generated idempotency key for a
 // long-running copy. Older clients without the header still receive a new job.
 func ParseCopyOperationID(c *gin.Context) (uuid.UUID, error) {
-	raw := strings.TrimSpace(c.GetHeader(CopyOperationIDHeader))
+	raw := strings.TrimSpace(c.GetHeader(IdempotencyKeyHeader))
+	if raw == "" {
+		raw = strings.TrimSpace(c.GetHeader(CopyOperationIDHeader))
+	}
 	if raw == "" {
 		return uuid.New(), nil
 	}

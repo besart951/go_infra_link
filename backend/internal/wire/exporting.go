@@ -1,17 +1,22 @@
 package wire
 
 import (
+	"context"
+	"database/sql"
 	"fmt"
 	"path/filepath"
 	"strings"
 
+	domainExport "github.com/besart951/go_infra_link/backend/internal/domain/exporting"
 	exportservice "github.com/besart951/go_infra_link/backend/internal/service/exporting"
+	facilityservice "github.com/besart951/go_infra_link/backend/internal/service/facility"
 
 	exportinfra "github.com/besart951/go_infra_link/backend/internal/infrastructure/exporting"
+	facilityrepo "github.com/besart951/go_infra_link/backend/internal/repository/facilitysql"
+	"gorm.io/gorm"
 )
 
-func newExportService(repos *Repositories, cfg ServiceConfig) (*exportservice.Service, error) {
-	jobStore := exportinfra.NewMemoryJobStore()
+func newExportService(db *gorm.DB, repos *Repositories, cfg ServiceConfig, jobs *facilityservice.CopyJobManager) (*exportservice.Service, error) {
 	fileStore, err := exportinfra.NewLocalFileStore(resolveExportDirectory(cfg))
 	if err != nil {
 		return nil, fmt.Errorf("export file store: %w", err)
@@ -22,14 +27,30 @@ func newExportService(repos *Repositories, cfg ServiceConfig) (*exportservice.Se
 		repos.FacilityBacnetObjects,
 		repos.FacilitySPSControllers,
 		repos.FacilityControlCabinet,
+		repos.FacilityBacnetObjectAlarmValues,
 	)
+	if db != nil {
+		dataProvider.SetSnapshotRunner(func(ctx context.Context, consume func(domainExport.DataProvider) error) error {
+			return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+				txProvider := exportinfra.NewDataProvider(
+					facilityrepo.NewFieldDeviceRepository(tx),
+					facilityrepo.NewSpecificationRepository(tx),
+					facilityrepo.NewBacnetObjectRepository(tx),
+					facilityrepo.NewSPSControllerRepository(tx),
+					facilityrepo.NewControlCabinetRepository(tx),
+					facilityrepo.NewBacnetObjectAlarmValueRepository(tx),
+				)
+				return consume(txProvider)
+			}, &sql.TxOptions{Isolation: sql.LevelRepeatableRead, ReadOnly: true})
+		})
+	}
 	excelGenerator := exportinfra.NewExcelizeGenerator()
 	return exportservice.NewService(
 		dataProvider,
 		excelGenerator,
 		excelGenerator,
-		jobStore,
 		fileStore,
+		jobs,
 		resolveExportConfig(cfg.Export),
 	), nil
 }
@@ -63,7 +84,7 @@ func defaultExportConfig() exportservice.Config {
 		QueueSize:             200,
 		MaxConcurrent:         1,
 		SingleFileDeviceLimit: 5000,
-		PageSize:              1000,
+		PageSize:              500,
 	}
 }
 

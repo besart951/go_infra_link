@@ -22,6 +22,27 @@ func NewBacnetObjectHandler(service BacnetObjectService, broadcasters ...Project
 	return h
 }
 
+// GetBacnetObject godoc
+// @Summary Get a BACnet instance or template by ID
+// @Tags facility-bacnet-objects
+// @Produce json
+// @Param id path string true "BACnet Object ID"
+// @Success 200 {object} dto.BacnetObjectResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Router /api/v1/facility/bacnet-objects/{id} [get]
+func (h *BacnetObjectHandler) GetBacnetObject(c *gin.Context) {
+	id, ok := parseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+	object, err := h.service.GetByID(c.Request.Context(), id)
+	if err != nil {
+		respondLocalizedDomainError(c, err, "fetch_failed", "facility.fetch_failed", localizedNotFound("facility.bacnet_object_not_found"))
+		return
+	}
+	c.JSON(http.StatusOK, toBacnetObjectResponse(*object))
+}
+
 // CreateBacnetObject godoc
 // @Summary Create a bacnet object (for field device or object data)
 // @Tags facility-bacnet-objects

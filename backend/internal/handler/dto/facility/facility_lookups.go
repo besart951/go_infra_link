@@ -188,6 +188,13 @@ type SPSControllerSystemTypeResponse struct {
 	UpdatedAt         time.Time `json:"updated_at"`
 }
 
+type CreateSPSControllerSystemTypeRequest struct {
+	SPSControllerID uuid.UUID `json:"sps_controller_id" binding:"required"`
+	SystemTypeID    uuid.UUID `json:"system_type_id" binding:"required"`
+	Number          *int      `json:"number" binding:"omitempty,min=1"`
+	DocumentName    *string   `json:"document_name" binding:"omitempty,max=250"`
+}
+
 type UpdateSPSControllerSystemTypeRequest struct {
 	BaseVersion  *uint64 `json:"base_version" binding:"omitempty,min=1"`
 	Number       *int    `json:"number" binding:"omitempty,min=1"`

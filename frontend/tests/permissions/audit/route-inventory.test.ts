@@ -28,7 +28,7 @@ describe('route permission audit inventory', () => {
   it('summarizes which routes are currently configured correctly', () => {
     const summary = getRouteAuditSummary();
 
-    expect(summary.totalRoutes).toBe(43);
+    expect(summary.totalRoutes).toBe(50);
     expect(summary.configured).toEqual([
       '/',
       '/account',
@@ -48,7 +48,7 @@ describe('route permission audit inventory', () => {
       '/users',
       '/users/roles'
     ]);
-    expect(summary.misconfigured).toHaveLength(26);
+    expect(summary.misconfigured).toHaveLength(33);
     expect(configuredRoutePaths).toHaveLength(17);
   });
 });

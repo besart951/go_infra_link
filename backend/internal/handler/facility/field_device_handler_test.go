@@ -98,6 +98,35 @@ func TestMultiCreateFieldDevicesBindJSONReturnsNestedValidationShape(t *testing.
 	}
 }
 
+func TestBulkDeleteFieldDevicesRejectsMoreThanSynchronousLimit(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	service := &fakeFieldDeviceHandlerService{}
+	handler := NewFieldDeviceHandler(service)
+	ids := make([]uuid.UUID, 501)
+	for i := range ids {
+		ids[i] = uuid.New()
+	}
+	body, err := json.Marshal(dto.BulkDeleteFieldDeviceRequest{IDs: ids})
+	if err != nil {
+		t.Fatalf("marshal bulk delete request: %v", err)
+	}
+
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	context.Request = httptest.NewRequest(http.MethodDelete, "/field-devices/bulk-delete", strings.NewReader(string(body)))
+	context.Request.Header.Set("Content-Type", "application/json")
+
+	handler.BulkDeleteFieldDevices(context)
+
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("expected status 400, got %d body=%s", recorder.Code, recorder.Body.String())
+	}
+	if service.bulkDeleteCalls != 0 {
+		t.Fatalf("expected service not to be called, got %d call(s)", service.bulkDeleteCalls)
+	}
+}
+
 func TestListFieldDevicesAcceptsMultiValueFilterParam(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -218,6 +247,7 @@ type fakeFieldDeviceHandlerService struct {
 	listWithFiltersCalls int
 	listAvailableCalls   int
 	multiCreateCalls     int
+	bulkDeleteCalls      int
 	listWithFiltersErr   error
 	listAvailableErr     error
 	lastFilters          domainFacility.FieldDeviceFilterParams
@@ -237,6 +267,10 @@ func (s *fakeFieldDeviceHandlerService) MultiCreate(context.Context, []domainFac
 }
 
 func (s *fakeFieldDeviceHandlerService) GetByID(context.Context, uuid.UUID) (*domainFacility.FieldDevice, error) {
+	return nil, domain.ErrNotFound
+}
+
+func (s *fakeFieldDeviceHandlerService) CopyByID(context.Context, uuid.UUID) (*domainFacility.FieldDevice, error) {
 	return nil, domain.ErrNotFound
 }
 
@@ -289,8 +323,16 @@ func (s *fakeFieldDeviceHandlerService) CreateSpecification(context.Context, uui
 	return nil
 }
 
+func (s *fakeFieldDeviceHandlerService) GetSpecification(context.Context, uuid.UUID) (*domainFacility.Specification, error) {
+	return nil, domain.ErrNotFound
+}
+
 func (s *fakeFieldDeviceHandlerService) UpdateSpecificationPatch(context.Context, uuid.UUID, *domainFacility.SpecificationPatch) (*domainFacility.Specification, error) {
 	return nil, nil
+}
+
+func (s *fakeFieldDeviceHandlerService) DeleteSpecification(context.Context, uuid.UUID) error {
+	return nil
 }
 
 func (s *fakeFieldDeviceHandlerService) BulkUpdate(context.Context, []domainFacility.BulkFieldDeviceUpdate) *domainFacility.BulkOperationResult {
@@ -298,5 +340,6 @@ func (s *fakeFieldDeviceHandlerService) BulkUpdate(context.Context, []domainFaci
 }
 
 func (s *fakeFieldDeviceHandlerService) BulkDelete(context.Context, []uuid.UUID) *domainFacility.BulkOperationResult {
+	s.bulkDeleteCalls++
 	return &domainFacility.BulkOperationResult{}
 }

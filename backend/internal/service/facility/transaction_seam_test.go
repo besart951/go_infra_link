@@ -29,6 +29,13 @@ type txObjectDataStore struct {
 	bacnetObjectIDs map[uuid.UUID][]uuid.UUID
 }
 
+func (r *txObjectDataStore) Create(ctx context.Context, entity *domainFacility.ObjectData) error {
+	if entity.ID == uuid.Nil {
+		entity.ID = uuid.New()
+	}
+	return r.fakeObjectDataStore.Create(ctx, entity)
+}
+
 func (r *txObjectDataStore) GetBacnetObjectIDs(_ context.Context, objectDataID uuid.UUID) ([]uuid.UUID, error) {
 	ids := r.bacnetObjectIDs[objectDataID]
 	return append([]uuid.UUID(nil), ids...), nil
@@ -833,6 +840,347 @@ func TestFacilityTransaction_FieldDeviceCreateWithBacnetObjectsFailureDoesNotEsc
 	if txFieldDevices.deleteCalls != 0 {
 		t.Fatalf("expected no compensating field-device delete inside transaction, got %d", txFieldDevices.deleteCalls)
 	}
+}
+
+func TestFacilityTransaction_FieldDeviceCopyDeepCopiesOwnedChildren(t *testing.T) {
+	sourceID := uuid.New()
+	spsSystemTypeID := uuid.New()
+	systemTypeID := uuid.New()
+	apparatID := uuid.New()
+	systemPartID := uuid.New()
+	firstObjectID := uuid.New()
+	secondObjectID := uuid.New()
+	alarmFieldID := uuid.New()
+
+	baseFieldDevices := &fakeFieldDeviceStore{items: map[uuid.UUID]*domainFacility.FieldDevice{}}
+	txFieldDevices := &fakeFieldDeviceStore{items: map[uuid.UUID]*domainFacility.FieldDevice{
+		sourceID: newFieldDevice(sourceID, spsSystemTypeID, apparatID, systemPartID, 1),
+	}}
+	sharedSystemTypes := &fakeSystemTypeRepo{items: map[uuid.UUID]*domainFacility.SystemType{
+		systemTypeID: {Base: domain.Base{ID: systemTypeID}, NumberMin: 1, NumberMax: 99},
+	}}
+	sharedSystemParts := &fakeSystemPartRepo{items: map[uuid.UUID]*domainFacility.SystemPart{
+		systemPartID: {Base: domain.Base{ID: systemPartID}, ShortName: "AIR", Name: "Air"},
+	}}
+	sharedApparats := &fakeApparatRepo{items: map[uuid.UUID]*domainFacility.Apparat{
+		apparatID: {Base: domain.Base{ID: apparatID}, ShortName: "PMP", Name: "Pump"},
+	}}
+	sharedSPSSystemTypes := &fakeSpsControllerSystemTypeRepo{items: map[uuid.UUID]*domainFacility.SPSControllerSystemType{
+		spsSystemTypeID: {Base: domain.Base{ID: spsSystemTypeID}, SystemTypeID: systemTypeID},
+	}}
+	txSpecifications := &fakeSpecificationStore{items: map[uuid.UUID]*domainFacility.Specification{
+		uuid.New(): {Base: domain.Base{ID: uuid.New()}, FieldDeviceID: &sourceID},
+	}}
+	txBacnetObjects := &fakeBacnetObjectStore{items: map[uuid.UUID]*domainFacility.BacnetObject{
+		firstObjectID: {
+			Base: domain.Base{ID: firstObjectID}, FieldDeviceID: &sourceID,
+			TextFix: "AI1", SoftwareType: domainFacility.BacnetSoftwareTypeAI, SoftwareNumber: 1,
+		},
+		secondObjectID: {
+			Base: domain.Base{ID: secondObjectID}, FieldDeviceID: &sourceID,
+			TextFix: "AI2", SoftwareType: domainFacility.BacnetSoftwareTypeAI, SoftwareNumber: 2,
+			SoftwareReferenceID: &firstObjectID,
+		},
+	}}
+	txAlarmValues := &fakeBacnetObjectAlarmValueRepo{items: map[uuid.UUID]*domainFacility.BacnetObjectAlarmValue{
+		uuid.New(): {
+			Base: domain.Base{ID: uuid.New()}, BacnetObjectID: firstObjectID,
+			AlarmTypeFieldID: alarmFieldID, Source: domainFacility.AlarmValueSourceUser,
+		},
+	}}
+
+	baseRepos := facility.Repositories{
+		FieldDevices:             baseFieldDevices,
+		SPSControllerSystemTypes: sharedSPSSystemTypes,
+		SystemTypes:              sharedSystemTypes,
+		Apparats:                 sharedApparats,
+		SystemParts:              sharedSystemParts,
+	}
+	txRepos := facility.Repositories{
+		FieldDevices:             txFieldDevices,
+		SPSControllerSystemTypes: sharedSPSSystemTypes,
+		SystemTypes:              sharedSystemTypes,
+		Apparats:                 sharedApparats,
+		SystemParts:              sharedSystemParts,
+		Specifications:           txSpecifications,
+		BacnetObjects:            txBacnetObjects,
+		BacnetObjectAlarmValues:  txAlarmValues,
+	}
+	runnerCalls := 0
+	services := newTxServices(baseRepos, txRepos, &runnerCalls)
+
+	copyDevice, err := services.FieldDevice.CopyByID(context.Background(), sourceID)
+	if err != nil {
+		t.Fatalf("copy field device: %v", err)
+	}
+	if runnerCalls != 1 {
+		t.Fatalf("transaction runs = %d, want 1", runnerCalls)
+	}
+	if copyDevice.ID == sourceID || copyDevice.ApparatNr != 2 {
+		t.Fatalf("copy = %#v, want new ID and next apparat number", copyDevice)
+	}
+
+	copyObjects, err := txBacnetObjects.GetByFieldDeviceIDs(context.Background(), []uuid.UUID{copyDevice.ID})
+	if err != nil || len(copyObjects) != 2 {
+		t.Fatalf("copied BACnet objects = %d, error = %v; want 2", len(copyObjects), err)
+	}
+	copyIDs := make(map[uuid.UUID]struct{}, len(copyObjects))
+	var remappedReference *uuid.UUID
+	for _, object := range copyObjects {
+		copyIDs[object.ID] = struct{}{}
+		if object.SoftwareNumber == 2 {
+			remappedReference = object.SoftwareReferenceID
+		}
+	}
+	if remappedReference == nil || *remappedReference == firstObjectID {
+		t.Fatalf("software reference was not remapped: %v", remappedReference)
+	}
+	if _, ok := copyIDs[*remappedReference]; !ok {
+		t.Fatalf("software reference %s does not target the copied aggregate", *remappedReference)
+	}
+
+	copySpecifications, err := txSpecifications.GetByFieldDeviceIDs(context.Background(), []uuid.UUID{copyDevice.ID})
+	if err != nil || len(copySpecifications) != 1 {
+		t.Fatalf("copied specifications = %d, error = %v; want 1", len(copySpecifications), err)
+	}
+	copiedAlarmValues := 0
+	for _, object := range copyObjects {
+		values, valueErr := txAlarmValues.GetByBacnetObjectID(context.Background(), object.ID)
+		if valueErr != nil {
+			t.Fatalf("get copied alarm values: %v", valueErr)
+		}
+		copiedAlarmValues += len(values)
+	}
+	if copiedAlarmValues != 1 {
+		t.Fatalf("copied alarm values = %d, want 1", copiedAlarmValues)
+	}
+}
+
+func TestFacilityTransaction_ObjectDataCopyRemapsTemplateReferences(t *testing.T) {
+	sourceID := uuid.New()
+	apparatID := uuid.New()
+	firstObjectID := uuid.New()
+	secondObjectID := uuid.New()
+	apparat := &domainFacility.Apparat{Base: domain.Base{ID: apparatID}, ShortName: "PMP", Name: "Pump"}
+
+	baseObjectData := &fakeObjectDataStore{items: map[uuid.UUID]*domainFacility.ObjectData{}}
+	txObjectData := &txObjectDataStore{
+		fakeObjectDataStore: &fakeObjectDataStore{items: map[uuid.UUID]*domainFacility.ObjectData{
+			sourceID: {
+				Base: domain.Base{ID: sourceID}, Description: "Template", Version: "1", IsActive: true,
+				Apparats: []*domainFacility.Apparat{apparat},
+			},
+		}},
+		bacnetObjectIDs: map[uuid.UUID][]uuid.UUID{sourceID: {firstObjectID, secondObjectID}},
+	}
+	txBacnetObjects := &fakeBacnetObjectStore{items: map[uuid.UUID]*domainFacility.BacnetObject{
+		firstObjectID: {
+			Base: domain.Base{ID: firstObjectID}, TextFix: "AI1",
+			SoftwareType: domainFacility.BacnetSoftwareTypeAI, SoftwareNumber: 1,
+		},
+		secondObjectID: {
+			Base: domain.Base{ID: secondObjectID}, TextFix: "AI2",
+			SoftwareType: domainFacility.BacnetSoftwareTypeAI, SoftwareNumber: 2,
+			SoftwareReferenceID: &firstObjectID,
+		},
+	}}
+	txLinks := &fakeObjectDataBacnetObjectStore{links: map[uuid.UUID][]uuid.UUID{sourceID: {firstObjectID, secondObjectID}}}
+	sharedApparats := &fakeApparatRepo{items: map[uuid.UUID]*domainFacility.Apparat{apparatID: apparat}}
+
+	baseRepos := facility.Repositories{ObjectData: baseObjectData, Apparats: sharedApparats}
+	txRepos := facility.Repositories{
+		ObjectData:              txObjectData,
+		ObjectDataBacnetObjects: txLinks,
+		BacnetObjects:           txBacnetObjects,
+		Apparats:                sharedApparats,
+	}
+	runnerCalls := 0
+	services := newTxServices(baseRepos, txRepos, &runnerCalls)
+
+	copyTemplate, err := services.ObjectData.CopyByID(context.Background(), sourceID)
+	if err != nil {
+		t.Fatalf("copy object data: %v", err)
+	}
+	if runnerCalls != 1 {
+		t.Fatalf("transaction runs = %d, want 1", runnerCalls)
+	}
+	if copyTemplate.ID == sourceID || copyTemplate.Description != "Template1" {
+		t.Fatalf("copy = %#v, want new ID and incremented description", copyTemplate)
+	}
+	if len(copyTemplate.Apparats) != 1 || copyTemplate.Apparats[0].ID != apparatID {
+		t.Fatalf("shared apparat references = %#v", copyTemplate.Apparats)
+	}
+
+	copyObjectIDs := txLinks.links[copyTemplate.ID]
+	if len(copyObjectIDs) != 2 {
+		t.Fatalf("copied template links = %v, want 2", copyObjectIDs)
+	}
+	copyIDSet := make(map[uuid.UUID]struct{}, len(copyObjectIDs))
+	for _, id := range copyObjectIDs {
+		copyIDSet[id] = struct{}{}
+	}
+	var remappedReference *uuid.UUID
+	for _, id := range copyObjectIDs {
+		object := txBacnetObjects.items[id]
+		if object.SoftwareNumber == 2 {
+			remappedReference = object.SoftwareReferenceID
+		}
+	}
+	if remappedReference == nil || *remappedReference == firstObjectID {
+		t.Fatalf("template software reference was not remapped: %v", remappedReference)
+	}
+	if _, ok := copyIDSet[*remappedReference]; !ok {
+		t.Fatalf("template software reference %s is outside the copied template", *remappedReference)
+	}
+}
+
+func TestFacilityTransaction_BulkUpdateRollsBackFailedItemAndContinues(t *testing.T) {
+	failedID := uuid.New()
+	successID := uuid.New()
+	specID := uuid.New()
+	bacnetID := uuid.New()
+	spsSystemTypeID := uuid.New()
+	systemTypeID := uuid.New()
+	apparatID := uuid.New()
+	systemPartID := uuid.New()
+	bacnetErr := errors.New("bacnet update failed")
+
+	failedDevice := newFieldDevice(failedID, spsSystemTypeID, apparatID, systemPartID, 1)
+	failedDevice.SpecificationID = &specID
+	successDevice := newFieldDevice(successID, spsSystemTypeID, apparatID, systemPartID, 2)
+	baseFieldDevices := &fakeFieldDeviceStore{items: map[uuid.UUID]*domainFacility.FieldDevice{
+		failedID:  failedDevice,
+		successID: successDevice,
+	}}
+	txFieldDevices := &fakeFieldDeviceStore{items: cloneFieldDeviceItems(baseFieldDevices.items)}
+	supplier := "before"
+	txSpecifications := &fakeSpecificationStore{items: map[uuid.UUID]*domainFacility.Specification{
+		specID: {
+			Base:                  domain.Base{ID: specID},
+			FieldDeviceID:         &failedID,
+			SpecificationSupplier: &supplier,
+		},
+	}}
+	txBacnetObjects := &fakeBacnetObjectStore{
+		items: map[uuid.UUID]*domainFacility.BacnetObject{
+			bacnetID: {
+				Base:           domain.Base{ID: bacnetID},
+				TextFix:        "before",
+				SoftwareType:   domainFacility.BacnetSoftwareTypeAI,
+				SoftwareNumber: 1,
+				FieldDeviceID:  &failedID,
+			},
+		},
+		failUpdate: bacnetErr,
+	}
+	sharedSystemTypes := &fakeSystemTypeRepo{items: map[uuid.UUID]*domainFacility.SystemType{
+		systemTypeID: {Base: domain.Base{ID: systemTypeID}, NumberMin: 1, NumberMax: 99},
+	}}
+	sharedSystemParts := &fakeSystemPartRepo{items: map[uuid.UUID]*domainFacility.SystemPart{
+		systemPartID: {Base: domain.Base{ID: systemPartID}, ShortName: "AIR", Name: "Air"},
+	}}
+	sharedApparats := &fakeApparatRepo{items: map[uuid.UUID]*domainFacility.Apparat{
+		apparatID: {Base: domain.Base{ID: apparatID}, ShortName: "PMP", Name: "Pump"},
+	}}
+	sharedSPSSystemTypes := &fakeSpsControllerSystemTypeRepo{items: map[uuid.UUID]*domainFacility.SPSControllerSystemType{
+		spsSystemTypeID: {Base: domain.Base{ID: spsSystemTypeID}, SystemTypeID: systemTypeID},
+	}}
+
+	baseRepos := facility.Repositories{
+		FieldDevices:             baseFieldDevices,
+		SPSControllerSystemTypes: sharedSPSSystemTypes,
+		SystemTypes:              sharedSystemTypes,
+		Apparats:                 sharedApparats,
+		SystemParts:              sharedSystemParts,
+	}
+	txRepos := facility.Repositories{
+		FieldDevices:             txFieldDevices,
+		SPSControllerSystemTypes: sharedSPSSystemTypes,
+		SystemTypes:              sharedSystemTypes,
+		Apparats:                 sharedApparats,
+		SystemParts:              sharedSystemParts,
+		Specifications:           txSpecifications,
+		BacnetObjects:            txBacnetObjects,
+	}
+
+	runnerCalls := 0
+	services := facility.NewServices(baseRepos, facility.Config{
+		TxRunner: func(ctx context.Context, run func(context.Context, apptransaction.UnitOfWork) error) error {
+			runnerCalls++
+			fieldDeviceSnapshot := cloneFieldDeviceItems(txFieldDevices.items)
+			specificationSnapshot := cloneSpecificationItems(txSpecifications.items)
+			bacnetSnapshot := cloneBacnetObjectItems(txBacnetObjects.items)
+			if err := run(ctx, nil); err != nil {
+				txFieldDevices.items = fieldDeviceSnapshot
+				txSpecifications.items = specificationSnapshot
+				txBacnetObjects.items = bacnetSnapshot
+				return err
+			}
+			return nil
+		},
+		TxRepositories: func(apptransaction.UnitOfWork) (facility.Repositories, error) {
+			return txRepos, nil
+		},
+	})
+
+	afterSupplier := "after"
+	afterTextFix := "after"
+	afterDescription := "updated"
+	result := services.FieldDevice.BulkUpdate(context.Background(), []domainFacility.BulkFieldDeviceUpdate{
+		{
+			ID: failedID,
+			Specification: &domainFacility.SpecificationPatch{
+				SpecificationSupplier:    &afterSupplier,
+				HasSpecificationSupplier: true,
+			},
+			BacnetObjects: &[]domainFacility.BacnetObjectPatch{{ID: bacnetID, TextFix: &afterTextFix}},
+		},
+		{
+			ID:             successID,
+			Description:    &afterDescription,
+			HasDescription: true,
+		},
+	})
+
+	if runnerCalls != 2 {
+		t.Fatalf("expected one transaction per item, got %d", runnerCalls)
+	}
+	if result.SuccessCount != 1 || result.FailureCount != 1 {
+		t.Fatalf("expected one success and one failure, got %+v", result)
+	}
+	if got := txSpecifications.items[specID].SpecificationSupplier; got == nil || *got != "before" {
+		t.Fatalf("expected failed item's specification rollback, got %+v", got)
+	}
+	if got := txFieldDevices.items[successID].Description; got == nil || *got != afterDescription {
+		t.Fatalf("expected second item to commit, got %+v", got)
+	}
+}
+
+func cloneFieldDeviceItems(items map[uuid.UUID]*domainFacility.FieldDevice) map[uuid.UUID]*domainFacility.FieldDevice {
+	clones := make(map[uuid.UUID]*domainFacility.FieldDevice, len(items))
+	for id, item := range items {
+		clone := *item
+		clones[id] = &clone
+	}
+	return clones
+}
+
+func cloneSpecificationItems(items map[uuid.UUID]*domainFacility.Specification) map[uuid.UUID]*domainFacility.Specification {
+	clones := make(map[uuid.UUID]*domainFacility.Specification, len(items))
+	for id, item := range items {
+		clone := *item
+		clones[id] = &clone
+	}
+	return clones
+}
+
+func cloneBacnetObjectItems(items map[uuid.UUID]*domainFacility.BacnetObject) map[uuid.UUID]*domainFacility.BacnetObject {
+	clones := make(map[uuid.UUID]*domainFacility.BacnetObject, len(items))
+	for id, item := range items {
+		clone := *item
+		clones[id] = &clone
+	}
+	return clones
 }
 
 func TestFacilityTransaction_FieldDeviceUpdateWithBacnetObjectsFailureDoesNotEscapeTransaction(t *testing.T) {

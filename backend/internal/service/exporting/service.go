@@ -2,17 +2,21 @@ package exporting
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"os"
 	"strings"
-	"sync"
 	"time"
 
 	domainExport "github.com/besart951/go_infra_link/backend/internal/domain/exporting"
-	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
+	facilityservice "github.com/besart951/go_infra_link/backend/internal/service/facility"
 	"github.com/google/uuid"
 )
 
 var ErrJobNotFound = errors.New("export job not found")
+
+const fieldDeviceExportTask = "fielddevice.export.v1"
 
 type Config struct {
 	QueueSize             int
@@ -21,244 +25,178 @@ type Config struct {
 	PageSize              int
 }
 
+type exportResult struct {
+	OutputType  domainExport.OutputType `json:"output_type"`
+	FileName    string                  `json:"file_name"`
+	ContentType string                  `json:"content_type"`
+	DownloadURL string                  `json:"download_url"`
+	Size        int64                   `json:"size"`
+	ExpiresAt   time.Time               `json:"expires_at"`
+}
+
 type Service struct {
-	data      domainExport.DataProvider
-	workbook  domainExport.WorkbookGenerator
-	zip       domainExport.ZipGenerator
-	jobs      domainExport.JobStore
-	files     domainExport.FileStore
-	cfg       Config
-	queue     chan uuid.UUID
-	requests  map[uuid.UUID]domainExport.Request
-	requestsM sync.RWMutex
+	data     domainExport.DataProvider
+	workbook domainExport.WorkbookGenerator
+	zip      domainExport.ZipGenerator
+	files    domainExport.FileStore
+	jobs     *facilityservice.CopyJobManager
+	cfg      Config
 }
 
 func NewService(
 	data domainExport.DataProvider,
 	workbook domainExport.WorkbookGenerator,
 	zip domainExport.ZipGenerator,
-	jobs domainExport.JobStore,
 	files domainExport.FileStore,
+	jobs *facilityservice.CopyJobManager,
 	cfg Config,
 ) *Service {
-	if cfg.QueueSize <= 0 {
-		cfg.QueueSize = 100
+	if cfg.PageSize <= 0 || cfg.PageSize > 500 {
+		cfg.PageSize = 500
 	}
-	if cfg.MaxConcurrent <= 0 {
-		cfg.MaxConcurrent = 1
+	service := &Service{data: data, workbook: workbook, zip: zip, files: files, jobs: jobs, cfg: cfg}
+	if jobs != nil {
+		jobs.RegisterTask(fieldDeviceExportTask, service.run)
 	}
-	if cfg.SingleFileDeviceLimit <= 0 {
-		cfg.SingleFileDeviceLimit = 5000
-	}
-	if cfg.PageSize <= 0 {
-		cfg.PageSize = 1000
-	}
-
-	s := &Service{
-		data:     data,
-		workbook: workbook,
-		zip:      zip,
-		jobs:     jobs,
-		files:    files,
-		cfg:      cfg,
-		queue:    make(chan uuid.UUID, cfg.QueueSize),
-		requests: map[uuid.UUID]domainExport.Request{},
-	}
-
-	for i := 0; i < cfg.MaxConcurrent; i++ {
-		go s.worker()
-	}
-
-	return s
+	return service
 }
 
-func (s *Service) Create(ctx context.Context, req domainExport.Request) (domainExport.Job, error) {
-	now := time.Now().UTC()
-	job := domainExport.Job{
-		ID:        uuid.New(),
-		Status:    domainExport.StatusQueued,
-		Progress:  0,
-		Message:   "queued",
-		CreatedAt: now,
-		UpdatedAt: now,
+func (s *Service) Create(ctx context.Context, ownerID, operationID uuid.UUID, req domainExport.Request) (domainExport.Job, error) {
+	if s.jobs == nil {
+		return domainExport.Job{}, errors.New("facility jobs unavailable")
 	}
-
-	if err := s.jobs.Create(ctx, job); err != nil {
+	payload, err := json.Marshal(req)
+	if err != nil {
+		return domainExport.Job{}, fmt.Errorf("encode export request: %w", err)
+	}
+	job, err := s.jobs.SubmitTask(ctx, facilityservice.CopyJob{
+		ID: operationID, OwnerID: ownerID,
+		Kind:  facilityservice.CopyJobKindFieldDevice,
+		Class: facilityservice.FacilityJobClassExport,
+		Type:  facilityservice.FacilityJobTypeExport,
+		Task:  fieldDeviceExportTask, Payload: payload,
+	})
+	if err != nil {
 		return domainExport.Job{}, err
 	}
-
-	s.requestsM.Lock()
-	s.requests[job.ID] = req
-	s.requestsM.Unlock()
-
-	shouldQueue := req.ForceAsync || len(s.queue) > 0
-	if shouldQueue {
-		s.queue <- job.ID
-		return s.jobs.Get(ctx, job.ID)
-	}
-
-	if err := s.process(ctx, job.ID); err != nil {
-		if failErr := s.failJob(ctx, job.ID, err); failErr != nil {
-			return domainExport.Job{}, failErr
-		}
-	}
-
-	return s.jobs.Get(ctx, job.ID)
+	return s.toExportJob(job)
 }
 
-func (s *Service) Get(ctx context.Context, id uuid.UUID) (domainExport.Job, error) {
-	job, err := s.jobs.Get(ctx, id)
-	if err != nil {
+func (s *Service) Get(_ context.Context, ownerID, id uuid.UUID) (domainExport.Job, error) {
+	if s.jobs == nil {
 		return domainExport.Job{}, ErrJobNotFound
 	}
-	return job, nil
+	job, err := s.jobs.Get(ownerID, id)
+	if err != nil || job.Type != facilityservice.FacilityJobTypeExport {
+		return domainExport.Job{}, ErrJobNotFound
+	}
+	return s.toExportJob(job)
 }
 
-func (s *Service) worker() {
-	for jobID := range s.queue {
-		ctx := context.Background()
-		if err := s.process(ctx, jobID); err != nil {
-			if failErr := s.failJob(ctx, jobID, err); failErr != nil {
-				s.deleteRequest(jobID)
-			}
-		}
+func (s *Service) run(ctx context.Context, job facilityservice.CopyJob, report func(facilityservice.FacilityJobProgress)) (facilityservice.FacilityJobTaskResult, error) {
+	var req domainExport.Request
+	if err := json.Unmarshal(job.Payload, &req); err != nil {
+		return facilityservice.FacilityJobTaskResult{}, fmt.Errorf("decode export request: %w", err)
 	}
-}
-
-func (s *Service) process(ctx context.Context, jobID uuid.UUID) error {
-	job, err := s.jobs.Get(ctx, jobID)
-	if err != nil {
-		return err
-	}
-
-	req, ok := s.getRequest(jobID)
+	report(facilityservice.FacilityJobProgress{Progress: 5, Stage: "snapshotting"})
+	live, ok := s.data.(domainExport.SnapshotDataProvider)
 	if !ok {
-		return errors.New("job request payload missing")
+		return facilityservice.FacilityJobTaskResult{}, errors.New("export data provider does not support consistent snapshots")
 	}
-
-	job.Status = domainExport.StatusProcessing
-	job.Progress = 5
-	job.Message = "resolving controllers"
-	job.UpdatedAt = time.Now().UTC()
-	if err := s.jobs.Update(ctx, job); err != nil {
-		return err
-	}
-
-	controllers, err := s.data.ResolveControllers(ctx, req)
+	lastProgressAt := time.Time{}
+	snapshot, err := createOrOpenSnapshot(ctx, s.files.SnapshotDirectory(job.ID), req, live, s.cfg.PageSize, func(processed int64) {
+		if time.Since(lastProgressAt) < time.Second {
+			return
+		}
+		lastProgressAt = time.Now()
+		report(facilityservice.FacilityJobProgress{Progress: 15, Stage: "snapshotting", Processed: processed})
+	})
 	if err != nil {
-		return err
+		return facilityservice.FacilityJobTaskResult{}, err
 	}
-
-	perController := make(map[uuid.UUID][]domainFacility.FieldDevice, len(controllers))
-	var total int64
-
-	for idx, controller := range controllers {
-		page := 1
-		for {
-			items, count, listErr := s.data.ListFieldDevicesByController(ctx, controller.ID, req, page, s.cfg.PageSize)
-			if listErr != nil {
-				return listErr
-			}
-			if page == 1 {
-				total += count
-			}
-			if len(items) == 0 {
-				break
-			}
-			perController[controller.ID] = append(perController[controller.ID], items...)
-			if len(items) < s.cfg.PageSize {
-				break
-			}
-			page++
-		}
-
-		job.Progress = 5 + ((idx + 1) * 55 / max(1, len(controllers)))
-		job.Message = "collecting field devices"
-		job.UpdatedAt = time.Now().UTC()
-		if err := s.jobs.Update(ctx, job); err != nil {
-			return err
-		}
-	}
+	defer func() { _ = snapshot.Close() }()
+	controllers := snapshot.manifest.Controllers
+	snapshotTotal := snapshot.manifest.DeviceCount
+	checkpoint, _ := json.Marshal(map[string]any{"snapshot_at": snapshot.manifest.SnapshotAt, "device_count": snapshotTotal})
+	report(facilityservice.FacilityJobProgress{Progress: 25, Stage: "snapshotting", Processed: snapshotTotal, Total: &snapshotTotal, Checkpoint: checkpoint})
+	req.SnapshotAt = snapshot.manifest.SnapshotAt
+	req.SchemaVersion = exportSnapshotSchemaVersion
 
 	outputType := domainExport.OutputTypeExcel
-	cabinetCount := uniqueControlCabinetCount(controllers)
-	if cabinetCount > 1 || total > s.cfg.SingleFileDeviceLimit {
+	if uniqueControlCabinetCount(controllers) > 1 {
 		outputType = domainExport.OutputTypeZip
 	}
+	outputPath, fileName := s.files.BuildOutputPath(job.ID, outputType, exportDownloadFileName(outputType, controllers))
+	stagingPath := s.files.BuildStagingPath(job.ID, outputType)
+	_ = s.files.Remove(stagingPath)
+	defer func() { _ = s.files.Remove(stagingPath) }()
 
-	filePath, fileName := s.files.BuildOutputPath(jobID, outputType, exportDownloadFileName(outputType, controllers))
-	job.OutputType = outputType
-	job.FilePath = filePath
-	job.FileName = fileName
-	job.Message = "generating file"
-	job.Progress = 75
-	job.UpdatedAt = time.Now().UTC()
-	if err := s.jobs.Update(ctx, job); err != nil {
-		return err
-	}
-
+	report(facilityservice.FacilityJobProgress{Progress: 30, Stage: "generating"})
+	var processed int64
 	if outputType == domainExport.OutputTypeZip {
-		if err := s.zip.GenerateZipByCabinet(ctx, filePath, controllers, perController); err != nil {
-			return err
-		}
-		job.ContentType = "application/zip"
+		processed, err = s.zip.GenerateZipByCabinet(ctx, stagingPath, controllers, snapshot, req, s.cfg.PageSize)
 	} else {
-		if err := s.workbook.GenerateWorkbook(ctx, filePath, controllers, perController); err != nil {
-			return err
+		processed, err = s.workbook.GenerateWorkbook(ctx, stagingPath, controllers, snapshot, req, s.cfg.PageSize)
+	}
+	if err != nil {
+		return facilityservice.FacilityJobTaskResult{}, fmt.Errorf("generate export: %w", err)
+	}
+	total := processed
+	report(facilityservice.FacilityJobProgress{Progress: 90, Stage: "packaging", Processed: processed, Total: &total, Succeeded: processed})
+	if err := s.files.Finalize(stagingPath, outputPath); err != nil {
+		return facilityservice.FacilityJobTaskResult{}, fmt.Errorf("finalize export: %w", err)
+	}
+	info, err := os.Stat(outputPath)
+	if err != nil {
+		return facilityservice.FacilityJobTaskResult{}, fmt.Errorf("stat export: %w", err)
+	}
+	contentType := "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+	if outputType == domainExport.OutputTypeZip {
+		contentType = "application/zip"
+	}
+	result, err := json.Marshal(exportResult{
+		OutputType: outputType, FileName: fileName, ContentType: contentType,
+		DownloadURL: "/api/v1/facility/jobs/" + job.ID.String() + "/download",
+		Size:        info.Size(), ExpiresAt: time.Now().UTC().Add(90 * 24 * time.Hour),
+	})
+	if err != nil {
+		return facilityservice.FacilityJobTaskResult{}, fmt.Errorf("encode export result: %w", err)
+	}
+	return facilityservice.FacilityJobTaskResult{Result: result}, nil
+}
+
+func (s *Service) toExportJob(job facilityservice.CopyJob) (domainExport.Job, error) {
+	status := domainExport.Status(job.Status)
+	if job.Status == facilityservice.CopyJobStatusRunning {
+		status = domainExport.StatusProcessing
+	}
+	result := exportResult{}
+	if len(job.Result) > 0 {
+		if err := json.Unmarshal(job.Result, &result); err != nil {
+			return domainExport.Job{}, fmt.Errorf("decode export result: %w", err)
 		}
-		job.ContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 	}
-
-	job.Status = domainExport.StatusCompleted
-	job.Progress = 100
-	job.Message = "completed"
-	job.UpdatedAt = time.Now().UTC()
-	if err := s.jobs.Update(ctx, job); err != nil {
-		return err
+	filePath := ""
+	if result.OutputType != "" {
+		filePath, _ = s.files.BuildOutputPath(job.ID, result.OutputType, result.FileName)
 	}
-
-	s.deleteRequest(jobID)
-	return nil
+	return domainExport.Job{
+		ID: job.ID, Status: status, Progress: job.Progress, Message: job.Stage,
+		OutputType: result.OutputType, FileName: result.FileName, ContentType: result.ContentType,
+		FilePath: filePath, Error: job.Error, CreatedAt: job.CreatedAt, UpdatedAt: job.UpdatedAt,
+	}, nil
 }
 
 func exportDownloadFileName(outputType domainExport.OutputType, controllers []domainExport.Controller) string {
 	if outputType != domainExport.OutputTypeExcel {
 		return ""
 	}
-
 	for _, controller := range controllers {
 		if name := strings.TrimSpace(controller.ControlCabinetNr); name != "" {
 			return name
 		}
 	}
-
 	return ""
-}
-
-func (s *Service) failJob(ctx context.Context, jobID uuid.UUID, processErr error) error {
-	job, err := s.jobs.Get(ctx, jobID)
-	if err != nil {
-		return err
-	}
-	job.Status = domainExport.StatusFailed
-	job.Error = processErr.Error()
-	job.Message = "failed"
-	job.UpdatedAt = time.Now().UTC()
-	s.deleteRequest(jobID)
-	return s.jobs.Update(ctx, job)
-}
-
-func (s *Service) getRequest(jobID uuid.UUID) (domainExport.Request, bool) {
-	s.requestsM.RLock()
-	defer s.requestsM.RUnlock()
-	req, ok := s.requests[jobID]
-	return req, ok
-}
-
-func (s *Service) deleteRequest(jobID uuid.UUID) {
-	s.requestsM.Lock()
-	defer s.requestsM.Unlock()
-	delete(s.requests, jobID)
 }
 
 func uniqueControlCabinetCount(controllers []domainExport.Controller) int {

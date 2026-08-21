@@ -3,11 +3,14 @@ package exporting
 import (
 	"archive/zip"
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	domainExport "github.com/besart951/go_infra_link/backend/internal/domain/exporting"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
@@ -100,101 +103,385 @@ func NewExcelizeGenerator() *ExcelizeGenerator {
 	return &ExcelizeGenerator{}
 }
 
-func (g *ExcelizeGenerator) GenerateWorkbook(ctx context.Context, outputPath string, controllers []domainExport.Controller, perControllerDevices map[uuid.UUID][]domainFacility.FieldDevice) error {
+const excelMaximumRows = 1_048_576
+
+func (g *ExcelizeGenerator) GenerateWorkbook(ctx context.Context, outputPath string, controllers []domainExport.Controller, source domainExport.DataProvider, req domainExport.Request, pageSize int) (int64, error) {
+	if pageSize <= 0 || pageSize > 500 {
+		pageSize = 500
+	}
 	f := excelize.NewFile()
 	defer func() { _ = f.Close() }()
 
 	st, err := createStyles(f)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	defaultSheet := f.GetSheetName(0)
+	var written int64
+	usedSheets := make(map[string]struct{})
+	if err := writeExportManifest(f, req); err != nil {
+		return 0, err
+	}
+	machineSheets, err := newMachineDataSheets(f)
+	if err != nil {
+		return 0, err
+	}
 
 	for idx, controller := range sortedControllers(controllers) {
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return 0, ctx.Err()
 		default:
 		}
 
-		sheetName := safeSheetName(controller.GADevice, controller.ID)
+		part := 1
+		sheetName := uniqueSheetName(safeSheetName(controller.GADevice, controller.ID), part, usedSheets)
 		if idx == 0 && defaultSheet != "" {
 			if err := f.SetSheetName(defaultSheet, sheetName); err != nil {
-				return err
+				return 0, err
 			}
 		} else {
 			if _, err = f.NewSheet(sheetName); err != nil {
-				return err
+				return 0, err
 			}
 		}
 		stream, err := f.NewStreamWriter(sheetName)
 		if err != nil {
-			return err
+			return 0, err
+		}
+		rowIdx, err := writeControllerHeading(stream, controller, st)
+		if err != nil {
+			return 0, err
 		}
 
-		rowIdx := 1
-
-		// Controller header rows
-		headerRows := controllerHeaderRows(controller)
-		for i, row := range headerRows {
-			styleID := st.headerInfo
-			if i == 0 {
-				styleID = st.headerTitle
+		afterID := uuid.Nil
+		for {
+			devices, listErr := source.ListFieldDevicesByControllerAfter(ctx, controller.ID, req, afterID, pageSize)
+			if listErr != nil {
+				return 0, listErr
 			}
-			if err := stream.SetRow(cell("A", rowIdx), styledRow(row, styleID)); err != nil {
-				return err
+			if len(devices) == 0 {
+				break
 			}
-			rowIdx++
-		}
-
-		// Blank separator row
-		if err := stream.SetRow(cell("A", rowIdx), []any{excelize.Cell{Value: " "}}); err != nil {
-			return err
-		}
-		rowIdx++
-
-		// Column headings
-		if err := stream.SetRow(cell("A", rowIdx), styledRow(headings, st.columnHeading)); err != nil {
-			return err
-		}
-		rowIdx++
-
-		// Data rows
-		for _, device := range perControllerDevices[controller.ID] {
-			if err := stream.SetRow(cell("A", rowIdx), styledAnyRow(firstLine(controller, device), st.firstLineStyle)); err != nil {
-				return err
-			}
-			rowIdx++
-
-			for _, bo := range device.BacnetObjects {
-				if err := stream.SetRow(cell("A", rowIdx), anyToCells(bacnetLine(controller, device, bo))); err != nil {
-					return err
+			for _, device := range devices {
+				rowsNeeded := 1 + len(device.BacnetObjects)
+				if rowIdx+rowsNeeded-1 > excelMaximumRows {
+					if err := stream.Flush(); err != nil {
+						return 0, err
+					}
+					part++
+					sheetName = uniqueSheetName(safeSheetName(controller.GADevice, controller.ID), part, usedSheets)
+					if _, err := f.NewSheet(sheetName); err != nil {
+						return 0, err
+					}
+					stream, err = f.NewStreamWriter(sheetName)
+					if err != nil {
+						return 0, err
+					}
+					rowIdx, err = writeControllerHeading(stream, controller, st)
+					if err != nil {
+						return 0, err
+					}
+				}
+				if err := stream.SetRow(cell("A", rowIdx), styledAnyRow(firstLine(controller, device), st.firstLineStyle)); err != nil {
+					return 0, err
 				}
 				rowIdx++
+
+				for _, bo := range device.BacnetObjects {
+					if err := stream.SetRow(cell("A", rowIdx), anyToCells(bacnetLine(controller, device, bo))); err != nil {
+						return 0, err
+					}
+					rowIdx++
+				}
+				written++
+				if err := machineSheets.Write(controller, device); err != nil {
+					return 0, err
+				}
+			}
+			afterID = devices[len(devices)-1].ID
+			if len(devices) < pageSize {
+				break
 			}
 		}
 
 		if err := stream.Flush(); err != nil {
-			return err
+			return 0, err
 		}
+	}
+	if err := machineSheets.Close(); err != nil {
+		return 0, err
 	}
 
 	if len(f.GetSheetList()) > 0 {
 		f.SetActiveSheet(0)
 	}
 
-	return f.SaveAs(outputPath)
+	return written, f.SaveAs(outputPath)
 }
 
-func (g *ExcelizeGenerator) GenerateZipByCabinet(ctx context.Context, outputPath string, controllers []domainExport.Controller, perControllerDevices map[uuid.UUID][]domainFacility.FieldDevice) error {
-	if err := os.MkdirAll(filepath.Dir(outputPath), 0o755); err != nil {
+type dataSheetWriter struct {
+	file     *excelize.File
+	baseName string
+	headings []string
+	part     int
+	row      int
+	stream   *excelize.StreamWriter
+}
+
+func newDataSheetWriter(file *excelize.File, baseName string, headings []string) (*dataSheetWriter, error) {
+	w := &dataSheetWriter{file: file, baseName: baseName, headings: headings}
+	if err := w.nextSheet(); err != nil {
+		return nil, err
+	}
+	return w, nil
+}
+
+func (w *dataSheetWriter) Write(values []any) error {
+	if w.row > excelMaximumRows {
+		if err := w.stream.Flush(); err != nil {
+			return err
+		}
+		if err := w.nextSheet(); err != nil {
+			return err
+		}
+	}
+	if err := w.stream.SetRow(cell("A", w.row), anyToCells(values)); err != nil {
 		return err
+	}
+	w.row++
+	return nil
+}
+
+func (w *dataSheetWriter) nextSheet() error {
+	w.part++
+	name := w.baseName
+	if w.part > 1 {
+		name = fmt.Sprintf("%s-%d", w.baseName, w.part)
+	}
+	if _, err := w.file.NewSheet(name); err != nil {
+		return err
+	}
+	stream, err := w.file.NewStreamWriter(name)
+	if err != nil {
+		return err
+	}
+	w.stream = stream
+	w.row = 2
+	return stream.SetRow("A1", anyToCells(stringSliceToAny(w.headings)))
+}
+
+func (w *dataSheetWriter) Close() error {
+	return w.stream.Flush()
+}
+
+type machineDataSheets struct {
+	fieldDevices   *dataSheetWriter
+	specifications *dataSheetWriter
+	bacnetObjects  *dataSheetWriter
+	alarmValues    *dataSheetWriter
+}
+
+func newMachineDataSheets(file *excelize.File) (*machineDataSheets, error) {
+	fieldDevices, err := newDataSheetWriter(file, "Data-FieldDevices", []string{
+		"source_id", "version", "created_at", "updated_at", "sps_controller_id", "sps_controller_system_type_id",
+		"system_part_id", "apparat_id", "apparat_nr", "bmk", "description", "text_individual",
+	})
+	if err != nil {
+		return nil, err
+	}
+	specifications, err := newDataSheetWriter(file, "Data-Specifications", []string{
+		"source_id", "field_device_id", "version", "supplier", "brand", "type", "motor_valve", "size",
+		"installation_location", "ph", "acdc", "amperage", "power", "rotation",
+	})
+	if err != nil {
+		return nil, err
+	}
+	bacnetObjects, err := newDataSheetWriter(file, "Data-BACnetObjects", []string{
+		"source_id", "field_device_id", "version", "text_fix", "description", "gms_visible", "optional", "text_individual",
+		"software_type", "software_number", "hardware_type", "hardware_quantity", "software_reference_id",
+		"state_text_id", "notification_class_id", "alarm_type_id", "alarm_definition_id",
+	})
+	if err != nil {
+		return nil, err
+	}
+	alarmValues, err := newDataSheetWriter(file, "Data-AlarmValues", []string{
+		"source_id", "bacnet_object_id", "version", "alarm_type_field_id", "value_number", "value_integer",
+		"value_boolean", "value_string", "value_json", "unit_id", "source",
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &machineDataSheets{fieldDevices: fieldDevices, specifications: specifications, bacnetObjects: bacnetObjects, alarmValues: alarmValues}, nil
+}
+
+func (s *machineDataSheets) Write(controller domainExport.Controller, device domainFacility.FieldDevice) error {
+	if err := s.fieldDevices.Write([]any{
+		device.ID.String(), device.Version, device.CreatedAt, device.UpdatedAt, controller.ID.String(), device.SPSControllerSystemTypeID.String(),
+		device.SystemPartID.String(), device.ApparatID.String(), device.ApparatNr, strPtr(device.BMK), strPtr(device.Description), strPtr(device.TextIndividuell),
+	}); err != nil {
+		return err
+	}
+	if spec := device.Specification; spec != nil {
+		if err := s.specifications.Write([]any{
+			spec.ID.String(), device.ID.String(), spec.Version, strPtr(spec.SpecificationSupplier), strPtr(spec.SpecificationBrand),
+			strPtr(spec.SpecificationType), strPtr(spec.AdditionalInfoMotorValve), intPtr(spec.AdditionalInfoSize),
+			strPtr(spec.AdditionalInformationInstallationLocation), intPtr(spec.ElectricalConnectionPH), strPtr(spec.ElectricalConnectionACDC),
+			floatPtr(spec.ElectricalConnectionAmperage), floatPtr(spec.ElectricalConnectionPower), intPtr(spec.ElectricalConnectionRotation),
+		}); err != nil {
+			return err
+		}
+	}
+	for _, object := range device.BacnetObjects {
+		if err := s.bacnetObjects.Write([]any{
+			object.ID.String(), device.ID.String(), object.Version, object.TextFix, strPtr(object.Description), object.GMSVisible, object.Optional,
+			strPtr(object.TextIndividual), object.SoftwareType, object.SoftwareNumber, object.HardwareType, object.HardwareQuantity,
+			uuidPtr(object.SoftwareReferenceID), uuidPtr(object.StateTextID), uuidPtr(object.NotificationClassID), uuidPtr(object.AlarmTypeID), uuidPtr(object.AlarmDefinitionID),
+		}); err != nil {
+			return err
+		}
+		for _, value := range object.AlarmValues {
+			if err := s.alarmValues.Write([]any{
+				value.ID.String(), object.ID.String(), value.Version, value.AlarmTypeFieldID.String(), pointerValue(value.ValueNumber),
+				pointerValue(value.ValueInteger), pointerValue(value.ValueBoolean), pointerValue(value.ValueString), pointerValue(value.ValueJSON),
+				uuidPtr(value.UnitID), value.Source,
+			}); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (s *machineDataSheets) Close() error {
+	return errors.Join(s.fieldDevices.Close(), s.specifications.Close(), s.bacnetObjects.Close(), s.alarmValues.Close())
+}
+
+func writeExportManifest(file *excelize.File, req domainExport.Request) error {
+	if _, err := file.NewSheet("Export-Manifest"); err != nil {
+		return err
+	}
+	stream, err := file.NewStreamWriter("Export-Manifest")
+	if err != nil {
+		return err
+	}
+	rows := [][]any{
+		{"schema_version", req.SchemaVersion},
+		{"snapshot_at", req.SnapshotAt.UTC().Format(time.RFC3339Nano)},
+		{"project_ids", joinUUIDs(req.ProjectIDs)},
+		{"building_ids", joinUUIDs(req.BuildingIDs)},
+		{"control_cabinet_ids", joinUUIDs(req.ControlCabinetIDs)},
+		{"sps_controller_ids", joinUUIDs(req.SPSControllerIDs)},
+		{"sps_controller_system_type_ids", joinUUIDs(req.SPSControllerSystemTypeIDs)},
+		{"search", req.Search},
+	}
+	for i, row := range rows {
+		if err := stream.SetRow(cell("A", i+1), anyToCells(row)); err != nil {
+			return err
+		}
+	}
+	return stream.Flush()
+}
+
+func stringSliceToAny(values []string) []any {
+	out := make([]any, len(values))
+	for i := range values {
+		out[i] = values[i]
+	}
+	return out
+}
+
+func joinUUIDs(values []uuid.UUID) string {
+	parts := make([]string, len(values))
+	for i := range values {
+		parts[i] = values[i].String()
+	}
+	return strings.Join(parts, ",")
+}
+
+func uuidPtr(value *uuid.UUID) string {
+	if value == nil {
+		return ""
+	}
+	return value.String()
+}
+
+func intPtr(value *int) any {
+	if value == nil {
+		return ""
+	}
+	return *value
+}
+
+func floatPtr(value *float64) any {
+	if value == nil {
+		return ""
+	}
+	return *value
+}
+
+func pointerValue[T any](value *T) any {
+	if value == nil {
+		return ""
+	}
+	return *value
+}
+
+func writeControllerHeading(stream *excelize.StreamWriter, controller domainExport.Controller, st styles) (int, error) {
+	rowIdx := 1
+	for i, row := range controllerHeaderRows(controller) {
+		styleID := st.headerInfo
+		if i == 0 {
+			styleID = st.headerTitle
+		}
+		if err := stream.SetRow(cell("A", rowIdx), styledRow(row, styleID)); err != nil {
+			return 0, err
+		}
+		rowIdx++
+	}
+	if err := stream.SetRow(cell("A", rowIdx), []any{excelize.Cell{Value: " "}}); err != nil {
+		return 0, err
+	}
+	rowIdx++
+	if err := stream.SetRow(cell("A", rowIdx), styledRow(headings, st.columnHeading)); err != nil {
+		return 0, err
+	}
+	return rowIdx + 1, nil
+}
+
+func uniqueSheetName(base string, part int, used map[string]struct{}) string {
+	candidate := base
+	if part > 1 {
+		suffix := fmt.Sprintf("-%d", part)
+		maxBase := max(1, 31-len(suffix))
+		if len(candidate) > maxBase {
+			candidate = candidate[:maxBase]
+		}
+		candidate += suffix
+	}
+	for n := 2; ; n++ {
+		if _, exists := used[candidate]; !exists {
+			used[candidate] = struct{}{}
+			return candidate
+		}
+		suffix := fmt.Sprintf("-%d", n)
+		trimmed := base
+		if len(trimmed) > 31-len(suffix) {
+			trimmed = trimmed[:31-len(suffix)]
+		}
+		candidate = trimmed + suffix
+	}
+}
+
+func (g *ExcelizeGenerator) GenerateZipByCabinet(ctx context.Context, outputPath string, controllers []domainExport.Controller, source domainExport.DataProvider, req domainExport.Request, pageSize int) (int64, error) {
+	if err := os.MkdirAll(filepath.Dir(outputPath), 0o755); err != nil {
+		return 0, err
 	}
 
 	f, err := os.Create(outputPath)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	defer func() { _ = f.Close() }()
 
@@ -207,48 +494,57 @@ func (g *ExcelizeGenerator) GenerateZipByCabinet(ctx context.Context, outputPath
 	}
 
 	usedEntryNames := map[string]struct{}{}
+	var written int64
 
 	for cabinetID, cabinetControllers := range byCabinet {
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return 0, ctx.Err()
 		default:
 		}
 
 		tmp, err := os.CreateTemp("", "field-device-export-*.xlsx")
 		if err != nil {
-			return err
+			return 0, err
 		}
 		tmpPath := tmp.Name()
 		_ = tmp.Close()
 
-		if err := g.GenerateWorkbook(ctx, tmpPath, cabinetControllers, perControllerDevices); err != nil {
+		count, err := g.GenerateWorkbook(ctx, tmpPath, cabinetControllers, source, req, pageSize)
+		if err != nil {
 			_ = os.Remove(tmpPath)
-			return err
+			return 0, err
 		}
+		written += count
 
 		entryName := safeCabinetFileName(cabinetControllers[0], cabinetID)
 		entryName = ensureUniqueZipEntryName(entryName, usedEntryNames)
 		entry, err := zw.Create(entryName)
 		if err != nil {
 			_ = os.Remove(tmpPath)
-			return err
+			return 0, err
 		}
 
-		content, err := os.ReadFile(tmpPath)
+		content, err := os.Open(tmpPath)
 		if err != nil {
 			_ = os.Remove(tmpPath)
-			return err
+			return 0, err
 		}
-		if _, err := entry.Write(content); err != nil {
+		_, copyErr := io.Copy(entry, content)
+		closeErr := content.Close()
+		if copyErr != nil {
 			_ = os.Remove(tmpPath)
-			return err
+			return 0, copyErr
+		}
+		if closeErr != nil {
+			_ = os.Remove(tmpPath)
+			return 0, closeErr
 		}
 
 		_ = os.Remove(tmpPath)
 	}
 
-	return zw.Close()
+	return written, zw.Close()
 }
 
 // ---------------------------------------------------------------------------

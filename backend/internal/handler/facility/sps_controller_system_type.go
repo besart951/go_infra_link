@@ -12,6 +12,38 @@ import (
 	"github.com/google/uuid"
 )
 
+// CreateSPSControllerSystemType godoc
+// @Summary Create an SPS controller system type assignment
+// @Tags facility-sps-controller-system-types
+// @Accept json
+// @Produce json
+// @Param system_type body dto.CreateSPSControllerSystemTypeRequest true "SPS controller system type data"
+// @Success 201 {object} SPSControllerSystemTypeResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 409 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /api/v1/facility/sps-controller-system-types [post]
+func (h *SPSControllerSystemTypeHandler) CreateSPSControllerSystemType(c *gin.Context) {
+	var req dto.CreateSPSControllerSystemTypeRequest
+	if !bindJSON(c, &req) {
+		return
+	}
+	item := &domainFacility.SPSControllerSystemType{
+		SPSControllerID: req.SPSControllerID,
+		SystemTypeID:    req.SystemTypeID,
+		Number:          req.Number,
+		DocumentName:    req.DocumentName,
+	}
+	if err := h.service.Create(c.Request.Context(), item); err != nil {
+		respondLocalizedDomainError(c, err, "creation_failed", "facility.creation_failed")
+		return
+	}
+	if h.collaboration != nil {
+		h.collaboration.BroadcastSPSControllerSystemTypeChange(c.Request.Context(), currentActorID(c), item.SPSControllerID, item.ID, "created")
+	}
+	c.JSON(http.StatusCreated, toSPSControllerSystemTypeResponse(*item))
+}
+
 // UpdateSPSControllerSystemType godoc
 // @Summary Update an SPS controller system type
 // @Tags facility-sps-controller-system-types
@@ -177,6 +209,9 @@ func (h *SPSControllerSystemTypeHandler) GetSPSControllerSystemType(c *gin.Conte
 func (h *SPSControllerSystemTypeHandler) CopySPSControllerSystemType(c *gin.Context) {
 	id, ok := parseUUIDParam(c, "id")
 	if !ok {
+		return
+	}
+	if startPersistedFacilityCopyJob(c, h.copyJobs, facilityservice.CopyJobKindSPSControllerSystemType, id) {
 		return
 	}
 	if startFacilityCopyJob(c, h.copyJobs, facilityservice.CopyJobKindSPSControllerSystemType, func(ctx context.Context, actorID uuid.UUID) error {

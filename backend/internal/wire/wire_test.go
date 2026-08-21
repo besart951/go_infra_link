@@ -77,7 +77,7 @@ func TestExportDefaultsAreApplied(t *testing.T) {
 	if got, want := resolved.SingleFileDeviceLimit, int64(5000); got != want {
 		t.Fatalf("SingleFileDeviceLimit: expected %d, got %d", want, got)
 	}
-	if got, want := resolved.PageSize, 1000; got != want {
+	if got, want := resolved.PageSize, 500; got != want {
 		t.Fatalf("PageSize: expected %d, got %d", want, got)
 	}
 

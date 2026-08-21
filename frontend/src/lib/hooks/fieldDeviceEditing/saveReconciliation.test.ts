@@ -41,7 +41,7 @@ describe('field-device save-result reconciliation', () => {
     expect(result.successIds).toEqual(new Set(['fd-1']));
   });
 
-  it('keeps failed phases while clearing successful phases after partial success', () => {
+  it('keeps the complete device draft when an atomic item fails', () => {
     const device = buildFieldDevice();
     const pendingEdits = new Map<string, Partial<BulkUpdateFieldDeviceItem>>([
       [
@@ -93,19 +93,18 @@ describe('field-device save-result reconciliation', () => {
     });
 
     expect(result.remainingEdits.get('fd-1')).toEqual({
+      bmk: 'FD-PARTIAL',
       specification: { specification_brand: 'Rejected Brand' }
     });
-    expect(result.remainingBacnetEdits.size).toBe(0);
-    expect(result.partialSuccessIds).toEqual(new Set(['fd-1']));
+    expect(result.remainingBacnetEdits.get('fd-1')?.get('bo-1')).toEqual({
+      text_fix: 'TF-PARTIAL'
+    });
+    expect(result.successIds.size).toBe(0);
     expect(result.editErrors.get('fd-1')).toEqual({
       message: 'validation failed',
       fields: { 'specification.specification_brand': 'brand rejected' }
     });
-    expect(result.optimisticUpdates[0].bmk).toBe('FD-PARTIAL');
-    expect(result.optimisticUpdates[0].specification?.specification_brand).toBe(
-      device.specification?.specification_brand
-    );
-    expect(result.optimisticUpdates[0].bacnet_objects?.[0].text_fix).toBe('TF-PARTIAL');
+    expect(result.optimisticUpdates).toEqual([]);
   });
 
   it('understands indexed update paths from unified validation errors', () => {
@@ -161,6 +160,7 @@ describe('field-device save-result reconciliation', () => {
     });
 
     expect(result.remainingEdits.get('fd-1')).toEqual({
+      bmk: 'FD-PARTIAL',
       specification: { specification_brand: 'Rejected Brand' }
     });
     expect(result.remainingBacnetEdits.get('fd-1')?.get('bo-1')).toEqual({

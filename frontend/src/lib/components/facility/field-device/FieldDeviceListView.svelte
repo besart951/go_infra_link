@@ -193,7 +193,11 @@
     </div>
 
     {#if fieldDeviceState.showExportPanel}
-      <FieldDeviceExportPanel {projectId} />
+      <FieldDeviceExportPanel
+        {projectId}
+        filters={fieldDeviceState.filters}
+        searchText={fieldDeviceState.searchText}
+      />
     {/if}
 
     {#if fieldDeviceState.showBulkEditPanel}

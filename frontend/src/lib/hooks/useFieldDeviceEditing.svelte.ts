@@ -1040,30 +1040,17 @@ export function useFieldDeviceEditing(options: UseFieldDeviceEditingOptions = {}
       editErrors = reconciled.editErrors;
       bacnetFieldErrors = reconciled.bacnetFieldErrors;
 
-      const totalSuccessful = reconciled.successIds.size + reconciled.partialSuccessIds.size;
-      if (totalSuccessful > 0) {
-        options.onSaveSuccess?.([
-          ...new Set([...reconciled.successIds, ...reconciled.partialSuccessIds])
-        ]);
-        if (reconciled.partialSuccessIds.size > 0) {
-          addToast(
-            translate('field_device.editing.toasts.partial_success', {
-              complete: reconciled.successIds.size,
-              partial: reconciled.partialSuccessIds.size
-            }),
-            'warning'
-          );
-        } else {
-          addToast(
-            translate('field_device.editing.toasts.success', {
-              count: result.success_count
-            }),
-            'success'
-          );
-        }
+      if (reconciled.successIds.size > 0) {
+        options.onSaveSuccess?.([...reconciled.successIds]);
+        addToast(
+          translate('field_device.editing.toasts.success', {
+            count: result.success_count
+          }),
+          'success'
+        );
         onSuccess?.(reconciled.optimisticUpdates);
       }
-      if (result.failure_count > 0 && reconciled.partialSuccessIds.size === 0) {
+      if (result.failure_count > 0) {
         addToast(
           translate('field_device.editing.toasts.partial_failure', {
             count: result.failure_count

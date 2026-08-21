@@ -8,10 +8,12 @@ import (
 
 type Handlers struct {
 	CreateBacnetObject         gin.HandlerFunc
+	GetBacnetObject            gin.HandlerFunc
 	UpdateBacnetObject         gin.HandlerFunc
 	DeleteBacnetObject         gin.HandlerFunc
 	ListObjectData             gin.HandlerFunc
 	GetObjectData              gin.HandlerFunc
+	CopyObjectData             gin.HandlerFunc
 	GetObjectDataBacnetObjects gin.HandlerFunc
 	CreateObjectData           gin.HandlerFunc
 	UpdateObjectData           gin.HandlerFunc
@@ -21,10 +23,12 @@ type Handlers struct {
 func Routes(handlers Handlers) []routing.Definition {
 	return []routing.Definition{
 		routing.Post("/bacnet-objects", domainUser.PermissionBacnetObjectCreate, handlers.CreateBacnetObject),
+		routing.Get("/bacnet-objects/:id", domainUser.PermissionBacnetObjectRead, handlers.GetBacnetObject),
 		routing.Put("/bacnet-objects/:id", domainUser.PermissionBacnetObjectUpdate, handlers.UpdateBacnetObject),
 		routing.Delete("/bacnet-objects/:id", domainUser.PermissionBacnetObjectDelete, handlers.DeleteBacnetObject),
 		routing.Get("/object-data", domainUser.PermissionObjectDataRead, handlers.ListObjectData),
 		routing.Get("/object-data/:id", domainUser.PermissionObjectDataRead, handlers.GetObjectData),
+		routing.Post("/object-data/:id/copy", domainUser.PermissionObjectDataCreate, handlers.CopyObjectData),
 		routing.Get("/object-data/:id/bacnet-objects", domainUser.PermissionObjectDataRead, handlers.GetObjectDataBacnetObjects),
 		routing.Post("/object-data", domainUser.PermissionObjectDataCreate, handlers.CreateObjectData),
 		routing.Put("/object-data/:id", domainUser.PermissionObjectDataUpdate, handlers.UpdateObjectData),

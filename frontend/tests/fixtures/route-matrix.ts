@@ -198,7 +198,8 @@ export const routeAudits = [
     status: 'configured',
     expectedAccess: 'Requires team.create.',
     protectedUi: ['team creation form'],
-    notes: 'The app layout maps this dedicated creation route to team.create before the generic /teams rule.'
+    notes:
+      'The app layout maps this dedicated creation route to team.create before the generic /teams rule.'
   },
   {
     path: '/teams/:id',
@@ -294,6 +295,67 @@ export const routeAudits = [
     expectedAccess: 'Requires phase.read and phase.update/delete for mutations.',
     protectedUi: ['phase detail', 'phase delete action'],
     notes: 'The phase detail page does not enforce permission checks at load time.'
+  },
+  {
+    path: '/projects/:id/facility/buildings/:buildingId',
+    domain: 'project',
+    files: ['src/routes/(app)/projects/[id]/facility/buildings/[buildingId]/+page.svelte'],
+    auth: 'authenticated',
+    authorization: 'none',
+    status: 'misconfigured',
+    expectedAccess: 'Requires project membership and project-scoped building.read.',
+    protectedUi: ['project building detail'],
+    notes: 'The project detail route lacks load-level authorization.'
+  },
+  {
+    path: '/projects/:id/facility/control-cabinets/:controlCabinetId',
+    domain: 'project',
+    files: [
+      'src/routes/(app)/projects/[id]/facility/control-cabinets/[controlCabinetId]/+page.svelte'
+    ],
+    auth: 'authenticated',
+    authorization: 'none',
+    status: 'misconfigured',
+    expectedAccess: 'Requires project membership and project-scoped controlcabinet.read.',
+    protectedUi: ['project control cabinet detail'],
+    notes: 'The project detail route lacks load-level authorization.'
+  },
+  {
+    path: '/projects/:id/facility/field-devices/:fieldDeviceId',
+    domain: 'project',
+    files: ['src/routes/(app)/projects/[id]/facility/field-devices/[fieldDeviceId]/+page.svelte'],
+    auth: 'authenticated',
+    authorization: 'none',
+    status: 'misconfigured',
+    expectedAccess: 'Requires project membership and project-scoped fielddevice.read.',
+    protectedUi: ['project field device detail'],
+    notes: 'The project detail route lacks load-level authorization.'
+  },
+  {
+    path: '/projects/:id/facility/sps-controller-system-types/:spsControllerSystemTypeId',
+    domain: 'project',
+    files: [
+      'src/routes/(app)/projects/[id]/facility/sps-controller-system-types/[spsControllerSystemTypeId]/+page.svelte'
+    ],
+    auth: 'authenticated',
+    authorization: 'none',
+    status: 'misconfigured',
+    expectedAccess: 'Requires project membership and project-scoped systemtype.read.',
+    protectedUi: ['project SPS controller system type detail'],
+    notes: 'The project detail route lacks load-level authorization.'
+  },
+  {
+    path: '/projects/:id/facility/sps-controllers/:spsControllerId',
+    domain: 'project',
+    files: [
+      'src/routes/(app)/projects/[id]/facility/sps-controllers/[spsControllerId]/+page.svelte'
+    ],
+    auth: 'authenticated',
+    authorization: 'none',
+    status: 'misconfigured',
+    expectedAccess: 'Requires project membership and project-scoped spscontroller.read.',
+    protectedUi: ['project SPS controller detail'],
+    notes: 'The project detail route lacks load-level authorization.'
   },
   {
     path: '/facility',
@@ -418,6 +480,28 @@ export const routeAudits = [
     expectedAccess: 'Requires fielddevice.read for the route.',
     protectedUi: ['field device list view'],
     notes: 'The route loads regardless of fielddevice.read.'
+  },
+  {
+    path: '/facility/field-devices/:id',
+    domain: 'facility',
+    files: ['src/routes/(app)/facility/field-devices/[id]/+page.svelte'],
+    auth: 'authenticated',
+    authorization: 'none',
+    status: 'misconfigured',
+    expectedAccess: 'Requires fielddevice.read plus fielddevice.update for edits.',
+    protectedUi: ['field device detail'],
+    notes: 'The detail route lacks load-level authorization.'
+  },
+  {
+    path: '/facility/sps-controller-system-types/:id',
+    domain: 'facility',
+    files: ['src/routes/(app)/facility/sps-controller-system-types/[id]/+page.svelte'],
+    auth: 'authenticated',
+    authorization: 'none',
+    status: 'misconfigured',
+    expectedAccess: 'Requires systemtype.read plus the relevant update permission for edits.',
+    protectedUi: ['SPS controller system type detail'],
+    notes: 'The plural detail route lacks load-level authorization.'
   },
   {
     path: '/facility/system-types',

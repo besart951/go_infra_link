@@ -8,6 +8,7 @@ import (
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/besart951/go_infra_link/backend/internal/repository/gormbase"
 	"github.com/besart951/go_infra_link/backend/internal/repository/searchspec"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -73,12 +74,50 @@ func (q fieldDeviceQuery) ListWithFilters(ctx context.Context, params domain.Pag
 	page, limit := normalizeFieldDeviceListPagination(params.Page, params.Limit)
 	query := q.db.WithContext(ctx).Model(&FieldDeviceRecord{})
 	query, hasPotentialDuplicateRows := applyFieldDeviceFilters(query, filters)
+	if strings.TrimSpace(filters.Search) != "" {
+		query = applyFieldDeviceSearch(query, filters.Search)
+	}
 
 	if strings.TrimSpace(params.Search) != "" {
 		query = applyFieldDeviceSearch(query, params.Search)
 	}
 
 	return q.page(ctx, query, params, page, limit, hasPotentialDuplicateRows)
+}
+
+func (q fieldDeviceQuery) ExportPage(ctx context.Context, filters domainFacility.FieldDeviceFilterParams, afterID uuid.UUID, limit int) ([]domainFacility.FieldDevice, error) {
+	if limit <= 0 || limit > 500 {
+		limit = 500
+	}
+	query := q.db.WithContext(ctx).Model(&FieldDeviceRecord{})
+	query, hasPotentialDuplicateRows := applyFieldDeviceFilters(query, filters)
+	if strings.TrimSpace(filters.Search) != "" {
+		query = applyFieldDeviceSearch(query, filters.Search)
+	}
+	if afterID != uuid.Nil {
+		query = query.Where("field_devices.id > ?", afterID)
+	}
+	if hasPotentialDuplicateRows {
+		distinctIDs := query.Session(&gorm.Session{}).Select("DISTINCT field_devices.id")
+		query = q.db.WithContext(ctx).Model(&FieldDeviceRecord{}).
+			Joins("JOIN (?) ids ON ids.id = field_devices.id", distinctIDs)
+	}
+	return scanFieldDeviceListRows(query.Order("field_devices.id ASC"), limit, 0)
+}
+
+func (q fieldDeviceQuery) ExportControllerIDs(ctx context.Context, filters domainFacility.FieldDeviceFilterParams, search string) ([]uuid.UUID, error) {
+	query := q.db.WithContext(ctx).Model(&FieldDeviceRecord{})
+	query, _ = applyFieldDeviceFilters(query, filters)
+	if strings.TrimSpace(search) != "" {
+		query = applyFieldDeviceSearch(query, search)
+	}
+	var ids []uuid.UUID
+	err := query.
+		Joins("JOIN sps_controller_system_types scts_export ON scts_export.id = field_devices.sps_controller_system_type_id").
+		Distinct("scts_export.sps_controller_id").
+		Order("scts_export.sps_controller_id ASC").
+		Pluck("scts_export.sps_controller_id", &ids).Error
+	return ids, err
 }
 
 func (q fieldDeviceQuery) page(ctx context.Context, query *gorm.DB, params domain.PaginationParams, page, limit int, hasPotentialDuplicateRows bool) (*domain.PaginatedList[domainFacility.FieldDevice], error) {

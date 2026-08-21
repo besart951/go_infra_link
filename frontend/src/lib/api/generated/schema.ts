@@ -2567,7 +2567,39 @@ export type paths = {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Get a BACnet instance or template by ID */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description BACnet Object ID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BacnetObjectResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"];
+                    };
+                };
+            };
+        };
         /** Update a bacnet object */
         put: {
             parameters: {
@@ -4414,6 +4446,66 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/facility/field-devices/{id}/copy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Deep-copy a field device */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    /** @description Client-generated operation UUID */
+                    "Idempotency-Key"?: string;
+                };
+                path: {
+                    /** @description Field Device ID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Accepted */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FacilityJobResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"];
+                    };
+                };
+                /** @description Service Unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/facility/field-devices/{id}/detail": {
         parameters: {
             query?: never;
@@ -4478,7 +4570,39 @@ export type paths = {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Get the specification owned by a field device */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Field Device ID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SpecificationResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"];
+                    };
+                };
+            };
+        };
         /** Update specification for a field device */
         put: {
             parameters: {
@@ -4600,7 +4724,37 @@ export type paths = {
                 };
             };
         };
-        delete?: never;
+        /** Delete the specification owned by a field device */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Field Device ID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "*/*": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"];
+                    };
+                };
+            };
+        };
         options?: never;
         head?: never;
         patch?: never;
@@ -4881,6 +5035,51 @@ export type paths = {
                 };
                 /** @description Internal Server Error */
                 500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/facility/jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the current user's facility jobs */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FacilityJobListResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -5496,6 +5695,66 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/facility/object-data/{id}/copy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Deep-copy an object data template */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    /** @description Client-generated operation UUID */
+                    "Idempotency-Key"?: string;
+                };
+                path: {
+                    /** @description Object Data ID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Accepted */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FacilityJobResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"];
+                    };
+                };
+                /** @description Service Unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/facility/reference-data/stream": {
         parameters: {
             query?: never;
@@ -5609,7 +5868,59 @@ export type paths = {
             };
         };
         put?: never;
-        post?: never;
+        /** Create an SPS controller system type assignment */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            /** @description SPS controller system type data */
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateSPSControllerSystemTypeRequest"];
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["internal_handler_facility.SPSControllerSystemTypeResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["internal_handler_facility.ErrorResponse"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["internal_handler_facility.ErrorResponse"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["internal_handler_facility.ErrorResponse"];
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -12303,15 +12614,27 @@ export type components = {
             version?: number;
         };
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CopyJobResponse": {
+            attempts?: number;
+            /** @enum {string} */
+            class?: "mutation" | "export";
+            completed_at?: string;
             created_at?: string;
             error?: string;
+            failure_count?: number;
             job_id?: string;
             /** @enum {string} */
-            kind?: "control_cabinet" | "sps_controller" | "sps_controller_system_type";
+            kind?: "control_cabinet" | "sps_controller" | "sps_controller_system_type" | "field_device" | "object_data";
+            processed?: number;
             progress?: number;
+            result?: Record<string, never>;
+            retryable?: boolean;
             stage?: string;
             /** @enum {string} */
             status?: "queued" | "running" | "completed" | "failed";
+            success_count?: number;
+            total?: number;
+            /** @enum {string} */
+            type?: "copy" | "export" | "bulk" | "delete" | "restore";
             updated_at?: string;
         };
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateAlarmDefinitionRequest": {
@@ -12428,6 +12751,12 @@ export type components = {
             system_types?: components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SPSControllerSystemTypeInput"][];
             vlan?: string;
         };
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateSPSControllerSystemTypeRequest": {
+            document_name?: string;
+            number?: number;
+            sps_controller_id: string;
+            system_type_id: string;
+        };
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateStateTextRequest": {
             ref_number: number;
             state_text1?: string;
@@ -12504,6 +12833,35 @@ export type components = {
             localized_key?: string;
             message?: string;
             request_id?: string;
+        };
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FacilityJobListResponse": {
+            items?: components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FacilityJobResponse"][];
+            next_cursor?: string;
+            previous_cursor?: string;
+        };
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FacilityJobResponse": {
+            attempts?: number;
+            /** @enum {string} */
+            class?: "mutation" | "export";
+            completed_at?: string;
+            created_at?: string;
+            error?: string;
+            failure_count?: number;
+            job_id?: string;
+            /** @enum {string} */
+            kind?: "control_cabinet" | "sps_controller" | "sps_controller_system_type" | "field_device" | "object_data";
+            processed?: number;
+            progress?: number;
+            result?: Record<string, never>;
+            retryable?: boolean;
+            stage?: string;
+            /** @enum {string} */
+            status?: "queued" | "running" | "completed" | "failed";
+            success_count?: number;
+            total?: number;
+            /** @enum {string} */
+            type?: "copy" | "export" | "bulk" | "delete" | "restore";
+            updated_at?: string;
         };
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FieldDeviceCreateResultResponse": {
             /** @description Error message if failed (empty if succeeded) */

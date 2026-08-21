@@ -28,6 +28,10 @@ func RegisterRoutes(protectedV1 *gin.RouterGroup, handlers *Handlers, authChecke
 	facility.GET("/delete-impacts", handlers.DeleteImpact.GetDeleteImpacts)
 	facility.GET("/reference-data/stream", handlers.ReferenceData.StreamFacilityReferenceData)
 	facility.GET("/copy-jobs/:id", handlers.CopyJob.GetCopyJob)
+	facility.GET("/jobs", handlers.CopyJob.ListJobs)
+	facility.GET("/jobs/:id", handlers.CopyJob.GetCopyJob)
+	facility.POST("/jobs/:id/retry", handlers.CopyJob.RetryJob)
+	facility.GET("/jobs/:id/download", handlers.Export.DownloadExport)
 }
 
 func registerRoutes(group *gin.RouterGroup, authChecker middleware.AuthorizationChecker, routes []routeDefinition, broadcaster FacilityMutationBroadcaster) {
