@@ -6,30 +6,31 @@ import (
 	"time"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
+	"github.com/besart951/go_infra_link/backend/internal/postgresjson"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
 type facilityJobRecord struct {
-	OwnerID     uuid.UUID  `gorm:"type:uuid;primaryKey"`
-	ID          uuid.UUID  `gorm:"type:uuid;primaryKey"`
-	Kind        string     `gorm:"type:varchar(64);not null"`
-	Class       string     `gorm:"type:varchar(32);not null;default:mutation;index"`
-	JobType     string     `gorm:"column:job_type;type:varchar(32);not null;default:copy;index"`
-	Status      string     `gorm:"type:varchar(32);not null;index"`
-	Progress    int        `gorm:"not null;default:0"`
-	Stage       string     `gorm:"type:varchar(96);not null"`
-	Error       string     `gorm:"column:error_message;type:text"`
-	WorkerID    *string    `gorm:"type:varchar(64);index"`
-	LeaseUntil  *time.Time `gorm:"index"`
-	Attempts    int        `gorm:"not null;default:0"`
-	Task        string     `gorm:"type:varchar(96)"`
-	Payload     []byte     `gorm:"type:jsonb"`
-	Checkpoint  []byte     `gorm:"type:jsonb"`
-	ResultID    *uuid.UUID `gorm:"type:uuid"`
-	Result      []byte     `gorm:"type:jsonb"`
-	Processed   int64      `gorm:"not null;default:0"`
+	OwnerID     uuid.UUID             `gorm:"type:uuid;primaryKey"`
+	ID          uuid.UUID             `gorm:"type:uuid;primaryKey"`
+	Kind        string                `gorm:"type:varchar(64);not null"`
+	Class       string                `gorm:"type:varchar(32);not null;default:mutation;index"`
+	JobType     string                `gorm:"column:job_type;type:varchar(32);not null;default:copy;index"`
+	Status      string                `gorm:"type:varchar(32);not null;index"`
+	Progress    int                   `gorm:"not null;default:0"`
+	Stage       string                `gorm:"type:varchar(96);not null"`
+	Error       string                `gorm:"column:error_message;type:text"`
+	WorkerID    *string               `gorm:"type:varchar(64);index"`
+	LeaseUntil  *time.Time            `gorm:"index"`
+	Attempts    int                   `gorm:"not null;default:0"`
+	Task        string                `gorm:"type:varchar(96)"`
+	Payload     postgresjson.Document `gorm:"type:jsonb"`
+	Checkpoint  postgresjson.Document `gorm:"type:jsonb"`
+	ResultID    *uuid.UUID            `gorm:"type:uuid"`
+	Result      postgresjson.Document `gorm:"type:jsonb"`
+	Processed   int64                 `gorm:"not null;default:0"`
 	Total       *int64
 	Succeeded   int64     `gorm:"not null;default:0"`
 	Failed      int64     `gorm:"not null;default:0"`
@@ -40,16 +41,16 @@ type facilityJobRecord struct {
 }
 
 type facilityJobItemRecord struct {
-	OwnerID   uuid.UUID `gorm:"type:uuid;primaryKey"`
-	JobID     uuid.UUID `gorm:"type:uuid;primaryKey"`
-	Ordinal   int64     `gorm:"primaryKey"`
-	Status    string    `gorm:"type:varchar(32);not null;index"`
-	Input     []byte    `gorm:"type:jsonb;not null"`
-	Result    []byte    `gorm:"type:jsonb"`
-	Error     string    `gorm:"column:error_message;type:text"`
-	Attempts  int       `gorm:"not null;default:0"`
-	CreatedAt time.Time `gorm:"not null"`
-	UpdatedAt time.Time `gorm:"not null"`
+	OwnerID   uuid.UUID             `gorm:"type:uuid;primaryKey"`
+	JobID     uuid.UUID             `gorm:"type:uuid;primaryKey"`
+	Ordinal   int64                 `gorm:"primaryKey"`
+	Status    string                `gorm:"type:varchar(32);not null;index"`
+	Input     postgresjson.Document `gorm:"type:jsonb;not null"`
+	Result    postgresjson.Document `gorm:"type:jsonb"`
+	Error     string                `gorm:"column:error_message;type:text"`
+	Attempts  int                   `gorm:"not null;default:0"`
+	CreatedAt time.Time             `gorm:"not null"`
+	UpdatedAt time.Time             `gorm:"not null"`
 }
 
 func (facilityJobItemRecord) TableName() string {
@@ -496,8 +497,8 @@ func facilityJobRecordFromDomain(job FacilityJob) facilityJobRecord {
 		Class:      string(job.Class),
 		JobType:    string(job.Type),
 		Task:       job.Task,
-		Payload:    []byte(job.Payload),
-		Checkpoint: []byte(job.Checkpoint),
+		Payload:    postgresjson.Document(job.Payload),
+		Checkpoint: postgresjson.Document(job.Checkpoint),
 		Status:     string(job.Status),
 		Progress:   job.Progress,
 		Stage:      job.Stage,
@@ -507,7 +508,7 @@ func facilityJobRecordFromDomain(job FacilityJob) facilityJobRecord {
 		Succeeded:  job.Succeeded,
 		Failed:     job.Failed,
 		Retryable:  job.Retryable,
-		Result:     []byte(job.Result),
+		Result:     postgresjson.Document(job.Result),
 		CreatedAt:  job.CreatedAt,
 		UpdatedAt:  job.UpdatedAt,
 	}
@@ -521,8 +522,8 @@ func (r facilityJobRecord) toDomain() FacilityJob {
 		Class:       FacilityJobClass(r.Class),
 		Type:        FacilityJobType(r.JobType),
 		Task:        r.Task,
-		Payload:     append([]byte(nil), r.Payload...),
-		Checkpoint:  append([]byte(nil), r.Checkpoint...),
+		Payload:     r.Payload.Bytes(),
+		Checkpoint:  r.Checkpoint.Bytes(),
 		Status:      FacilityJobStatus(r.Status),
 		Progress:    r.Progress,
 		Stage:       r.Stage,
@@ -533,7 +534,7 @@ func (r facilityJobRecord) toDomain() FacilityJob {
 		Succeeded:   r.Succeeded,
 		Failed:      r.Failed,
 		Retryable:   r.Retryable,
-		Result:      append([]byte(nil), r.Result...),
+		Result:      r.Result.Bytes(),
 		CreatedAt:   r.CreatedAt,
 		UpdatedAt:   r.UpdatedAt,
 		CompletedAt: r.CompletedAt,

@@ -2,6 +2,7 @@ package facility
 
 import (
 	"errors"
+	"log/slog"
 	"net/http"
 
 	"github.com/besart951/go_infra_link/backend/internal/cursor"
@@ -204,6 +205,7 @@ func (h *FieldDeviceHandler) respondFieldDeviceListError(c *gin.Context, err err
 		respondLocalizedError(c, http.StatusBadRequest, "invalid_cursor", "validation.invalid_request")
 		return
 	}
+	slog.Error("facility field device list failed", "error", err)
 	respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 }
 

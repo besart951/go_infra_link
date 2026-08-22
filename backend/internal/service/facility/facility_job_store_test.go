@@ -4,11 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
+	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -100,6 +102,27 @@ func TestMigrateFacilityJobsCreatesChunkAndMappingTables(t *testing.T) {
 		}).Error; err != nil {
 			t.Fatalf("create owner-scoped job mapping: %v", err)
 		}
+	}
+}
+
+func TestFacilityJobJSONFieldsPersistAsJSONBPostgres(t *testing.T) {
+	dsn := os.Getenv("FACILITY_BENCHMARK_DSN")
+	if dsn == "" {
+		t.Skip("FACILITY_BENCHMARK_DSN is not configured")
+	}
+	database, err := gorm.Open(postgres.New(postgres.Config{DSN: dsn, PreferSimpleProtocol: true}), &gorm.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	manager := NewFacilityJobManagerWithDB(nil, database)
+	t.Cleanup(manager.Close)
+	job := FacilityJob{
+		OwnerID: uuid.New(), ID: uuid.New(), Kind: FacilityJobKindFieldDevice,
+		Class: FacilityJobClassExport, Type: FacilityJobTypeExport, Task: "test.export.v1",
+		Payload: json.RawMessage(`{"search":"pump"}`),
+	}
+	if _, err := manager.SubmitTask(t.Context(), job); err != nil {
+		t.Fatalf("persist JSONB job fields: %v", err)
 	}
 }
 

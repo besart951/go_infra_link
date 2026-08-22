@@ -190,6 +190,18 @@ type FieldDeviceStore struct {
 	store *historysql.Store
 }
 
+var _ domainFieldDevice.CursorReader = (*FieldDeviceStore)(nil)
+
+// GetCursorPage preserves the read capability when the write-history decorator
+// wraps the SQL store. Cursor reads do not create history entries.
+func (r *FieldDeviceStore) GetCursorPage(ctx context.Context, query domainFacility.FieldDeviceCursorQuery) (*domainFacility.FieldDeviceCursorPage, error) {
+	reader, ok := r.FieldDeviceStore.(domainFieldDevice.CursorReader)
+	if !ok {
+		return nil, domain.ErrInvalidArgument
+	}
+	return reader.GetCursorPage(ctx, query)
+}
+
 func (r *FieldDeviceStore) LockNumberSwapRows(ctx context.Context, ids []uuid.UUID) ([]*domainFacility.FieldDevice, error) {
 	store, ok := r.FieldDeviceStore.(interface {
 		LockNumberSwapRows(context.Context, []uuid.UUID) ([]*domainFacility.FieldDevice, error)

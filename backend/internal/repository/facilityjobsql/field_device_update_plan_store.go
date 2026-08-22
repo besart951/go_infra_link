@@ -6,6 +6,7 @@ import (
 	"time"
 
 	facilityjobs "github.com/besart951/go_infra_link/backend/internal/application/facilityjobs"
+	"github.com/besart951/go_infra_link/backend/internal/postgresjson"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -26,7 +27,7 @@ type fieldDeviceUpdatePlanRecord struct {
 	GroupOrdinal      int64
 	DependencyGroupID uuid.UUID
 	FieldDeviceID     uuid.UUID
-	Command           []byte `gorm:"type:jsonb"`
+	Command           postgresjson.Document `gorm:"type:jsonb"`
 	CreatedAt         time.Time
 }
 
@@ -128,7 +129,7 @@ func planRecord(item facilityjobs.FieldDeviceUpdatePlanItem) fieldDeviceUpdatePl
 	return fieldDeviceUpdatePlanRecord{
 		OwnerID: item.OwnerID, JobID: item.JobID, Ordinal: item.Ordinal,
 		GroupOrdinal: item.GroupOrdinal, DependencyGroupID: item.DependencyGroupID,
-		FieldDeviceID: item.FieldDeviceID, Command: item.Command, CreatedAt: time.Now().UTC(),
+		FieldDeviceID: item.FieldDeviceID, Command: postgresjson.Document(item.Command), CreatedAt: time.Now().UTC(),
 	}
 }
 
@@ -136,6 +137,6 @@ func (record fieldDeviceUpdatePlanRecord) toDomain() facilityjobs.FieldDeviceUpd
 	return facilityjobs.FieldDeviceUpdatePlanItem{
 		OwnerID: record.OwnerID, JobID: record.JobID, Ordinal: record.Ordinal,
 		GroupOrdinal: record.GroupOrdinal, DependencyGroupID: record.DependencyGroupID,
-		FieldDeviceID: record.FieldDeviceID, Command: record.Command,
+		FieldDeviceID: record.FieldDeviceID, Command: record.Command.Bytes(),
 	}
 }

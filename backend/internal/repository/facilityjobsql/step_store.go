@@ -133,13 +133,13 @@ func lockOrCreateItem(tx *gorm.DB, step facilityjobs.Step) (itemRecord, bool, er
 
 func completedResult(tx *gorm.DB, step facilityjobs.Step, item itemRecord) (facilityjobs.StepResult, bool, error) {
 	if !step.PersistIDMapping {
-		return facilityjobs.StepResult{Result: item.Result}, true, nil
+		return facilityjobs.StepResult{Result: item.Result.Bytes()}, true, nil
 	}
 	var mapping mappingRecord
 	if err := tx.Where(mappingQuery(step)).First(&mapping).Error; err != nil {
 		return facilityjobs.StepResult{}, false, err
 	}
-	return facilityjobs.StepResult{TargetID: mapping.TargetID, Result: item.Result}, true, nil
+	return facilityjobs.StepResult{TargetID: mapping.TargetID, Result: item.Result.Bytes()}, true, nil
 }
 
 func completeStep(tx *gorm.DB, step facilityjobs.Step, result facilityjobs.StepResult) error {
