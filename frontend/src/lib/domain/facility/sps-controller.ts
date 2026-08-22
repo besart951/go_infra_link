@@ -7,6 +7,7 @@ import type { Pagination } from '../utils/index.ts';
 
 export interface SPSController {
   id: string;
+  version: number;
   control_cabinet_id: string;
   ga_device?: string;
   device_name: string;
@@ -41,6 +42,7 @@ export interface CreateSPSControllerRequest {
 }
 
 export interface UpdateSPSControllerRequest {
+  base_version: number;
   ga_device?: string;
   device_name?: string;
   device_description?: string;

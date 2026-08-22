@@ -43,6 +43,13 @@ func (s *SystemTypeService) DeleteByID(ctx context.Context, id uuid.UUID) error 
 	return s.baseService.DeleteByID(ctx, id)
 }
 
+func (s *SystemTypeService) DeleteAtVersion(ctx context.Context, id uuid.UUID, version uint64) error {
+	if err := s.deleteGuard.ensureDeleteAllowed(ctx, id); err != nil {
+		return err
+	}
+	return s.baseService.DeleteAtVersion(ctx, id, version)
+}
+
 func (s *SystemTypeService) Validate(ctx context.Context, systemType *domainFacility.SystemType, excludeID *uuid.UUID) error {
 	if err := s.validateRequiredFields(systemType); err != nil {
 		return err

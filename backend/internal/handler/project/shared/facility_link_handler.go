@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainproject "github.com/besart951/go_infra_link/backend/internal/domain/project"
+	projectdto "github.com/besart951/go_infra_link/backend/internal/handler/dto/project"
 	"github.com/besart951/go_infra_link/backend/internal/handler/middleware"
 	sharedpresenter "github.com/besart951/go_infra_link/backend/internal/handler/presenter/shared"
 	"github.com/besart951/go_infra_link/backend/internal/handlerutil"
@@ -19,8 +21,21 @@ import (
 type ProjectCopyCommand struct {
 	ProjectID uuid.UUID
 	SourceID  uuid.UUID
-	Kind      facilityservice.CopyJobKind
+	Kind      facilityservice.FacilityJobKind
 	Task      string
+}
+
+func RequiredBaseVersion(c *gin.Context) (domain.AggregateVersion, bool) {
+	var query projectdto.RequiredBaseVersionQuery
+	if !handlerutil.BindQuery(c, &query) {
+		return 0, false
+	}
+	version, err := domain.NewAggregateVersion(query.BaseVersion)
+	if err != nil {
+		handlerutil.RespondLocalizedError(c, http.StatusBadRequest, "validation_error", "errors.validation_error")
+		return 0, false
+	}
+	return version, true
 }
 
 type projectCopyIdentity struct {
@@ -30,19 +45,19 @@ type projectCopyIdentity struct {
 
 // FacilityLinkHandler owns the HTTP mechanics common to project facility-link
 // handlers: project authorization, lifecycle notifications and asynchronous
-// copy-job execution. It intentionally does not own domain CRUD operations.
+// facility-job execution. It intentionally does not own domain CRUD operations.
 type FacilityLinkHandler struct {
-	access   AccessPolicyService
-	notify   ProjectChangeNotifier
-	copyJobs *facilityservice.CopyJobManager
+	access       AccessPolicyService
+	notify       ProjectChangeNotifier
+	facilityJobs *facilityservice.FacilityJobManager
 }
 
 func NewFacilityLinkHandler(access AccessPolicyService, notify ProjectChangeNotifier) *FacilityLinkHandler {
 	return &FacilityLinkHandler{access: access, notify: notify}
 }
 
-func (h *FacilityLinkHandler) ConfigureCopyJobs(copyJobs *facilityservice.CopyJobManager) {
-	h.copyJobs = copyJobs
+func (h *FacilityLinkHandler) ConfigureFacilityJobs(facilityJobs *facilityservice.FacilityJobManager) {
+	h.facilityJobs = facilityJobs
 }
 
 // ProjectIDWithPermission parses the route parameter and verifies both project
@@ -69,7 +84,7 @@ func (h *FacilityLinkHandler) StartCopy(
 	c *gin.Context,
 	command ProjectCopyCommand,
 ) {
-	if h.copyJobs == nil || !h.copyJobs.SupportsDurableTasks() {
+	if h.facilityJobs == nil || !h.facilityJobs.SupportsDurableTasks() {
 		handlerutil.RespondLocalizedError(c, http.StatusServiceUnavailable, "durable_jobs_unavailable", "errors.service_unavailable")
 		return
 	}
@@ -83,11 +98,11 @@ func (h *FacilityLinkHandler) StartCopy(
 		return
 	}
 
-	c.JSON(http.StatusAccepted, sharedpresenter.ToCopyJobResponse(job))
+	c.JSON(http.StatusAccepted, sharedpresenter.ToFacilityJobResponse(job))
 }
 
 func projectCopyIdentityFromContext(c *gin.Context) (projectCopyIdentity, bool) {
-	operationID, err := handlerutil.ParseCopyOperationID(c)
+	operationID, err := handlerutil.ParseIdempotencyKey(c)
 	if err != nil {
 		handlerutil.RespondLocalizedError(c, http.StatusBadRequest, "invalid_operation_id", "project.creation_failed")
 		return projectCopyIdentity{}, false
@@ -100,12 +115,12 @@ func projectCopyIdentityFromContext(c *gin.Context) (projectCopyIdentity, bool) 
 	return projectCopyIdentity{operationID: operationID, actorID: actorID}, true
 }
 
-func (h *FacilityLinkHandler) submitProjectCopy(ctx context.Context, identity projectCopyIdentity, command ProjectCopyCommand) (facilityservice.CopyJob, error) {
-	payload, err := json.Marshal(domainproject.FacilityCopyJobPayload{ProjectID: command.ProjectID, SourceID: command.SourceID})
+func (h *FacilityLinkHandler) submitProjectCopy(ctx context.Context, identity projectCopyIdentity, command ProjectCopyCommand) (facilityservice.FacilityJob, error) {
+	payload, err := json.Marshal(domainproject.ProjectFacilityCopyCommand{ProjectID: command.ProjectID, SourceID: command.SourceID})
 	if err != nil {
-		return facilityservice.CopyJob{}, err
+		return facilityservice.FacilityJob{}, err
 	}
-	return h.copyJobs.SubmitTask(ctx, facilityservice.CopyJob{
+	return h.facilityJobs.SubmitTask(ctx, facilityservice.FacilityJob{
 		ID: identity.operationID, OwnerID: identity.actorID, Kind: command.Kind,
 		Class: facilityservice.FacilityJobClassMutation, Type: facilityservice.FacilityJobTypeCopy,
 		Task: command.Task, Payload: payload,

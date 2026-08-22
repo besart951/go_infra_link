@@ -19,12 +19,12 @@ type facilityCopyOperation struct {
 }
 
 type facilityCopyTaskRegistrar struct {
-	jobs     *facilityservice.CopyJobManager
+	jobs     *facilityservice.FacilityJobManager
 	services *facilityservice.Services
 	runtime  *RuntimeAdapters
 }
 
-func registerFacilityCopyTasks(jobs *facilityservice.CopyJobManager, services *Services, runtime *RuntimeAdapters) {
+func registerFacilityCopyTasks(jobs *facilityservice.FacilityJobManager, services *Services, runtime *RuntimeAdapters) {
 	if jobs == nil || services == nil || services.Facility == nil {
 		return
 	}
@@ -32,7 +32,7 @@ func registerFacilityCopyTasks(jobs *facilityservice.CopyJobManager, services *S
 	for _, operation := range facilityCopyOperations() {
 		jobs.RegisterTask(operation.task, registrar.taskHandler(operation))
 	}
-	registerFieldDeviceBulkTasks(jobs, runtime)
+	registerFieldDeviceBulkTasks(jobs, runtime, services)
 	registerFacilityDeleteTasks(jobs, runtime)
 }
 
@@ -46,29 +46,31 @@ func facilityCopyOperations() []facilityCopyOperation {
 	}
 }
 
-func (r facilityCopyTaskRegistrar) taskHandler(operation facilityCopyOperation) facilityservice.FacilityJobTask {
-	return func(ctx context.Context, job facilityservice.CopyJob, report func(facilityservice.FacilityJobProgress)) (facilityservice.FacilityJobTaskResult, error) {
+func (r facilityCopyTaskRegistrar) taskHandler(operation facilityCopyOperation) facilityservice.FacilityJobHandler {
+	return facilityservice.FacilityJobHandlerFunc(func(ctx context.Context, execution facilityservice.FacilityJobExecution) (facilityservice.FacilityJobTaskResult, error) {
+		job, report := execution.Job, execution.Reporter
 		payload, err := decodeFacilityCopyPayload(job.Payload)
 		if err != nil {
 			return facilityservice.FacilityJobTaskResult{}, err
 		}
-		report(facilityservice.FacilityJobProgress{Progress: 10, Stage: "copying_root"})
-		result, err := r.executeStep(ctx, facilityCopyExecution{job: job, payload: payload, operation: operation})
+		report.Report(facilityservice.FacilityJobProgress{Progress: 10, Stage: "copying_root"})
+		result, err := r.executeStep(ctx, facilityCopyExecution{job: job, payload: payload, operation: operation, reporter: report})
 		if err != nil {
 			return facilityservice.FacilityJobTaskResult{}, err
 		}
-		report(facilityservice.FacilityJobProgress{Progress: 95, Stage: "finalizing", Processed: 1, Succeeded: 1})
+		report.Report(facilityservice.FacilityJobProgress{Progress: 95, Stage: "finalizing", Processed: 1, Succeeded: 1})
 		r.publish(ctx, facilityCopyNotification{
 			ownerID: job.OwnerID, resource: operation.resource, resultID: result.TargetID,
 		})
 		return facilityservice.FacilityJobTaskResult{Result: result.Result}, nil
-	}
+	})
 }
 
 type facilityCopyExecution struct {
-	job       facilityservice.CopyJob
+	job       facilityservice.FacilityJob
 	payload   facilityservice.FacilityCopyTaskPayload
 	operation facilityCopyOperation
+	reporter  facilityservice.FacilityJobReporter
 }
 
 type facilityCopyNotification struct {
@@ -84,6 +86,7 @@ func (r facilityCopyTaskRegistrar) executeStep(ctx context.Context, execution fa
 	step := facilityjobs.Step{
 		Key:        facilityjobs.ItemKey{OwnerID: execution.job.OwnerID, JobID: execution.job.ID},
 		EntityType: execution.operation.entityType, SourceID: execution.payload.SourceID, Input: execution.job.Payload,
+		PersistIDMapping: true,
 	}
 	result, _, err := r.runtime.FacilityJobSteps.Execute(ctx, step, func(stepCtx context.Context, unit apptransaction.UnitOfWork) (facilityjobs.StepResult, error) {
 		repos, buildErr := repositoriesFromUnit(unit)
@@ -97,6 +100,7 @@ func (r facilityCopyTaskRegistrar) executeStep(ctx context.Context, execution fa
 }
 
 func runFacilityCopy(ctx context.Context, services *facilityservice.Services, execution facilityCopyExecution) (facilityjobs.StepResult, error) {
+	ctx = facilityservice.WithFacilityJobReporter(ctx, execution.reporter)
 	resultID, err := execution.operation.copy(ctx, services, execution.payload.SourceID)
 	if err != nil {
 		return facilityjobs.StepResult{}, err

@@ -21,8 +21,8 @@ type FacilityLinkService interface {
 	CreateSPSController(ctx context.Context, projectID, spsControllerID uuid.UUID) (*domainProject.ProjectSPSController, error)
 	CopySPSController(ctx context.Context, projectID, spsControllerID uuid.UUID) (*domainFacility.SPSController, error)
 	CopySPSControllerSystemType(ctx context.Context, projectID, systemTypeID uuid.UUID) (*domainFacility.SPSControllerSystemType, error)
-	UpdateSPSController(ctx context.Context, linkID, projectID, spsControllerID uuid.UUID) (*domainProject.ProjectSPSController, error)
-	DeleteSPSController(ctx context.Context, linkID, projectID uuid.UUID) error
+	UpdateSPSController(ctx context.Context, command domainProject.FacilityLinkUpdate) (*domainProject.ProjectSPSController, error)
+	DeleteSPSController(ctx context.Context, command domainProject.FacilityLinkDelete) error
 	ListSPSControllers(ctx context.Context, projectID uuid.UUID, page, limit int) (*domain.PaginatedList[domainProject.ProjectSPSController], error)
 }
 
@@ -34,9 +34,9 @@ type Handler struct {
 
 type ProjectSPSControllerDeltaNotifier func(*gin.Context, uuid.UUID, domainFacility.SPSController)
 
-// copyJobResponseContract keeps Swag's imported DTO reference available while
+// facilityJobResponseContract keeps Swag's imported DTO reference available while
 // the shared project-link module writes the asynchronous response.
-type copyJobResponseContract = facilitydto.CopyJobResponse
+type facilityJobResponseContract = facilitydto.FacilityJobResponse
 
 func NewHandler(access projectshared.AccessPolicyService, facilityLink FacilityLinkService, notify projectshared.ProjectChangeNotifier, notifyDelta ...ProjectSPSControllerDeltaNotifier) *Handler {
 	var delta ProjectSPSControllerDeltaNotifier
@@ -46,8 +46,8 @@ func NewHandler(access projectshared.AccessPolicyService, facilityLink FacilityL
 	return &Handler{base: projectshared.NewFacilityLinkHandler(access, notify), facilityLink: facilityLink, notifyDelta: delta}
 }
 
-func (h *Handler) ConfigureCopyJobs(copyJobs *facilityservice.CopyJobManager) {
-	h.base.ConfigureCopyJobs(copyJobs)
+func (h *Handler) ConfigureFacilityJobs(facilityJobs *facilityservice.FacilityJobManager) {
+	h.base.ConfigureFacilityJobs(facilityJobs)
 }
 
 // CreateProjectSPSController godoc
@@ -133,8 +133,8 @@ func (h *Handler) ListProjectSPSControllers(c *gin.Context) {
 // @Produce json
 // @Param id path string true "Project ID"
 // @Param spsControllerId path string true "SPS Controller ID"
-// @Param X-Copy-Operation-ID header string false "Client-generated copy operation UUID"
-// @Success 202 {object} facilitydto.CopyJobResponse
+// @Param Idempotency-Key header string false "Client-generated operation UUID"
+// @Success 202 {object} facilitydto.FacilityJobResponse
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 401 {object} dto.ErrorResponse
 // @Failure 403 {object} dto.ErrorResponse
@@ -154,7 +154,7 @@ func (h *Handler) CopyProjectSPSController(c *gin.Context) {
 	h.base.StartCopy(c, projectshared.ProjectCopyCommand{
 		ProjectID: projectID,
 		SourceID:  spsControllerID,
-		Kind:      facilityservice.CopyJobKindSPSController,
+		Kind:      facilityservice.FacilityJobKindSPSController,
 		Task:      domainProject.TaskCopyProjectSPSController,
 	})
 }
@@ -165,8 +165,8 @@ func (h *Handler) CopyProjectSPSController(c *gin.Context) {
 // @Produce json
 // @Param id path string true "Project ID"
 // @Param systemTypeId path string true "SPS Controller System Type ID"
-// @Param X-Copy-Operation-ID header string false "Client-generated copy operation UUID"
-// @Success 202 {object} facilitydto.CopyJobResponse
+// @Param Idempotency-Key header string false "Client-generated operation UUID"
+// @Success 202 {object} facilitydto.FacilityJobResponse
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 401 {object} dto.ErrorResponse
 // @Failure 403 {object} dto.ErrorResponse
@@ -186,7 +186,7 @@ func (h *Handler) CopyProjectSPSControllerSystemType(c *gin.Context) {
 	h.base.StartCopy(c, projectshared.ProjectCopyCommand{
 		ProjectID: projectID,
 		SourceID:  systemTypeID,
-		Kind:      facilityservice.CopyJobKindSPSControllerSystemType,
+		Kind:      facilityservice.FacilityJobKindSPSControllerSystemType,
 		Task:      domainProject.TaskCopyProjectSPSControllerSystemType,
 	})
 }
@@ -220,19 +220,10 @@ func (h *Handler) UpdateProjectSPSController(c *gin.Context) {
 		return
 	}
 
-	var updated *domainProject.ProjectSPSController
-	var err error
-	if req.BaseVersion != nil {
-		if versioned, ok := h.facilityLink.(interface {
-			UpdateSPSControllerAtVersion(context.Context, uuid.UUID, uuid.UUID, uuid.UUID, uint64) (*domainProject.ProjectSPSController, error)
-		}); ok {
-			updated, err = versioned.UpdateSPSControllerAtVersion(c.Request.Context(), linkID, projectID, req.SPSControllerID, *req.BaseVersion)
-		} else {
-			updated, err = h.facilityLink.UpdateSPSController(c.Request.Context(), linkID, projectID, req.SPSControllerID)
-		}
-	} else {
-		updated, err = h.facilityLink.UpdateSPSController(c.Request.Context(), linkID, projectID, req.SPSControllerID)
-	}
+	updated, err := h.facilityLink.UpdateSPSController(c.Request.Context(), domainProject.FacilityLinkUpdate{
+		LinkID: linkID, ProjectID: projectID, TargetID: req.SPSControllerID,
+		BaseVersion: domain.AggregateVersion(req.BaseVersion),
+	})
 	if err != nil {
 		handlerutil.RespondDomainError(c, err,
 			handlerutil.LocalizedError(http.StatusInternalServerError, "update_failed", "project.update_failed"),
@@ -253,6 +244,7 @@ func (h *Handler) UpdateProjectSPSController(c *gin.Context) {
 // @Produce json
 // @Param id path string true "Project ID"
 // @Param linkId path string true "Link ID"
+// @Param base_version query integer true "Expected link version" minimum(1)
 // @Success 204
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 404 {object} dto.ErrorResponse
@@ -268,11 +260,18 @@ func (h *Handler) DeleteProjectSPSController(c *gin.Context) {
 	if !ok {
 		return
 	}
+	version, ok := projectshared.RequiredBaseVersion(c)
+	if !ok {
+		return
+	}
 
-	if err := h.facilityLink.DeleteSPSController(c.Request.Context(), linkID, projectID); err != nil {
+	if err := h.facilityLink.DeleteSPSController(c.Request.Context(), domainProject.FacilityLinkDelete{
+		LinkID: linkID, ProjectID: projectID, BaseVersion: version,
+	}); err != nil {
 		handlerutil.RespondDomainError(c, err,
 			handlerutil.LocalizedError(http.StatusInternalServerError, "deletion_failed", "project.deletion_failed"),
 			handlerutil.MapError(domain.ErrNotFound, handlerutil.LocalizedError(http.StatusNotFound, "not_found", "project.link_not_found")),
+			handlerutil.MapError(domain.ErrConflict, handlerutil.LocalizedError(http.StatusConflict, "write_conflict", "errors.write_conflict")),
 		)
 		return
 	}

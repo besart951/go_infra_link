@@ -39,7 +39,7 @@ func TestProjectFieldDeviceLinkHandlersCreateAndRelinkTheRequestedLink(t *testin
 
 	updateRecorder := httptest.NewRecorder()
 	updateContext, _ := gin.CreateTestContext(updateRecorder)
-	updateContext.Request = httptest.NewRequest(http.MethodPut, "/projects/"+projectID.String()+"/field-devices/"+linkID.String(), strings.NewReader(`{"field_device_id":"`+replacementDeviceID.String()+`"}`))
+	updateContext.Request = httptest.NewRequest(http.MethodPut, "/projects/"+projectID.String()+"/field-devices/"+linkID.String(), strings.NewReader(`{"field_device_id":"`+replacementDeviceID.String()+`","base_version":1}`))
 	updateContext.Request.Header.Set("Content-Type", "application/json")
 	updateContext.Params = gin.Params{{Key: "id", Value: projectID.String()}, {Key: "linkId", Value: linkID.String()}}
 	updateContext.Set(middleware.ContextUserIDKey, uuid.New())
@@ -78,12 +78,12 @@ func (s *contractFacilityLinkService) CreateFieldDevice(_ context.Context, proje
 	return &domainProject.ProjectFieldDevice{ProjectID: projectID, FieldDeviceID: fieldDeviceID}, nil
 }
 
-func (s *contractFacilityLinkService) UpdateFieldDevice(_ context.Context, linkID, projectID, fieldDeviceID uuid.UUID) (*domainProject.ProjectFieldDevice, error) {
-	s.linkID, s.projectID, s.fieldDeviceID = linkID, projectID, fieldDeviceID
-	return &domainProject.ProjectFieldDevice{ProjectID: projectID, FieldDeviceID: fieldDeviceID}, nil
+func (s *contractFacilityLinkService) UpdateFieldDevice(_ context.Context, command domainProject.FacilityLinkUpdate) (*domainProject.ProjectFieldDevice, error) {
+	s.linkID, s.projectID, s.fieldDeviceID = command.LinkID, command.ProjectID, command.TargetID
+	return &domainProject.ProjectFieldDevice{ProjectID: command.ProjectID, FieldDeviceID: command.TargetID}, nil
 }
 
-func (s *contractFacilityLinkService) DeleteFieldDevice(context.Context, uuid.UUID, uuid.UUID) error {
+func (s *contractFacilityLinkService) DeleteFieldDevice(context.Context, domainProject.FacilityLinkDelete) error {
 	return nil
 }
 

@@ -36,6 +36,13 @@ func (s *AlarmTypeService) DeleteByID(ctx context.Context, id uuid.UUID) error {
 	return s.baseService.DeleteByID(ctx, id)
 }
 
+func (s *AlarmTypeService) DeleteAtVersion(ctx context.Context, id uuid.UUID, version uint64) error {
+	if err := s.deleteGuard.ensureDeleteAllowed(ctx, id); err != nil {
+		return err
+	}
+	return s.baseService.DeleteAtVersion(ctx, id, version)
+}
+
 func (s *AlarmTypeService) GetWithFields(ctx context.Context, id uuid.UUID) (*domainFacility.AlarmType, error) {
 	return s.extRepo.GetWithFields(ctx, id)
 }

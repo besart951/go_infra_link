@@ -15,13 +15,13 @@ import (
 type ControlCabinetHandler struct {
 	service       ControlCabinetService
 	collaboration ProjectRefreshBroadcaster
-	copyJobs      *facilityservice.CopyJobManager
+	facilityJobs  *facilityservice.FacilityJobManager
 }
 
-func NewControlCabinetHandler(service ControlCabinetService, collaboration ProjectRefreshBroadcaster, copyJobs ...*facilityservice.CopyJobManager) *ControlCabinetHandler {
+func NewControlCabinetHandler(service ControlCabinetService, collaboration ProjectRefreshBroadcaster, facilityJobs ...*facilityservice.FacilityJobManager) *ControlCabinetHandler {
 	handler := &ControlCabinetHandler{service: service, collaboration: collaboration}
-	if len(copyJobs) > 0 {
-		handler.copyJobs = copyJobs[0]
+	if len(facilityJobs) > 0 {
+		handler.facilityJobs = facilityJobs[0]
 	}
 	return handler
 }
@@ -132,8 +132,8 @@ func (h *ControlCabinetHandler) GetControlCabinetsByIDs(c *gin.Context) {
 // @Tags facility-control-cabinets
 // @Produce json
 // @Param id path string true "Control Cabinet ID"
-// @Param X-Copy-Operation-ID header string false "Client-generated copy operation UUID"
-// @Success 202 {object} dto.CopyJobResponse
+// @Param Idempotency-Key header string false "Client-generated operation UUID"
+// @Success 202 {object} dto.FacilityJobResponse
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 404 {object} dto.ErrorResponse
 // @Failure 409 {object} dto.ErrorResponse
@@ -145,7 +145,7 @@ func (h *ControlCabinetHandler) CopyControlCabinet(c *gin.Context) {
 	if !ok {
 		return
 	}
-	startPersistedFacilityCopyJob(c, h.copyJobs, facilityservice.CopyJobKindControlCabinet, id)
+	enqueueFacilityCopy(c, h.facilityJobs, facilityservice.FacilityJobKindControlCabinet, id)
 }
 
 // GetControlCabinetDeleteImpact godoc
@@ -257,10 +257,7 @@ func (h *ControlCabinetHandler) UpdateControlCabinet(c *gin.Context) {
 		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
 	}
-	baseVersion := controlCabinet.Version
-	if req.BaseVersion != nil {
-		baseVersion = *req.BaseVersion
-	}
+	baseVersion := req.BaseVersion
 
 	applyControlCabinetUpdate(controlCabinet, req)
 
@@ -283,6 +280,7 @@ func (h *ControlCabinetHandler) UpdateControlCabinet(c *gin.Context) {
 // @Tags facility-control-cabinets
 // @Produce json
 // @Param id path string true "Control Cabinet ID"
+// @Param base_version query integer true "Expected aggregate version" minimum(1)
 // @Success 202 {object} dto.FacilityJobResponse
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
@@ -292,6 +290,10 @@ func (h *ControlCabinetHandler) DeleteControlCabinet(c *gin.Context) {
 	if !ok {
 		return
 	}
+	version, ok := parseRequiredBaseVersion(c)
+	if !ok {
+		return
+	}
 
-	startPersistedFacilityDeleteJob(c, h.copyJobs, facilityservice.CopyJobKindControlCabinet, id)
+	startPersistedFacilityDeleteJob(c, h.facilityJobs, facilityservice.FacilityJobKindControlCabinet, id, version.Uint64())
 }

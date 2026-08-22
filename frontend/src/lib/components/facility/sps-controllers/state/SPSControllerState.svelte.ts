@@ -31,12 +31,13 @@ import {
 import { ContextualSPSControllerFetchStrategy } from './strategies/ContextualSPSControllerFetchStrategy.js';
 import { SPSControllerFetchStrategyFactory } from './SPSControllerFetchStrategyFactory.js';
 import { groupSystemTypesByController } from './groupSystemTypesByController.js';
-import { copyOperation } from '$lib/state/copyOperation.svelte.js';
+import { facilityJobState } from '$lib/state/facilityJobState.svelte.js';
+import { SvelteMap } from 'svelte/reactivity';
 
 export class SPSControllerState extends BaseDataTableState<SPSController, SPSControllerFilters> {
   showForm = $state(false);
   editingItem: SPSController | undefined = $state(undefined);
-  cabinetMap = $state(new Map<string, string>());
+  cabinetMap = $state(new SvelteMap<string, string>());
   cabinetFilterOptions = $state<MultiFilterOption[]>([]);
   systemTypesByController = $state<Record<string, SPSControllerSystemType[]>>({});
 
@@ -88,7 +89,7 @@ export class SPSControllerState extends BaseDataTableState<SPSController, SPSCon
   }
 
   get copyInProgress(): boolean {
-    return copyOperation.isPending;
+    return facilityJobState.isPending;
   }
 
   get selectedControlCabinetFilterIds(): string[] {
@@ -97,7 +98,8 @@ export class SPSControllerState extends BaseDataTableState<SPSController, SPSCon
 
   canCreateSPSController(): boolean {
     return this.isProjectContext
-      ? canProject(this.projectCapabilities, 'project.spscontroller.create') && can('spscontroller.create')
+      ? canProject(this.projectCapabilities, 'project.spscontroller.create') &&
+          can('spscontroller.create')
       : can('spscontroller.create');
   }
 
@@ -115,7 +117,8 @@ export class SPSControllerState extends BaseDataTableState<SPSController, SPSCon
 
   canUpdateSPSController(): boolean {
     return this.isProjectContext
-      ? canProject(this.projectCapabilities, 'project.spscontroller.update') && can('spscontroller.update')
+      ? canProject(this.projectCapabilities, 'project.spscontroller.update') &&
+          can('spscontroller.update')
       : can('spscontroller.update');
   }
 
@@ -312,7 +315,10 @@ export class SPSControllerState extends BaseDataTableState<SPSController, SPSCon
       if (this.projectId) {
         await this.removeProjectSPSController(controller.id);
       } else {
-        await this.manageSPSControllerUseCase.delete(controller.id);
+        await this.manageSPSControllerUseCase.delete({
+          id: controller.id,
+          base_version: controller.version
+        });
       }
       addToast(
         this.isProjectContext
@@ -337,25 +343,11 @@ export class SPSControllerState extends BaseDataTableState<SPSController, SPSCon
     if (!this.canDuplicateSPSController()) return;
 
     try {
-      const result = await copyOperation.run({
-        start: (operationId) =>
-          this.projectId
-            ? projectRepository.copySPSController(this.projectId, controller.id, operationId)
-            : this.manageSPSControllerUseCase.copy(controller.id, operationId),
-        onCompleted: async () => {
-          await this.reload();
-          this.notifyChanged({ entityIds: [controller.id] });
-          addToast(
-            this.projectId
-              ? translate('projects.sps_controllers.duplicated')
-              : translate('facility.sps_controller_copied'),
-            'success'
-          );
-        },
-        onFailed: () => {
-          addToast(translate('facility.copy_failed'), 'error');
-        }
-      });
+      const result = await facilityJobState.submit((operationId) =>
+        this.projectId
+          ? projectRepository.copySPSController(this.projectId, controller.id, operationId)
+          : this.manageSPSControllerUseCase.copy(controller.id, operationId)
+      );
       if (!result.started) return;
     } catch (error) {
       const message =
@@ -411,7 +403,7 @@ export class SPSControllerState extends BaseDataTableState<SPSController, SPSCon
   private mergeCabinetLabels(labels: Map<string, string>): void {
     if (labels.size === 0) return;
 
-    const next = new Map(this.cabinetMap);
+    const next = new SvelteMap(this.cabinetMap);
     for (const [cabinetId, label] of labels.entries()) {
       next.set(cabinetId, label);
     }
@@ -466,7 +458,7 @@ export class SPSControllerState extends BaseDataTableState<SPSController, SPSCon
   }
 
   private updateCabinetMap(cabinets: ControlCabinet[]): void {
-    const next = new Map(this.cabinetMap);
+    const next = new SvelteMap(this.cabinetMap);
     for (const cabinet of cabinets) {
       next.set(cabinet.id, cabinet.control_cabinet_nr ?? cabinet.id);
     }
@@ -531,7 +523,11 @@ export class SPSControllerState extends BaseDataTableState<SPSController, SPSCon
       throw new Error(translate('projects.sps_controllers.delete_failed'));
     }
 
-    await projectRepository.removeSPSController(this.projectId, link.id);
+    await projectRepository.removeSPSController({
+      project_id: this.projectId,
+      link_id: link.id,
+      base_version: link.version
+    });
   }
 
   private notifyChanged(

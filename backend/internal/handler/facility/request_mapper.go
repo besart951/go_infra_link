@@ -123,9 +123,7 @@ func toSPSControllerModel(req dto.CreateSPSControllerRequest) *domainFacility.SP
 }
 
 func applySPSControllerUpdate(target *domainFacility.SPSController, req dto.UpdateSPSControllerRequest) {
-	if req.BaseVersion != nil {
-		target.Version = *req.BaseVersion
-	}
+	target.Version = req.BaseVersion
 	if req.ControlCabinetID != uuid.Nil {
 		target.ControlCabinetID = req.ControlCabinetID
 	}
@@ -172,9 +170,7 @@ func toSPSControllerSystemTypes(inputs []dto.SPSControllerSystemTypeInput) []dom
 }
 
 func applyFieldDeviceUpdate(target *domainFacility.FieldDevice, req dto.UpdateFieldDeviceRequest) {
-	if req.BaseVersion != nil {
-		target.Version = *req.BaseVersion
-	}
+	target.Version = req.BaseVersion
 	if req.BMK != nil {
 		target.BMK = req.BMK
 	}
@@ -215,7 +211,9 @@ func toFieldDeviceSpecification(req dto.CreateFieldDeviceSpecificationRequest) *
 }
 
 func toFieldDeviceSpecificationPatch(req dto.UpdateFieldDeviceSpecificationRequest) *domainFacility.SpecificationPatch {
-	return toSpecificationPatchFromInput(&req)
+	patch := toSpecificationPatchFromInput(&req.SpecificationInput)
+	patch.BaseVersion = req.BaseVersion
+	return patch
 }
 
 // toSpecificationPatchFromInput converts a SpecificationInput DTO to a domain patch.
@@ -262,9 +260,7 @@ func toBuildingModel(req dto.CreateBuildingRequest) *domainFacility.Building {
 }
 
 func applyBuildingUpdate(target *domainFacility.Building, req dto.UpdateBuildingRequest) {
-	if req.BaseVersion != nil {
-		target.Version = *req.BaseVersion
-	}
+	target.Version = req.BaseVersion
 	if req.IWSCode != "" {
 		target.IWSCode = req.IWSCode
 	}
@@ -302,6 +298,7 @@ func toSystemPartModel(req dto.CreateSystemPartRequest) *domainFacility.SystemPa
 }
 
 func applySystemPartUpdate(target *domainFacility.SystemPart, req dto.UpdateSystemPartRequest) {
+	target.Version = req.BaseVersion
 	if req.ShortName != "" {
 		target.ShortName = req.ShortName
 	}
@@ -322,6 +319,7 @@ func toApparatModel(req dto.CreateApparatRequest) *domainFacility.Apparat {
 }
 
 func applyApparatUpdate(target *domainFacility.Apparat, req dto.UpdateApparatRequest) {
+	target.Version = req.BaseVersion
 	if req.ShortName != "" {
 		target.ShortName = req.ShortName
 	}
@@ -349,6 +347,7 @@ func toObjectDataTemplateCreate(req dto.CreateObjectDataRequest) domainFacility.
 
 func toObjectDataTemplateUpdate(req dto.UpdateObjectDataRequest) domainFacility.ObjectDataTemplateUpdate {
 	input := domainFacility.ObjectDataTemplateUpdate{
+		BaseVersion: req.BaseVersion,
 		Description: req.Description,
 		Version:     req.Version,
 		IsActive:    req.IsActive,
@@ -518,9 +517,7 @@ func toControlCabinetModel(req dto.CreateControlCabinetRequest) *domainFacility.
 }
 
 func applyControlCabinetUpdate(target *domainFacility.ControlCabinet, req dto.UpdateControlCabinetRequest) {
-	if req.BaseVersion != nil {
-		target.Version = *req.BaseVersion
-	}
+	target.Version = req.BaseVersion
 	if req.BuildingID != uuid.Nil {
 		target.BuildingID = req.BuildingID
 	}

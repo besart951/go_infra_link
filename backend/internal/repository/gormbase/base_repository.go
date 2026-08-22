@@ -23,6 +23,26 @@ type Entity interface {
 // SearchCallback is a function type for custom search logic
 type SearchCallback[T any] func(query *gorm.DB, search string) *gorm.DB
 
+type VersionLock struct {
+	Model   any
+	ID      uuid.UUID
+	Version uint64
+}
+
+func LockVersion(ctx context.Context, db *gorm.DB, request VersionLock) error {
+	if request.Version == 0 {
+		return domain.ErrInvalidArgument
+	}
+	result := db.WithContext(ctx).
+		Clauses(clause.Locking{Strength: "UPDATE"}).
+		Where("id = ? AND version = ?", request.ID, request.Version).
+		First(request.Model)
+	if result.Error == gorm.ErrRecordNotFound {
+		return domain.ErrConflict
+	}
+	return result.Error
+}
+
 // BaseRepository provides common CRUD operations for entities with hard delete support
 type BaseRepository[T Entity] struct {
 	db             *gorm.DB
@@ -62,11 +82,8 @@ func (r *BaseRepository[T]) Update(ctx context.Context, entity T) error {
 	expectedVersion := base.Version
 	base.TouchForUpdate(time.Now().UTC())
 
-	// A zero incoming version is the temporary compatibility path for callers
-	// that have not adopted optimistic concurrency yet. Versioned aggregate
-	// commands always take the conditional branch below.
 	if expectedVersion == 0 {
-		return r.db.WithContext(ctx).Save(entity).Error
+		return domain.ErrInvalidArgument
 	}
 
 	result := r.db.WithContext(ctx).
@@ -84,6 +101,29 @@ func (r *BaseRepository[T]) Update(ctx context.Context, entity T) error {
 		return domain.ErrConflict
 	}
 	return nil
+}
+
+// DeleteAtVersion deletes exactly the revision observed by the caller.
+func (r *BaseRepository[T]) DeleteAtVersion(ctx context.Context, id uuid.UUID, version uint64) error {
+	if version == 0 {
+		return domain.ErrInvalidArgument
+	}
+	var model T
+	result := r.db.WithContext(ctx).Where("id = ? AND version = ?", id, version).Delete(&model)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return domain.ErrConflict
+	}
+	return nil
+}
+
+// LockAtVersion serializes a destructive aggregate command and validates its
+// optimistic-concurrency token inside the caller's transaction.
+func (r *BaseRepository[T]) LockAtVersion(ctx context.Context, id uuid.UUID, version uint64) error {
+	var model T
+	return LockVersion(ctx, r.db, VersionLock{Model: &model, ID: id, Version: version})
 }
 
 // DeleteByIds hard deletes entities by their IDs

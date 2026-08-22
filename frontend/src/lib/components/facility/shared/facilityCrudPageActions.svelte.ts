@@ -78,7 +78,8 @@ export function createBuildingActions(): CrudPageActions<Building> {
   const manageBuilding = new ManageBuildingUseCase(buildingRepository);
   return createStandardFacilityCrudActions<Building>({
     reload: () => buildingsStore.reload(),
-    deleteItem: (building) => manageBuilding.delete(building.id),
+    deleteItem: (building) =>
+      manageBuilding.delete({ id: building.id, base_version: building.version }),
     getDeleteMessage: (building) =>
       translate('facility.delete_building_confirm').replace('{name}', building.iws_code),
     getDeleteSuccessMessage: () => translate('facility.building_deleted'),
@@ -90,7 +91,7 @@ export function createSystemTypeActions(): CrudPageActions<SystemType> {
   const manageSystemType = new ManageEntityUseCase(systemTypeRepository);
   return createStandardFacilityCrudActions<SystemType>({
     reload: () => systemTypesStore.reload(),
-    deleteItem: (item) => manageSystemType.delete(item.id),
+    deleteItem: (item) => manageSystemType.delete({ id: item.id, base_version: item.version }),
     getDeleteMessage: (item) =>
       translate('facility.delete_system_type_confirm').replace('{name}', item.name),
     getDeleteSuccessMessage: () => translate('facility.system_type_deleted'),
@@ -102,7 +103,7 @@ export function createSystemPartActions(): CrudPageActions<SystemPart> {
   const manageSystemPart = new ManageEntityUseCase(systemPartRepository);
   return createStandardFacilityCrudActions<SystemPart>({
     reload: () => systemPartsStore.reload(),
-    deleteItem: (item) => manageSystemPart.delete(item.id),
+    deleteItem: (item) => manageSystemPart.delete({ id: item.id, base_version: item.version }),
     getDeleteMessage: (item) =>
       translate('facility.delete_system_part_confirm').replace(
         '{name}',
@@ -117,7 +118,7 @@ export function createStateTextActions(): CrudPageActions<StateText> {
   const manageStateText = new ManageEntityUseCase(stateTextRepository);
   return createStandardFacilityCrudActions<StateText>({
     reload: () => stateTextsStore.reload(),
-    deleteItem: (item) => manageStateText.delete(item.id),
+    deleteItem: (item) => manageStateText.delete({ id: item.id, base_version: item.version }),
     getDeleteTitle: () => translate('facility.delete_state_text_confirm').replace('{ref}', ''),
     getDeleteMessage: (item) =>
       translate('facility.delete_state_text_confirm').replace(
@@ -133,7 +134,7 @@ export function createApparatActions(): CrudPageActions<Apparat> {
   const manageApparat = new ManageEntityUseCase(apparatRepository);
   return createStandardFacilityCrudActions<Apparat>({
     reload: () => apparatsStore.reload(),
-    deleteItem: (item) => manageApparat.delete(item.id),
+    deleteItem: (item) => manageApparat.delete({ id: item.id, base_version: item.version }),
     getDeleteMessage: (item) =>
       translate('facility.delete_apparat_confirm').replace('{name}', item.short_name ?? item.name),
     getDeleteSuccessMessage: () => translate('facility.apparat_deleted'),
@@ -145,7 +146,8 @@ export function createNotificationClassActions(): CrudPageActions<NotificationCl
   const manageNotificationClass = new ManageEntityUseCase(notificationClassRepository);
   return createStandardFacilityCrudActions<NotificationClass>({
     reload: () => notificationClassesStore.reload(),
-    deleteItem: (item) => manageNotificationClass.delete(item.id),
+    deleteItem: (item) =>
+      manageNotificationClass.delete({ id: item.id, base_version: item.version }),
     getDeleteTitle: () =>
       translate('facility.delete_notification_class_confirm').replace('{name}', ''),
     getDeleteMessage: (item) =>
@@ -162,7 +164,7 @@ export function createAlarmDefinitionActions(): CrudPageActions<AlarmDefinition>
   const manageAlarmDefinition = new ManageEntityUseCase(alarmDefinitionRepository);
   return createStandardFacilityCrudActions<AlarmDefinition>({
     reload: () => alarmDefinitionsStore.reload(),
-    deleteItem: (item) => manageAlarmDefinition.delete(item.id),
+    deleteItem: (item) => manageAlarmDefinition.delete({ id: item.id, base_version: item.version }),
     getDeleteTitle: () =>
       translate('facility.delete_alarm_definition_confirm').replace('{name}', ''),
     getDeleteMessage: (item) =>
@@ -180,7 +182,7 @@ export function createObjectDataActions(): ObjectDataActions {
   const manageObjectData = new ManageObjectDataUseCase(objectDataRepository);
   const actions = createStandardFacilityCrudActions<ObjectData>({
     reload: () => objectDataStore.reload(),
-    deleteItem: (item) => manageObjectData.delete(item.id),
+    deleteItem: (item) => manageObjectData.delete({ id: item.id, base_version: item.revision }),
     getDeleteTitle: () => translate('facility.delete_object_data_confirm').replace('{desc}', ''),
     getDeleteMessage: (item) =>
       translate('facility.delete_object_data_confirm').replace('{desc}', item.description || ''),

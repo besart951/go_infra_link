@@ -139,21 +139,24 @@ func (s *ProjectFacilityLinkService) copyControlCabinet(ctx context.Context, pro
 	return copyEntity, nil
 }
 
-func (s *ProjectFacilityLinkService) UpdateControlCabinet(ctx context.Context, linkID, projectID, controlCabinetID uuid.UUID) (*domainProject.ProjectControlCabinet, error) {
+func (s *ProjectFacilityLinkService) UpdateControlCabinet(ctx context.Context, command domainProject.FacilityLinkUpdate) (*domainProject.ProjectControlCabinet, error) {
+	if err := command.Validate(); err != nil {
+		return nil, err
+	}
 	return withProjectFacilityLinkTxResult(ctx, s, func(txCtx context.Context, txService *ProjectFacilityLinkService) (*domainProject.ProjectControlCabinet, error) {
-		return txService.assignments().updateControlCabinet(txCtx, linkID, projectID, controlCabinetID)
+		return txService.assignments().updateControlCabinet(txCtx, projectAssignmentUpdate{
+			linkID: command.LinkID, projectID: command.ProjectID, target: projectAssignmentTarget{id: command.TargetID},
+			baseVersion: command.BaseVersion,
+		})
 	})
 }
 
-func (s *ProjectFacilityLinkService) UpdateControlCabinetAtVersion(ctx context.Context, linkID, projectID, controlCabinetID uuid.UUID, baseVersion uint64) (*domainProject.ProjectControlCabinet, error) {
-	return withProjectFacilityLinkTxResult(ctx, s, func(txCtx context.Context, txService *ProjectFacilityLinkService) (*domainProject.ProjectControlCabinet, error) {
-		return txService.assignments().updateControlCabinet(txCtx, linkID, projectID, controlCabinetID, baseVersion)
-	})
-}
-
-func (s *ProjectFacilityLinkService) DeleteControlCabinet(ctx context.Context, linkID, projectID uuid.UUID) error {
+func (s *ProjectFacilityLinkService) DeleteControlCabinet(ctx context.Context, command domainProject.FacilityLinkDelete) error {
+	if err := command.Validate(); err != nil {
+		return err
+	}
 	return s.withTx(ctx, func(txCtx context.Context, txService *ProjectFacilityLinkService) error {
-		return txService.assignments().removeControlCabinet(txCtx, linkID, projectID)
+		return txService.assignments().removeControlCabinet(txCtx, command.LinkID, command.ProjectID, command.BaseVersion.Uint64())
 	})
 }
 
@@ -201,21 +204,24 @@ func (s *ProjectFacilityLinkService) copySPSControllerSystemType(ctx context.Con
 	return copyEntity, nil
 }
 
-func (s *ProjectFacilityLinkService) UpdateSPSController(ctx context.Context, linkID, projectID, spsControllerID uuid.UUID) (*domainProject.ProjectSPSController, error) {
+func (s *ProjectFacilityLinkService) UpdateSPSController(ctx context.Context, command domainProject.FacilityLinkUpdate) (*domainProject.ProjectSPSController, error) {
+	if err := command.Validate(); err != nil {
+		return nil, err
+	}
 	return withProjectFacilityLinkTxResult(ctx, s, func(txCtx context.Context, txService *ProjectFacilityLinkService) (*domainProject.ProjectSPSController, error) {
-		return txService.assignments().updateSPSController(txCtx, linkID, projectID, spsControllerID)
+		return txService.assignments().updateSPSController(txCtx, projectAssignmentUpdate{
+			linkID: command.LinkID, projectID: command.ProjectID, target: projectAssignmentTarget{id: command.TargetID},
+			baseVersion: command.BaseVersion,
+		})
 	})
 }
 
-func (s *ProjectFacilityLinkService) UpdateSPSControllerAtVersion(ctx context.Context, linkID, projectID, spsControllerID uuid.UUID, baseVersion uint64) (*domainProject.ProjectSPSController, error) {
-	return withProjectFacilityLinkTxResult(ctx, s, func(txCtx context.Context, txService *ProjectFacilityLinkService) (*domainProject.ProjectSPSController, error) {
-		return txService.assignments().updateSPSController(txCtx, linkID, projectID, spsControllerID, baseVersion)
-	})
-}
-
-func (s *ProjectFacilityLinkService) DeleteSPSController(ctx context.Context, linkID, projectID uuid.UUID) error {
+func (s *ProjectFacilityLinkService) DeleteSPSController(ctx context.Context, command domainProject.FacilityLinkDelete) error {
+	if err := command.Validate(); err != nil {
+		return err
+	}
 	return s.withTx(ctx, func(txCtx context.Context, txService *ProjectFacilityLinkService) error {
-		return txService.assignments().removeSPSController(txCtx, linkID, projectID)
+		return txService.assignments().removeSPSController(txCtx, command.LinkID, command.ProjectID, command.BaseVersion.Uint64())
 	})
 }
 
@@ -225,21 +231,24 @@ func (s *ProjectFacilityLinkService) CreateFieldDevice(ctx context.Context, proj
 	})
 }
 
-func (s *ProjectFacilityLinkService) UpdateFieldDevice(ctx context.Context, linkID, projectID, fieldDeviceID uuid.UUID) (*domainProject.ProjectFieldDevice, error) {
+func (s *ProjectFacilityLinkService) UpdateFieldDevice(ctx context.Context, command domainProject.FacilityLinkUpdate) (*domainProject.ProjectFieldDevice, error) {
+	if err := command.Validate(); err != nil {
+		return nil, err
+	}
 	return withProjectFacilityLinkTxResult(ctx, s, func(txCtx context.Context, txService *ProjectFacilityLinkService) (*domainProject.ProjectFieldDevice, error) {
-		return txService.assignments().updateFieldDevice(txCtx, linkID, projectID, fieldDeviceID)
+		return txService.assignments().updateFieldDevice(txCtx, projectAssignmentUpdate{
+			linkID: command.LinkID, projectID: command.ProjectID, target: projectAssignmentTarget{id: command.TargetID},
+			baseVersion: command.BaseVersion,
+		})
 	})
 }
 
-func (s *ProjectFacilityLinkService) UpdateFieldDeviceAtVersion(ctx context.Context, linkID, projectID, fieldDeviceID uuid.UUID, baseVersion uint64) (*domainProject.ProjectFieldDevice, error) {
-	return withProjectFacilityLinkTxResult(ctx, s, func(txCtx context.Context, txService *ProjectFacilityLinkService) (*domainProject.ProjectFieldDevice, error) {
-		return txService.assignments().updateFieldDevice(txCtx, linkID, projectID, fieldDeviceID, baseVersion)
-	})
-}
-
-func (s *ProjectFacilityLinkService) DeleteFieldDevice(ctx context.Context, linkID, projectID uuid.UUID) error {
+func (s *ProjectFacilityLinkService) DeleteFieldDevice(ctx context.Context, command domainProject.FacilityLinkDelete) error {
+	if err := command.Validate(); err != nil {
+		return err
+	}
 	return s.withTx(ctx, func(txCtx context.Context, txService *ProjectFacilityLinkService) error {
-		return txService.assignments().removeFieldDevice(txCtx, linkID, projectID)
+		return txService.assignments().removeFieldDevice(txCtx, command.LinkID, command.ProjectID, command.BaseVersion.Uint64())
 	})
 }
 

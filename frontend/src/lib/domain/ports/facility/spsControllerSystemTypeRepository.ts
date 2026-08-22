@@ -1,6 +1,7 @@
 import type { ListParams, PaginatedResponse } from '$lib/domain/ports/listRepository.js';
+import type { VersionedDeleteCommand } from '$lib/domain/ports/crudRepository.js';
 import type {
-  CopyJob,
+  FacilityJob,
   SPSControllerSystemType,
   UpdateSPSControllerSystemTypeRequest
 } from '$lib/domain/facility/index.js';
@@ -16,6 +17,6 @@ export interface SPSControllerSystemTypeRepository {
     data: UpdateSPSControllerSystemTypeRequest,
     signal?: AbortSignal
   ): Promise<SPSControllerSystemType>;
-  copy(id: string, operationId: string, signal?: AbortSignal): Promise<CopyJob>;
-  delete(id: string, signal?: AbortSignal): Promise<void>;
+  copy(id: string, operationId: string, signal?: AbortSignal): Promise<FacilityJob>;
+  delete(command: VersionedDeleteCommand, signal?: AbortSignal): Promise<void>;
 }

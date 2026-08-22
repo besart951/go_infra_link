@@ -74,6 +74,7 @@
     await formState.handleSubmit(async () => {
       if (initialData) {
         return await manageStateText.update(initialData.id, {
+          base_version: initialData.version,
           ref_number,
           state_text1: state_text1 || undefined,
           state_text2: state_text2 || undefined,

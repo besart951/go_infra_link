@@ -13,7 +13,8 @@ import type {
   ProjectSPSControllerListResponse,
   ProjectFieldDeviceListResponse,
   ProjectFieldDeviceMultiCreateResponse,
-  ProjectCapabilities
+  ProjectCapabilities,
+  ProjectLinkDeleteCommand
 } from '$lib/domain/project/index.js';
 import type {
   ControlCabinet,
@@ -21,8 +22,9 @@ import type {
   MultiCreateFieldDeviceResponse,
   ObjectDataListParams,
   SPSController,
-  CopyJob
+  FacilityJob
 } from '$lib/domain/facility/index.js';
+import type { VersionedDeleteCommand } from '$lib/domain/ports/crudRepository.js';
 
 export interface PaginationParams {
   page?: number;
@@ -35,7 +37,7 @@ export interface ProjectRepository extends ListRepository<Project> {
   getCapabilities(id: string, signal?: AbortSignal): Promise<ProjectCapabilities>;
   create(data: CreateProjectRequest, signal?: AbortSignal): Promise<Project>;
   update(id: string, data: UpdateProjectRequest, signal?: AbortSignal): Promise<Project>;
-  delete(id: string, signal?: AbortSignal): Promise<void>;
+  delete(command: VersionedDeleteCommand, signal?: AbortSignal): Promise<void>;
 
   // Project user links
   listUsers(projectId: string, signal?: AbortSignal): Promise<ProjectUserListResponse>;
@@ -62,13 +64,13 @@ export interface ProjectRepository extends ListRepository<Project> {
     controlCabinetId: string,
     signal?: AbortSignal
   ): Promise<void>;
-  removeControlCabinet(projectId: string, linkId: string, signal?: AbortSignal): Promise<void>;
+  removeControlCabinet(command: ProjectLinkDeleteCommand, signal?: AbortSignal): Promise<void>;
   copyControlCabinet(
     projectId: string,
     controlCabinetId: string,
     operationId: string,
     signal?: AbortSignal
-  ): Promise<CopyJob>;
+  ): Promise<FacilityJob>;
 
   // Project SPS controller links
   listSPSControllers(
@@ -77,13 +79,13 @@ export interface ProjectRepository extends ListRepository<Project> {
     signal?: AbortSignal
   ): Promise<ProjectSPSControllerListResponse>;
   addSPSController(projectId: string, spsControllerId: string, signal?: AbortSignal): Promise<void>;
-  removeSPSController(projectId: string, linkId: string, signal?: AbortSignal): Promise<void>;
+  removeSPSController(command: ProjectLinkDeleteCommand, signal?: AbortSignal): Promise<void>;
   copySPSController(
     projectId: string,
     spsControllerId: string,
     operationId: string,
     signal?: AbortSignal
-  ): Promise<CopyJob>;
+  ): Promise<FacilityJob>;
 
   // Project field device links
   listFieldDevices(
@@ -102,5 +104,5 @@ export interface ProjectRepository extends ListRepository<Project> {
     data: MultiCreateFieldDeviceRequest,
     signal?: AbortSignal
   ): Promise<MultiCreateFieldDeviceResponse>;
-  removeFieldDevice(projectId: string, linkId: string, signal?: AbortSignal): Promise<void>;
+  removeFieldDevice(command: ProjectLinkDeleteCommand, signal?: AbortSignal): Promise<void>;
 }

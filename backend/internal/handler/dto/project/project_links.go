@@ -10,6 +10,10 @@ import (
 
 // Project link DTOs
 
+type RequiredBaseVersionQuery struct {
+	BaseVersion uint64 `form:"base_version" binding:"required,min=1"`
+}
+
 type CreateProjectUserRequest struct {
 	UserID uuid.UUID `json:"user_id" binding:"required"`
 }
@@ -29,7 +33,7 @@ type CreateProjectControlCabinetRequest struct {
 
 type UpdateProjectControlCabinetRequest struct {
 	ControlCabinetID uuid.UUID `json:"control_cabinet_id" binding:"required"`
-	BaseVersion      *uint64   `json:"base_version" binding:"omitempty,min=1"`
+	BaseVersion      uint64    `json:"base_version" binding:"required,min=1"`
 }
 
 type ProjectControlCabinetResponse struct {
@@ -54,7 +58,7 @@ type CreateProjectSPSControllerRequest struct {
 
 type UpdateProjectSPSControllerRequest struct {
 	SPSControllerID uuid.UUID `json:"sps_controller_id" binding:"required"`
-	BaseVersion     *uint64   `json:"base_version" binding:"omitempty,min=1"`
+	BaseVersion     uint64    `json:"base_version" binding:"required,min=1"`
 }
 
 type ProjectSPSControllerResponse struct {
@@ -93,7 +97,7 @@ type CreateProjectObjectDataRequest struct {
 
 type UpdateProjectFieldDeviceRequest struct {
 	FieldDeviceID uuid.UUID `json:"field_device_id" binding:"required"`
-	BaseVersion   *uint64   `json:"base_version" binding:"omitempty,min=1"`
+	BaseVersion   uint64    `json:"base_version" binding:"required,min=1"`
 }
 
 type ProjectFieldDeviceResponse struct {

@@ -16,11 +16,13 @@ import (
 const facilityBulkChunkSize = 500
 
 type fieldDeviceBulkTaskRegistrar struct {
-	steps facilityjobs.StepStore
+	steps    facilityjobs.StepStore
+	plans    facilityjobs.FieldDeviceUpdatePlanStore
+	services *Services
 }
 
 type fieldDeviceBulkRun[T any] struct {
-	job        facilityservice.CopyJob
+	job        facilityservice.FacilityJob
 	report     func(facilityservice.FacilityJobProgress)
 	items      []T
 	entityType string
@@ -36,17 +38,34 @@ type fieldDeviceBulkItemExecution[T any] struct {
 	item      T
 }
 
-func registerFieldDeviceBulkTasks(jobs *facilityservice.CopyJobManager, runtime *RuntimeAdapters) {
-	registrar := fieldDeviceBulkTaskRegistrar{}
-	if runtime != nil {
-		registrar.steps = runtime.FacilityJobSteps
-	}
-	jobs.RegisterTask(facilityservice.FacilityJobTaskMultiCreateFieldDevices, registrar.multiCreate)
-	jobs.RegisterTask(facilityservice.FacilityJobTaskBulkUpdateFieldDevices, registrar.bulkUpdate)
-	jobs.RegisterTask(facilityservice.FacilityJobTaskBulkDeleteFieldDevices, registrar.bulkDelete)
+type fieldDeviceUpdateGroupRun struct {
+	ctx    context.Context
+	job    facilityservice.FacilityJob
+	report func(facilityservice.FacilityJobProgress)
+	total  int
+	groups []facilityservice.FieldDeviceBulkUpdateGroup
 }
 
-func (r fieldDeviceBulkTaskRegistrar) multiCreate(ctx context.Context, job facilityservice.CopyJob, report func(facilityservice.FacilityJobProgress)) (facilityservice.FacilityJobTaskResult, error) {
+type fieldDeviceUpdateGroupExecution struct {
+	ctx     context.Context
+	job     facilityservice.FacilityJob
+	ordinal int64
+	group   facilityservice.FieldDeviceBulkUpdateGroup
+}
+
+func registerFieldDeviceBulkTasks(jobs *facilityservice.FacilityJobManager, runtime *RuntimeAdapters, services *Services) {
+	registrar := fieldDeviceBulkTaskRegistrar{services: services}
+	if runtime != nil {
+		registrar.steps = runtime.FacilityJobSteps
+		registrar.plans = runtime.FieldDeviceUpdatePlans
+	}
+	jobs.RegisterTask(facilityservice.FacilityJobTaskMultiCreateFieldDevices, facilityservice.FacilityJobHandlerFunc(registrar.multiCreate))
+	jobs.RegisterTask(facilityservice.FacilityJobTaskBulkUpdateFieldDevices, facilityservice.FacilityJobHandlerFunc(registrar.bulkUpdate))
+	jobs.RegisterTask(facilityservice.FacilityJobTaskBulkDeleteFieldDevices, facilityservice.FacilityJobHandlerFunc(registrar.bulkDelete))
+}
+
+func (r fieldDeviceBulkTaskRegistrar) multiCreate(ctx context.Context, execution facilityservice.FacilityJobExecution) (facilityservice.FacilityJobTaskResult, error) {
+	job, report := execution.Job, execution.Reporter.Report
 	var payload facilityservice.FieldDeviceMultiCreateTaskPayload
 	if err := decodeBulkPayload(job.Payload, &payload); err != nil {
 		return facilityservice.FacilityJobTaskResult{}, err
@@ -57,18 +76,210 @@ func (r fieldDeviceBulkTaskRegistrar) multiCreate(ctx context.Context, job facil
 	})
 }
 
-func (r fieldDeviceBulkTaskRegistrar) bulkUpdate(ctx context.Context, job facilityservice.CopyJob, report func(facilityservice.FacilityJobProgress)) (facilityservice.FacilityJobTaskResult, error) {
+func (r fieldDeviceBulkTaskRegistrar) bulkUpdate(ctx context.Context, execution facilityservice.FacilityJobExecution) (facilityservice.FacilityJobTaskResult, error) {
+	job, report := execution.Job, execution.Reporter.Report
 	var payload facilityservice.FieldDeviceBulkUpdateTaskPayload
 	if err := decodeBulkPayload(job.Payload, &payload); err != nil {
 		return facilityservice.FacilityJobTaskResult{}, err
 	}
-	return runFieldDeviceBulk(ctx, r, fieldDeviceBulkRun[domainFacility.BulkFieldDeviceUpdate]{
-		job: job, report: report, items: payload.Updates, entityType: "field_device_update",
-		sourceID: func(item domainFacility.BulkFieldDeviceUpdate) uuid.UUID { return item.ID }, mutate: updateFieldDeviceItem,
+	if r.steps == nil {
+		return facilityservice.FacilityJobTaskResult{}, errors.New("durable facility job step store is unavailable")
+	}
+	groups, err := r.prepareUpdateGroups(ctx, job, payload.Updates)
+	if err != nil {
+		return facilityservice.FacilityJobTaskResult{}, err
+	}
+	return r.runUpdateGroups(fieldDeviceUpdateGroupRun{
+		ctx: ctx, job: job, report: report, total: len(payload.Updates), groups: groups,
 	})
 }
 
-func (r fieldDeviceBulkTaskRegistrar) bulkDelete(ctx context.Context, job facilityservice.CopyJob, report func(facilityservice.FacilityJobProgress)) (facilityservice.FacilityJobTaskResult, error) {
+func (r fieldDeviceBulkTaskRegistrar) prepareUpdateGroups(ctx context.Context, job facilityservice.FacilityJob, updates []domainFacility.BulkFieldDeviceUpdate) ([]facilityservice.FieldDeviceBulkUpdateGroup, error) {
+	items, err := r.steps.ListItems(ctx, job.OwnerID, job.ID)
+	if err != nil {
+		return nil, err
+	}
+	if len(items) > 0 {
+		return decodePreparedUpdateGroups(items)
+	}
+	groups, err := r.loadUpdatePlan(ctx, job)
+	if err != nil {
+		return nil, err
+	}
+	if len(groups) > 0 {
+		return groups, r.prepareUpdateGroupSteps(ctx, job, groups)
+	}
+	if err := r.saveUnplannedUpdates(ctx, job, updates); err != nil {
+		return nil, err
+	}
+	if err := r.plans.Plan(ctx, job.OwnerID, job.ID); err != nil {
+		return nil, err
+	}
+	groups, err = r.loadUpdatePlan(ctx, job)
+	if err != nil {
+		return nil, err
+	}
+	return groups, r.prepareUpdateGroupSteps(ctx, job, groups)
+}
+
+func (r fieldDeviceBulkTaskRegistrar) prepareUpdateGroupSteps(ctx context.Context, job facilityservice.FacilityJob, groups []facilityservice.FieldDeviceBulkUpdateGroup) error {
+	steps, err := updateGroupSteps(job, groups)
+	if err != nil {
+		return err
+	}
+	return r.steps.Prepare(ctx, steps)
+}
+
+func (r fieldDeviceBulkTaskRegistrar) loadUpdatePlan(ctx context.Context, job facilityservice.FacilityJob) ([]facilityservice.FieldDeviceBulkUpdateGroup, error) {
+	if r.plans == nil {
+		return nil, errors.New("field device bulk plan store is unavailable")
+	}
+	items, err := r.plans.List(ctx, job.OwnerID, job.ID)
+	if err != nil || len(items) == 0 {
+		return nil, err
+	}
+	return updateGroupsFromPlan(items)
+}
+
+func (r fieldDeviceBulkTaskRegistrar) saveUnplannedUpdates(ctx context.Context, job facilityservice.FacilityJob, updates []domainFacility.BulkFieldDeviceUpdate) error {
+	if r.plans == nil {
+		return errors.New("field device bulk plan store is unavailable")
+	}
+	for start := 0; start < len(updates); start += facilityBulkChunkSize {
+		end := min(start+facilityBulkChunkSize, len(updates))
+		items, err := unplannedUpdateItems(job, updates[start:end], start)
+		if err != nil {
+			return err
+		}
+		if err := r.plans.Save(ctx, items); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func unplannedUpdateItems(job facilityservice.FacilityJob, updates []domainFacility.BulkFieldDeviceUpdate, offset int) ([]facilityjobs.FieldDeviceUpdatePlanItem, error) {
+	items := make([]facilityjobs.FieldDeviceUpdatePlanItem, len(updates))
+	for index, update := range updates {
+		command, err := json.Marshal(update)
+		if err != nil {
+			return nil, err
+		}
+		ordinal := offset + index
+		items[index] = facilityjobs.FieldDeviceUpdatePlanItem{
+			OwnerID: job.OwnerID, JobID: job.ID, Ordinal: int64(ordinal), GroupOrdinal: int64(ordinal),
+			DependencyGroupID: uuid.NewMD5(uuid.NameSpaceOID, []byte(update.ID.String())),
+			FieldDeviceID:     update.ID, Command: command,
+		}
+	}
+	return items, nil
+}
+
+func updateGroupsFromPlan(items []facilityjobs.FieldDeviceUpdatePlanItem) ([]facilityservice.FieldDeviceBulkUpdateGroup, error) {
+	groups := make([]facilityservice.FieldDeviceBulkUpdateGroup, 0)
+	for _, item := range items {
+		if len(groups) == 0 || groups[len(groups)-1].ID != item.DependencyGroupID {
+			groups = append(groups, facilityservice.FieldDeviceBulkUpdateGroup{ID: item.DependencyGroupID})
+		}
+		var update domainFacility.BulkFieldDeviceUpdate
+		if err := json.Unmarshal(item.Command, &update); err != nil {
+			return nil, fmt.Errorf("decode field device update plan item: %w", err)
+		}
+		group := &groups[len(groups)-1]
+		group.Indexes = append(group.Indexes, int(item.Ordinal))
+		group.Updates = append(group.Updates, update)
+	}
+	return groups, nil
+}
+
+func decodePreparedUpdateGroups(items []facilityjobs.Item) ([]facilityservice.FieldDeviceBulkUpdateGroup, error) {
+	groups := make([]facilityservice.FieldDeviceBulkUpdateGroup, len(items))
+	for index, item := range items {
+		if err := json.Unmarshal(item.Input, &groups[index]); err != nil {
+			return nil, fmt.Errorf("decode persisted field device update group: %w", err)
+		}
+	}
+	return groups, nil
+}
+
+func updateGroupSteps(job facilityservice.FacilityJob, groups []facilityservice.FieldDeviceBulkUpdateGroup) ([]facilityjobs.Step, error) {
+	steps := make([]facilityjobs.Step, len(groups))
+	for index, group := range groups {
+		input, err := json.Marshal(group)
+		if err != nil {
+			return nil, err
+		}
+		steps[index] = updateGroupStep(fieldDeviceUpdateGroupExecution{
+			job: job, ordinal: int64(index), group: group,
+		}, input)
+	}
+	return steps, nil
+}
+
+func updateGroupStep(execution fieldDeviceUpdateGroupExecution, input json.RawMessage) facilityjobs.Step {
+	return facilityjobs.Step{
+		Key: facilityjobs.ItemKey{
+			OwnerID: execution.job.OwnerID, JobID: execution.job.ID, Ordinal: execution.ordinal,
+		},
+		EntityType: "field_device_update_group", SourceID: execution.group.ID, Input: input,
+	}
+}
+
+func (r fieldDeviceBulkTaskRegistrar) runUpdateGroups(run fieldDeviceUpdateGroupRun) (facilityservice.FacilityJobTaskResult, error) {
+	result := facilityservice.FieldDeviceBulkJobResult{TotalCount: run.total}
+	processed := 0
+	for ordinal, group := range run.groups {
+		err := r.executeUpdateGroup(fieldDeviceUpdateGroupExecution{
+			ctx: run.ctx, job: run.job, ordinal: int64(ordinal), group: group,
+		})
+		processed += len(group.Updates)
+		applyUpdateGroupResult(&result, group, err)
+		reportFieldDeviceBulkProgress(run.report, processed, result)
+	}
+	encoded, err := json.Marshal(result)
+	return facilityservice.FacilityJobTaskResult{Result: encoded}, err
+}
+
+func (r fieldDeviceBulkTaskRegistrar) executeUpdateGroup(execution fieldDeviceUpdateGroupExecution) error {
+	input, err := json.Marshal(execution.group)
+	if err != nil {
+		return err
+	}
+	step := updateGroupStep(execution, input)
+	_, _, err = r.steps.Execute(execution.ctx, step, func(itemCtx context.Context, unit apptransaction.UnitOfWork) (facilityjobs.StepResult, error) {
+		services, buildErr := facilityServicesFromUnit(unit)
+		if buildErr != nil {
+			return facilityjobs.StepResult{}, buildErr
+		}
+		return updateFieldDeviceGroup(itemCtx, services, execution.group)
+	})
+	return err
+}
+
+func updateFieldDeviceGroup(ctx context.Context, services *facilityservice.Services, group facilityservice.FieldDeviceBulkUpdateGroup) (facilityjobs.StepResult, error) {
+	result := services.FieldDevice.BulkUpdate(ctx, group.Updates)
+	if result == nil || result.FailureCount > 0 || result.SuccessCount != len(group.Updates) {
+		return facilityjobs.StepResult{}, bulkOperationError(result)
+	}
+	encoded, err := json.Marshal(result)
+	return facilityjobs.StepResult{Result: encoded}, err
+}
+
+func applyUpdateGroupResult(result *facilityservice.FieldDeviceBulkJobResult, group facilityservice.FieldDeviceBulkUpdateGroup, cause error) {
+	if cause == nil {
+		result.SuccessCount += len(group.Updates)
+		return
+	}
+	result.FailureCount += len(group.Updates)
+	for index, update := range group.Updates {
+		result.Failures = append(result.Failures, facilityservice.FieldDeviceBulkJobFailure{
+			Ordinal: group.Indexes[index], SourceID: update.ID, DependencyGroupID: group.ID, Error: cause.Error(),
+		})
+	}
+}
+
+func (r fieldDeviceBulkTaskRegistrar) bulkDelete(ctx context.Context, execution facilityservice.FacilityJobExecution) (facilityservice.FacilityJobTaskResult, error) {
+	job, report := execution.Job, execution.Reporter.Report
 	var payload facilityservice.FieldDeviceBulkDeleteTaskPayload
 	if err := decodeBulkPayload(job.Payload, &payload); err != nil {
 		return facilityservice.FacilityJobTaskResult{}, err
@@ -81,14 +292,7 @@ func (r fieldDeviceBulkTaskRegistrar) bulkDelete(ctx context.Context, job facili
 }
 
 func deleteTaskCommands(payload facilityservice.FieldDeviceBulkDeleteTaskPayload) []domainFacility.FieldDeviceDeleteCommand {
-	if len(payload.Commands) > 0 {
-		return payload.Commands
-	}
-	commands := make([]domainFacility.FieldDeviceDeleteCommand, len(payload.IDs))
-	for index, id := range payload.IDs {
-		commands[index] = domainFacility.FieldDeviceDeleteCommand{ID: id}
-	}
-	return commands
+	return payload.Commands
 }
 
 func runFieldDeviceBulk[T any](ctx context.Context, registrar fieldDeviceBulkTaskRegistrar, run fieldDeviceBulkRun[T]) (facilityservice.FacilityJobTaskResult, error) {

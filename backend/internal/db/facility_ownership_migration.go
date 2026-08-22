@@ -44,8 +44,14 @@ var ownershipChecks = []ownershipCheck{
 }
 
 func migrateFacilityOwnership(db *gorm.DB) error {
-	if err := preflightFacilityOwnership(db); err != nil {
+	legacy, err := hasLegacyFacilityOwnership(db)
+	if err != nil {
 		return err
+	}
+	if legacy {
+		if err := preflightFacilityOwnership(db); err != nil {
+			return err
+		}
 	}
 	if err := db.AutoMigrate(
 		&facilitysql.BacnetObjectTemplateRecord{},
@@ -53,13 +59,24 @@ func migrateFacilityOwnership(db *gorm.DB) error {
 	); err != nil {
 		return err
 	}
-	if err := backfillCanonicalSpecificationOwner(db); err != nil {
-		return err
-	}
-	if err := backfillBacnetTemplates(db); err != nil {
-		return err
+	if legacy {
+		if err := backfillCanonicalSpecificationOwner(db); err != nil {
+			return err
+		}
+		if err := backfillBacnetTemplates(db); err != nil {
+			return err
+		}
 	}
 	return addFacilityOwnershipConstraints(db)
+}
+
+func hasLegacyFacilityOwnership(db *gorm.DB) (bool, error) {
+	hasJoinTable := db.Migrator().HasTable("object_data_bacnet_objects")
+	hasSpecificationColumn := db.Migrator().HasColumn("field_devices", "specification_id")
+	if hasJoinTable != hasSpecificationColumn {
+		return false, fmt.Errorf("incomplete legacy Facility ownership schema")
+	}
+	return hasJoinTable, nil
 }
 
 func preflightFacilityOwnership(db *gorm.DB) error {
@@ -152,6 +169,13 @@ func addFacilityOwnershipConstraints(db *gorm.DB) error {
 		`DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_bacnet_template_alarm_owner') THEN
 			ALTER TABLE bacnet_object_template_alarm_values ADD CONSTRAINT fk_bacnet_template_alarm_owner
 			FOREIGN KEY (template_id) REFERENCES bacnet_object_templates(id) ON DELETE CASCADE; END IF; END $$`,
+		`DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'uq_bacnet_objects_owner_id') THEN
+			ALTER TABLE bacnet_objects ADD CONSTRAINT uq_bacnet_objects_owner_id
+			UNIQUE (field_device_id,id); END IF; END $$`,
+		`DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_bacnet_objects_owner_reference') THEN
+			ALTER TABLE bacnet_objects ADD CONSTRAINT fk_bacnet_objects_owner_reference
+			FOREIGN KEY (field_device_id,software_reference_id)
+			REFERENCES bacnet_objects(field_device_id,id) DEFERRABLE INITIALLY DEFERRED; END IF; END $$`,
 	}
 	for _, statement := range statements {
 		if err := db.Exec(statement).Error; err != nil {

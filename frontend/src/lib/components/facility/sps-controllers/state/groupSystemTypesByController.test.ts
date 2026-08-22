@@ -7,6 +7,7 @@ describe('groupSystemTypesByController', () => {
     const grouped = groupSystemTypesByController([
       {
         id: 'type-1',
+        aggregate_version: 1,
         sps_controller_id: 'controller-1',
         system_type_id: 'system-1',
         created_at: '2026-01-01T00:00:00Z',
@@ -14,6 +15,7 @@ describe('groupSystemTypesByController', () => {
       },
       {
         id: 'type-2',
+        aggregate_version: 1,
         sps_controller_id: 'controller-1',
         system_type_id: 'system-2',
         created_at: '2026-01-01T00:00:00Z',
@@ -21,6 +23,7 @@ describe('groupSystemTypesByController', () => {
       },
       {
         id: 'type-3',
+        aggregate_version: 1,
         sps_controller_id: 'controller-2',
         system_type_id: 'system-3',
         created_at: '2026-01-01T00:00:00Z',
@@ -28,6 +31,7 @@ describe('groupSystemTypesByController', () => {
       },
       {
         id: 'type-4',
+        aggregate_version: 1,
         sps_controller_id: '',
         system_type_id: 'system-4',
         created_at: '2026-01-01T00:00:00Z',
@@ -39,6 +43,7 @@ describe('groupSystemTypesByController', () => {
       'controller-1': [
         {
           id: 'type-1',
+          aggregate_version: 1,
           sps_controller_id: 'controller-1',
           system_type_id: 'system-1',
           created_at: '2026-01-01T00:00:00Z',
@@ -46,6 +51,7 @@ describe('groupSystemTypesByController', () => {
         },
         {
           id: 'type-2',
+          aggregate_version: 1,
           sps_controller_id: 'controller-1',
           system_type_id: 'system-2',
           created_at: '2026-01-01T00:00:00Z',
@@ -55,6 +61,7 @@ describe('groupSystemTypesByController', () => {
       'controller-2': [
         {
           id: 'type-3',
+          aggregate_version: 1,
           sps_controller_id: 'controller-2',
           system_type_id: 'system-3',
           created_at: '2026-01-01T00:00:00Z',

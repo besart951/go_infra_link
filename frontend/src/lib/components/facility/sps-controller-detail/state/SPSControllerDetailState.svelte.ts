@@ -255,7 +255,10 @@ export class SPSControllerDetailState {
     }
 
     try {
-      await this.manageSpsController.delete(this.controller.id);
+      await this.manageSpsController.delete({
+        id: this.controller.id,
+        base_version: this.controller.version
+      });
       this.toastAction(translate('facility.sps_controller_deleted'), 'success');
       await this.gotoAction(this.backHref);
     } catch (error) {

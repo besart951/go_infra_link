@@ -130,6 +130,7 @@ This project follows **Clean/Hexagonal Architecture** principles:
 - The frontend container serves static assets and can proxy same-origin `/api/*` to the backend for standalone Compose deployments
 - The `server-setup` edge reverse proxy owns live blue/green routing for `/api/*`
 - Backend endpoints remain the only source of truth for auth, cookies, CSRF, and authorization
+- Facility contract cutover and the reproducible 5M performance profile are documented in [docs/facility-contract-and-benchmark.md](docs/facility-contract-and-benchmark.md)
 - PostgreSQL runs on the official `postgres:18.3-alpine3.23` image; major upgrades must use dump/restore, not an in-place data directory reuse
 - Production config is fail-closed: `JWT_SECRET` must be strong and non-default, `COOKIE_SECURE=true`, `TRUSTED_PROXIES` must name the reverse proxy IP/CIDR, and CORS origins must never use `*`
 - Cookie auth is designed for the same-origin SPA: auth cookies are `HttpOnly`, CSRF is a readable double-submit cookie, and `COOKIE_SAME_SITE=strict` is the default

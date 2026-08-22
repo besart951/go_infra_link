@@ -9,6 +9,7 @@ import type {
 } from '$lib/domain/facility/index.js';
 import { api } from '$lib/api/client.js';
 import { buildListUrl, mapPaginatedResponse } from './listHelpers.js';
+import { versionedDeletePath } from './versionedMutation.js';
 
 export const buildingRepository: BuildingRepository = {
   async list(params: ListParams, signal?: AbortSignal): Promise<PaginatedResponse<Building>> {
@@ -48,8 +49,8 @@ export const buildingRepository: BuildingRepository = {
     });
   },
 
-  async delete(id: string, signal?: AbortSignal): Promise<void> {
-    return api<void>(`/facility/buildings/${id}`, {
+  async delete(command, signal?: AbortSignal): Promise<void> {
+    return api<void>(versionedDeletePath('/facility/buildings', command), {
       method: 'DELETE',
       signal
     });

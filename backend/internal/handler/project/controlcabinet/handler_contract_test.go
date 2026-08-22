@@ -23,7 +23,7 @@ func TestUpdateProjectControlCabinetRelinksTheRequestedLink(t *testing.T) {
 	handler := NewHandler(contractAccessPolicy{}, service, nil)
 	recorder := httptest.NewRecorder()
 	ctx, _ := gin.CreateTestContext(recorder)
-	ctx.Request = httptest.NewRequest(http.MethodPut, "/projects/"+projectID.String()+"/control-cabinets/"+linkID.String(), strings.NewReader(`{"control_cabinet_id":"`+controlCabinetID.String()+`"}`))
+	ctx.Request = httptest.NewRequest(http.MethodPut, "/projects/"+projectID.String()+"/control-cabinets/"+linkID.String(), strings.NewReader(`{"control_cabinet_id":"`+controlCabinetID.String()+`","base_version":1}`))
 	ctx.Request.Header.Set("Content-Type", "application/json")
 	ctx.Params = gin.Params{{Key: "id", Value: projectID.String()}, {Key: "linkId", Value: linkID.String()}}
 	ctx.Set(middleware.ContextUserIDKey, uuid.New())
@@ -66,12 +66,12 @@ func (s *contractFacilityLinkService) CopyControlCabinet(context.Context, uuid.U
 	return nil, nil
 }
 
-func (s *contractFacilityLinkService) UpdateControlCabinet(_ context.Context, linkID, projectID, controlCabinetID uuid.UUID) (*domainProject.ProjectControlCabinet, error) {
-	s.linkID, s.projectID, s.controlCabinetID = linkID, projectID, controlCabinetID
-	return &domainProject.ProjectControlCabinet{ProjectID: projectID, ControlCabinetID: controlCabinetID}, nil
+func (s *contractFacilityLinkService) UpdateControlCabinet(_ context.Context, command domainProject.FacilityLinkUpdate) (*domainProject.ProjectControlCabinet, error) {
+	s.linkID, s.projectID, s.controlCabinetID = command.LinkID, command.ProjectID, command.TargetID
+	return &domainProject.ProjectControlCabinet{ProjectID: command.ProjectID, ControlCabinetID: command.TargetID}, nil
 }
 
-func (s *contractFacilityLinkService) DeleteControlCabinet(context.Context, uuid.UUID, uuid.UUID) error {
+func (s *contractFacilityLinkService) DeleteControlCabinet(context.Context, domainProject.FacilityLinkDelete) error {
 	return nil
 }
 

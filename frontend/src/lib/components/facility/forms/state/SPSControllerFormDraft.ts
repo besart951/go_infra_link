@@ -6,7 +6,10 @@ import type {
   SystemType
 } from '$lib/domain/facility/index.js';
 
-export type SPSControllerSystemTypeEntry = SPSControllerSystemTypeInput & { id?: string };
+export type SPSControllerSystemTypeEntry = SPSControllerSystemTypeInput & {
+  id?: string;
+  aggregate_version?: number;
+};
 
 export interface SystemTypeAddState {
   disabled: boolean;
@@ -57,6 +60,7 @@ export function toSPSControllerSystemTypeEntries(
 ): SPSControllerSystemTypeEntry[] {
   return items.map((item) => ({
     id: item.id,
+    aggregate_version: item.aggregate_version,
     system_type_id: item.system_type_id,
     number: item.number ?? undefined,
     document_name: item.document_name ?? undefined

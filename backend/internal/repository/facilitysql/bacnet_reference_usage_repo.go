@@ -50,24 +50,22 @@ func (r *bacnetReferenceUsageRepo) CountByResource(ctx context.Context, resource
 }
 
 func (r *bacnetReferenceUsageRepo) countByBacnetObjectColumn(ctx context.Context, column string, ids []uuid.UUID) (map[uuid.UUID]int64, error) {
-	var rows []bacnetReferenceUsageRow
-	err := r.db.WithContext(ctx).
-		Table("bacnet_objects").
-		Select(column+" AS id, COUNT(*) AS count").
-		Where(column+" IN ?", ids).
-		Group(column).
-		Scan(&rows).Error
-	if err != nil {
-		return nil, err
-	}
-	return usageRowsToMap(rows), nil
+	query := fmt.Sprintf(`SELECT id, COUNT(*) AS count FROM (
+		SELECT %s AS id FROM bacnet_objects WHERE %s IN ?
+		UNION ALL
+		SELECT %s AS id FROM bacnet_object_templates WHERE %s IN ?
+	) usage GROUP BY id`, column, column, column, column)
+	return r.scanUsageRows(ctx, query, ids, ids)
 }
 
 func (r *bacnetReferenceUsageRepo) countAlarmDefinitions(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]int64, error) {
 	const query = `
-		SELECT ad.id AS id, COUNT(bo.id) AS count
+		SELECT ad.id AS id, COUNT(*) AS count
 		FROM alarm_definitions ad
-		JOIN bacnet_objects bo ON bo.alarm_type_id = ad.alarm_type_id
+		JOIN (
+			SELECT alarm_type_id FROM bacnet_objects
+			UNION ALL SELECT alarm_type_id FROM bacnet_object_templates
+		) bo ON bo.alarm_type_id = ad.alarm_type_id
 		WHERE ad.id IN ?
 		GROUP BY ad.id
 	`
@@ -76,8 +74,8 @@ func (r *bacnetReferenceUsageRepo) countAlarmDefinitions(ctx context.Context, id
 
 func (r *bacnetReferenceUsageRepo) countObjectData(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]int64, error) {
 	const query = `
-		SELECT object_data_id AS id, COUNT(DISTINCT bacnet_object_id) AS count
-		FROM object_data_bacnet_objects
+		SELECT object_data_id AS id, COUNT(DISTINCT id) AS count
+		FROM bacnet_object_templates
 		WHERE object_data_id IN ?
 		GROUP BY object_data_id
 	`
@@ -93,9 +91,9 @@ func (r *bacnetReferenceUsageRepo) countApparats(ctx context.Context, ids []uuid
 			JOIN bacnet_objects bo ON bo.field_device_id = fd.id
 			WHERE fd.apparat_id IN ?
 			UNION
-			SELECT oda.apparat_id AS id, odb.bacnet_object_id AS bacnet_object_id
+			SELECT oda.apparat_id AS id, template.id AS bacnet_object_id
 			FROM object_data_apparats oda
-			JOIN object_data_bacnet_objects odb ON odb.object_data_id = oda.object_data_id
+			JOIN bacnet_object_templates template ON template.object_data_id = oda.object_data_id
 			WHERE oda.apparat_id IN ?
 		) AS usage
 		GROUP BY id
@@ -112,10 +110,10 @@ func (r *bacnetReferenceUsageRepo) countSystemParts(ctx context.Context, ids []u
 			JOIN bacnet_objects bo ON bo.field_device_id = fd.id
 			WHERE fd.system_part_id IN ?
 			UNION
-			SELECT spa.system_part_id AS id, odb.bacnet_object_id AS bacnet_object_id
+			SELECT spa.system_part_id AS id, template.id AS bacnet_object_id
 			FROM system_part_apparats spa
 			JOIN object_data_apparats oda ON oda.apparat_id = spa.apparat_id
-			JOIN object_data_bacnet_objects odb ON odb.object_data_id = oda.object_data_id
+			JOIN bacnet_object_templates template ON template.object_data_id = oda.object_data_id
 			WHERE spa.system_part_id IN ?
 		) AS usage
 		GROUP BY id

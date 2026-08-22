@@ -15,7 +15,7 @@
   import { buildingRepository } from '$lib/infrastructure/api/buildingRepository.js';
   import { controlCabinetRepository } from '$lib/infrastructure/api/controlCabinetRepository.js';
   import { spsControllerRepository } from '$lib/infrastructure/api/spsControllerRepository.js';
-  import { facilityJobState } from '$lib/state/copyOperation.svelte.js';
+  import { facilityJobState } from '$lib/state/facilityJobState.svelte.js';
   import type { FieldDeviceFilters } from './state/types.js';
   import { buildFieldDeviceExportRequest, hasExportScope } from './exportRequest.js';
 
@@ -51,12 +51,6 @@
 
   let submitting = $state(false);
   let activeJobId = $state<string | null>(null);
-
-  $effect(() => {
-    if (projectId && selectedProjectIds.length === 0) {
-      selectedProjectIds = [projectId];
-    }
-  });
 
   const exportRequest = $derived(
     buildFieldDeviceExportRequest({

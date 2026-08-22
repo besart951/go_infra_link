@@ -2,6 +2,7 @@ import type { Pagination } from '../utils/index.js';
 
 export interface SPSControllerSystemType {
   id: string;
+  aggregate_version: number;
   sps_controller_id: string;
   system_type_id: string;
   sps_controller_name?: string;
@@ -14,7 +15,7 @@ export interface SPSControllerSystemType {
 }
 
 export interface UpdateSPSControllerSystemTypeRequest {
-  base_version?: number;
+  base_version: number;
   number?: number;
   document_name?: string;
 }

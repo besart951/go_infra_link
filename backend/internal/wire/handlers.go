@@ -16,15 +16,15 @@ import (
 // NewHandlers creates all HTTP handler instances from services.
 func NewHandlers(services *Services, runtime *RuntimeAdapters, cookieSettings authhandler.CookieSettings, i18nLoader *i18n.Loader, accessTokenTTL, refreshTokenTTL time.Duration) *handler.Handlers {
 	runtime = runtimeOrDefault(runtime)
-	copyJobs := runtime.CopyJobs
-	registerFacilityCopyTasks(copyJobs, services, runtime)
-	registerProjectCopyTasks(copyJobs, services, runtime)
-	registerHistoryRestoreTasks(copyJobs, runtime, services.History)
+	facilityJobs := runtime.FacilityJobs
+	registerFacilityCopyTasks(facilityJobs, services, runtime)
+	registerProjectCopyTasks(facilityJobs, services, runtime)
+	registerHistoryRestoreTasks(facilityJobs, runtime, services.History)
 
-	projectHandlers := newProjectHandlers(services, runtime, copyJobs)
+	projectHandlers := newProjectHandlers(services, runtime, facilityJobs)
 
 	imports := newFieldDeviceImportService(runtime, services.Facility.FieldDevice)
-	facilityHandlers := newFacilityHandlers(services, projectHandlers.RefreshBroadcaster, runtime.FacilityReferenceData, copyJobs, imports)
+	facilityHandlers := newFacilityHandlers(services, projectHandlers.RefreshBroadcaster, runtime.FacilityReferenceData, facilityJobs, imports)
 	userHandlers := newUserHandlers(services)
 
 	authHandler := authhandler.NewAuthHandler(
@@ -47,6 +47,6 @@ func NewHandlers(services *Services, runtime *RuntimeAdapters, cookieSettings au
 		Team:             teamhandler.NewTeamHandler(services.Team),
 		User:             userHandlers,
 		Facility:         facilityHandlers,
-		History:          historyhandler.NewHandler(services.History, copyJobs),
+		History:          historyhandler.NewHandler(services.History, facilityJobs),
 	}
 }

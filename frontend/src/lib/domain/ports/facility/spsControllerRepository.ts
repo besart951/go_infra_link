@@ -19,7 +19,7 @@ export interface SPSControllerRepository extends CrudRepository<
     id: string,
     operationId: string,
     signal?: AbortSignal
-  ): Promise<import('$lib/domain/facility/index.js').CopyJob>;
+  ): Promise<import('$lib/domain/facility/index.js').FacilityJob>;
   validate(
     data: {
       id?: string;

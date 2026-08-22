@@ -45,6 +45,18 @@ func (s *baseService[T]) DeleteByID(ctx context.Context, id uuid.UUID) error {
 	return s.repo.DeleteByIds(ctx, []uuid.UUID{id})
 }
 
+type versionedDeleteRepository interface {
+	DeleteAtVersion(context.Context, uuid.UUID, uint64) error
+}
+
+func (s *baseService[T]) DeleteAtVersion(ctx context.Context, id uuid.UUID, version uint64) error {
+	repo, ok := s.repo.(versionedDeleteRepository)
+	if !ok {
+		return domain.ErrInvalidArgument
+	}
+	return repo.DeleteAtVersion(ctx, id, version)
+}
+
 // derefSlice converts []*T to []T by dereferencing each element.
 func derefSlice[T any](ptrs []*T) []T {
 	items := make([]T, len(ptrs))
@@ -78,7 +90,7 @@ type Repositories struct {
 	SPSControllerSystemTypes domainHierarchy.SPSControllerSystemTypeStore
 	BacnetObjects            domainObjectData.BacnetObjectStore
 	ObjectData               domainObjectData.ObjectDataStore
-	ObjectDataBacnetObjects  domainObjectData.ObjectDataBacnetObjectStore
+	BacnetTemplates          domainObjectData.BacnetObjectTemplateStore
 	StateTexts               domainFacility.StateTextRepository
 	NotificationClasses      domainFacility.NotificationClassRepository
 	AlarmDefinitions         domainFacility.AlarmDefinitionRepository
@@ -108,13 +120,13 @@ func (r Repositories) FieldDeviceModule() serviceFieldDevice.Repositories {
 
 func (r Repositories) ObjectDataModule() serviceObjectData.Repositories {
 	return serviceObjectData.Repositories{
-		ObjectData:              r.ObjectData,
-		BacnetObjects:           r.BacnetObjects,
-		ObjectDataBacnetObjects: r.ObjectDataBacnetObjects,
-		Apparats:                r.Apparats,
-		FieldDevices:            r.FieldDevices,
-		AlarmDefinitions:        r.AlarmDefinitions,
-		AlarmTypes:              r.AlarmTypes,
+		ObjectData:       r.ObjectData,
+		BacnetObjects:    r.BacnetObjects,
+		BacnetTemplates:  r.BacnetTemplates,
+		Apparats:         r.Apparats,
+		FieldDevices:     r.FieldDevices,
+		AlarmDefinitions: r.AlarmDefinitions,
+		AlarmTypes:       r.AlarmTypes,
 	}
 }
 
@@ -225,22 +237,19 @@ func NewServices(repos Repositories, cfgs ...Config) *Services {
 	fieldDeviceService.bindChangeRecorder(cfg.ChangeRecorder)
 	objectDataService := NewObjectDataService(
 		objectDataRepos.ObjectData,
-		objectDataRepos.BacnetObjects,
-		objectDataRepos.ObjectDataBacnetObjects,
+		objectDataRepos.BacnetTemplates,
 		objectDataRepos.Apparats,
 		objectDataRepos.AlarmDefinitions,
 		objectDataRepos.AlarmTypes,
 		repos.BacnetReferenceUsages,
 	)
 	objectDataService.bindTransactions(tx)
-	bacnetObjectService := NewBacnetObjectService(
-		objectDataRepos.BacnetObjects,
-		objectDataRepos.FieldDevices,
-		objectDataRepos.ObjectData,
-		objectDataRepos.ObjectDataBacnetObjects,
-		objectDataRepos.AlarmDefinitions,
-		objectDataRepos.AlarmTypes,
-	)
+	bacnetObjectService := NewBacnetObjectService(BacnetObjectDependencies{
+		Objects: objectDataRepos.BacnetObjects, FieldDevices: objectDataRepos.FieldDevices,
+		ObjectData: objectDataRepos.ObjectData, Templates: objectDataRepos.BacnetTemplates,
+		AlarmValues: alarmRepos.BacnetObjectAlarmValues, AlarmDefinitions: objectDataRepos.AlarmDefinitions,
+		AlarmTypes: objectDataRepos.AlarmTypes,
+	})
 	bacnetObjectService.bindTransactions(tx)
 	spsControllerService := NewSPSControllerService(
 		hierarchyRepos.SPSControllers,
@@ -267,6 +276,12 @@ func NewServices(repos Repositories, cfgs ...Config) *Services {
 	buildingService := NewBuildingService(hierarchyRepos.Buildings, controllerNames)
 	buildingService.bindTransactions(tx)
 
+	bacnetAlarmValueService := NewBacnetAlarmValueService(BacnetAlarmValueDependencies{
+		Values: alarmRepos.BacnetObjectAlarmValues, AlarmTypes: alarmRepos.AlarmTypes,
+		Objects: alarmRepos.BacnetObjects, Templates: objectDataRepos.BacnetTemplates,
+		Writer: bacnetObjectService,
+	})
+
 	return &Services{
 		HierarchyCopier:   hierarchyCopier,
 		Building:          buildingService,
@@ -288,12 +303,8 @@ func NewServices(repos Repositories, cfgs ...Config) *Services {
 			hierarchyRepos.SPSControllerSystemTypes,
 			hierarchyCopier,
 		),
-		AlarmType: NewAlarmTypeService(alarmRepos.AlarmTypes, repos.BacnetReferenceUsages),
-		BacnetAlarmValue: NewBacnetAlarmValueService(
-			alarmRepos.BacnetObjectAlarmValues,
-			alarmRepos.AlarmTypes,
-			alarmRepos.BacnetObjects,
-		),
+		AlarmType:            NewAlarmTypeService(alarmRepos.AlarmTypes, repos.BacnetReferenceUsages),
+		BacnetAlarmValue:     bacnetAlarmValueService,
 		BacnetReferenceUsage: NewBacnetReferenceUsageService(repos.BacnetReferenceUsages),
 		DeleteImpact:         NewDeleteImpactService(repos.DeleteImpacts),
 	}

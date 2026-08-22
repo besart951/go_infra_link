@@ -22,6 +22,7 @@ type Dependencies struct {
 	RolePermissions          domainUser.RolePermissionRepository
 	ObjectData               domainObjectData.ObjectDataStore
 	BacnetObjects            domainObjectData.BacnetObjectStore
+	BacnetTemplates          domainObjectData.BacnetObjectTemplateStore
 	Specifications           domainFieldDevice.SpecificationStore
 	ControlCabinets          domainFacility.ControlCabinetRepository
 	SPSControllers           domainFacility.SPSControllerRepository
@@ -62,7 +63,7 @@ func NewServices(deps Dependencies, cfgs ...Config) *Services {
 		userRepo:           deps.Users,
 		rolePermissionRepo: deps.RolePermissions,
 		objectDataRepo:     deps.ObjectData,
-		bacnetObjectRepo:   deps.BacnetObjects,
+		bacnetTemplateRepo: deps.BacnetTemplates,
 	}
 	services.Lifecycle.bindTransactions(tx)
 	services.Membership = &ProjectMembershipService{

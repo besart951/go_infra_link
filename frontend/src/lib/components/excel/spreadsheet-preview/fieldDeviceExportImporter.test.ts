@@ -89,6 +89,7 @@ function baseRows(): TestCell[][] {
 function lookups(overrides: Partial<FieldDeviceImportLookups> = {}): FieldDeviceImportLookups {
   const building: Building = {
     id: 'building-1',
+    version: 1,
     iws_code: 'IWS',
     building_group: 1,
     created_at: '',
@@ -96,6 +97,7 @@ function lookups(overrides: Partial<FieldDeviceImportLookups> = {}): FieldDevice
   };
   const systemType: SystemType = {
     id: 'system-type-1',
+    version: 1,
     number_min: 100,
     number_max: 199,
     name: 'Lüftung',
@@ -104,6 +106,7 @@ function lookups(overrides: Partial<FieldDeviceImportLookups> = {}): FieldDevice
   };
   const systemPart: SystemPart = {
     id: 'system-part-1',
+    version: 1,
     short_name: 'HV',
     name: 'Heating',
     created_at: '',
@@ -111,6 +114,7 @@ function lookups(overrides: Partial<FieldDeviceImportLookups> = {}): FieldDevice
   };
   const apparat: Apparat = {
     id: 'apparat-1',
+    version: 1,
     short_name: 'PMP',
     name: 'Pump',
     system_parts: [systemPart],
@@ -119,6 +123,7 @@ function lookups(overrides: Partial<FieldDeviceImportLookups> = {}): FieldDevice
   };
   const stateText: StateText = {
     id: 'state-text-1',
+    version: 1,
     ref_number: 1,
     state_text1: 'Off',
     state_text2: 'On',
@@ -127,6 +132,7 @@ function lookups(overrides: Partial<FieldDeviceImportLookups> = {}): FieldDevice
   };
   const notificationClass: NotificationClass = {
     id: 'notification-1',
+    version: 1,
     event_category: '',
     nc: 7,
     object_description: '',
@@ -143,6 +149,7 @@ function lookups(overrides: Partial<FieldDeviceImportLookups> = {}): FieldDevice
   };
   const alarmType: AlarmType = {
     id: 'alarm-type-1',
+    version: 1,
     code: 'alarm',
     name: 'Alarm',
     created_at: '',
@@ -262,6 +269,7 @@ describe('field device export importer', () => {
   it('marks existing cabinets as reusable on the header source cell', () => {
     const cabinet: ControlCabinet = {
       id: 'cabinet-1',
+      version: 1,
       building_id: 'building-1',
       control_cabinet_nr: '1_0100_00',
       created_at: '',
@@ -295,6 +303,7 @@ describe('field device export importer', () => {
       updated_at: '',
       sps_controller_system_type: {
         id: 'sps-controller-system-type-1',
+        aggregate_version: 1,
         sps_controller_id: 'sps-controller-1',
         system_type_id: 'system-type-1',
         sps_controller_name: 'IWS_1_0100_ABC',

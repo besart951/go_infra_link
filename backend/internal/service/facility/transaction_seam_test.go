@@ -8,6 +8,7 @@ import (
 	apptransaction "github.com/besart951/go_infra_link/backend/internal/application/transaction"
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
+	domainObjectData "github.com/besart951/go_infra_link/backend/internal/domain/facility/objectdata"
 	"github.com/besart951/go_infra_link/backend/internal/service/facility"
 	"github.com/google/uuid"
 )
@@ -165,6 +166,67 @@ type fakeObjectDataBacnetObjectStore struct {
 	addCalls              int
 	deleteByObjectDataIDs []uuid.UUID
 	links                 map[uuid.UUID][]uuid.UUID
+	templates             map[uuid.UUID]domainObjectData.BacnetObjectTemplate
+}
+
+func (r *fakeObjectDataBacnetObjectStore) GetByID(_ context.Context, id uuid.UUID) (*domainObjectData.BacnetObjectTemplate, error) {
+	item, ok := r.templates[id]
+	if !ok {
+		return nil, domain.ErrNotFound
+	}
+	return &item, nil
+}
+
+func (r *fakeObjectDataBacnetObjectStore) GetByIDs(ctx context.Context, ids []uuid.UUID) ([]domainObjectData.BacnetObjectTemplate, error) {
+	items := make([]domainObjectData.BacnetObjectTemplate, 0, len(ids))
+	for _, id := range ids {
+		if item, err := r.GetByID(ctx, id); err == nil {
+			items = append(items, *item)
+		}
+	}
+	return items, nil
+}
+
+func (r *fakeObjectDataBacnetObjectStore) ListByObjectDataID(_ context.Context, ownerID uuid.UUID) ([]domainObjectData.BacnetObjectTemplate, error) {
+	items := make([]domainObjectData.BacnetObjectTemplate, 0, len(r.links[ownerID]))
+	for _, id := range r.links[ownerID] {
+		items = append(items, r.templates[id])
+	}
+	return items, nil
+}
+
+func (r *fakeObjectDataBacnetObjectStore) Create(ctx context.Context, item *domainObjectData.BacnetObjectTemplate) error {
+	if item.ID == uuid.Nil {
+		item.ID, item.Version = uuid.New(), 1
+	}
+	if r.templates == nil {
+		r.templates = make(map[uuid.UUID]domainObjectData.BacnetObjectTemplate)
+	}
+	r.templates[item.ID] = *item
+	return r.Add(ctx, item.ObjectDataID, item.ID)
+}
+
+func (r *fakeObjectDataBacnetObjectStore) Update(_ context.Context, item *domainObjectData.BacnetObjectTemplate) error {
+	r.templates[item.ID] = *item
+	return nil
+}
+
+func (r *fakeObjectDataBacnetObjectStore) DeleteAtVersion(_ context.Context, id uuid.UUID, _ uint64) error {
+	delete(r.templates, id)
+	return nil
+}
+
+func (r *fakeObjectDataBacnetObjectStore) Replace(ctx context.Context, ownerID uuid.UUID, items []domainObjectData.BacnetObjectTemplate) error {
+	if err := r.DeleteByObjectDataID(ctx, ownerID); err != nil {
+		return err
+	}
+	for i := range items {
+		items[i].ObjectDataID = ownerID
+		if err := r.Create(ctx, &items[i]); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (r *fakeObjectDataBacnetObjectStore) Add(_ context.Context, objectDataID uuid.UUID, bacnetObjectID uuid.UUID) error {
@@ -984,15 +1046,21 @@ func TestFacilityTransaction_ObjectDataCopyRemapsTemplateReferences(t *testing.T
 			SoftwareReferenceID: &firstObjectID,
 		},
 	}}
-	txLinks := &fakeObjectDataBacnetObjectStore{links: map[uuid.UUID][]uuid.UUID{sourceID: {firstObjectID, secondObjectID}}}
+	txLinks := &fakeObjectDataBacnetObjectStore{
+		links: map[uuid.UUID][]uuid.UUID{sourceID: {firstObjectID, secondObjectID}},
+		templates: map[uuid.UUID]domainObjectData.BacnetObjectTemplate{
+			firstObjectID:  {ID: firstObjectID, ObjectDataID: sourceID, TextFix: "AI1", SoftwareType: domainFacility.BacnetSoftwareTypeAI, SoftwareNumber: 1},
+			secondObjectID: {ID: secondObjectID, ObjectDataID: sourceID, TextFix: "AI2", SoftwareType: domainFacility.BacnetSoftwareTypeAI, SoftwareNumber: 2, SoftwareReferenceID: &firstObjectID},
+		},
+	}
 	sharedApparats := &fakeApparatRepo{items: map[uuid.UUID]*domainFacility.Apparat{apparatID: apparat}}
 
 	baseRepos := facility.Repositories{ObjectData: baseObjectData, Apparats: sharedApparats}
 	txRepos := facility.Repositories{
-		ObjectData:              txObjectData,
-		ObjectDataBacnetObjects: txLinks,
-		BacnetObjects:           txBacnetObjects,
-		Apparats:                sharedApparats,
+		ObjectData:      txObjectData,
+		BacnetTemplates: txLinks,
+		BacnetObjects:   txBacnetObjects,
+		Apparats:        sharedApparats,
 	}
 	runnerCalls := 0
 	services := newTxServices(baseRepos, txRepos, &runnerCalls)
@@ -1021,7 +1089,7 @@ func TestFacilityTransaction_ObjectDataCopyRemapsTemplateReferences(t *testing.T
 	}
 	var remappedReference *uuid.UUID
 	for _, id := range copyObjectIDs {
-		object := txBacnetObjects.items[id]
+		object := txLinks.templates[id]
 		if object.SoftwareNumber == 2 {
 			remappedReference = object.SoftwareReferenceID
 		}
@@ -1128,7 +1196,8 @@ func TestFacilityTransaction_BulkUpdateRollsBackFailedItemAndContinues(t *testin
 	afterDescription := "updated"
 	result := services.FieldDevice.BulkUpdate(context.Background(), []domainFacility.BulkFieldDeviceUpdate{
 		{
-			ID: failedID,
+			ID:          failedID,
+			BaseVersion: testBaseVersion(),
 			Specification: &domainFacility.SpecificationPatch{
 				SpecificationSupplier:    &afterSupplier,
 				HasSpecificationSupplier: true,
@@ -1137,6 +1206,7 @@ func TestFacilityTransaction_BulkUpdateRollsBackFailedItemAndContinues(t *testin
 		},
 		{
 			ID:             successID,
+			BaseVersion:    testBaseVersion(),
 			Description:    &afterDescription,
 			HasDescription: true,
 		},
@@ -1485,9 +1555,9 @@ func TestFacilityTransaction_BacnetObjectCreateFailureDoesNotEscapeTransaction(t
 		ObjectData:    baseObjectDatas,
 	}
 	txRepos := facility.Repositories{
-		BacnetObjects:           txBacnetObjects,
-		ObjectData:              txObjectDatas,
-		ObjectDataBacnetObjects: txLinks,
+		BacnetObjects:   txBacnetObjects,
+		ObjectData:      txObjectDatas,
+		BacnetTemplates: txLinks,
 	}
 
 	runnerCalls := 0
@@ -1532,14 +1602,14 @@ func TestFacilityTransaction_BacnetObjectReplaceForObjectDataFailureDoesNotEscap
 	txLinks := &fakeObjectDataBacnetObjectStore{addErr: linkErr, links: map[uuid.UUID][]uuid.UUID{objectDataID: {oldBacnetObjectID}}}
 
 	baseRepos := facility.Repositories{
-		BacnetObjects:           baseBacnetObjects,
-		ObjectData:              baseObjectDatas,
-		ObjectDataBacnetObjects: baseLinks,
+		BacnetObjects:   baseBacnetObjects,
+		ObjectData:      baseObjectDatas,
+		BacnetTemplates: baseLinks,
 	}
 	txRepos := facility.Repositories{
-		BacnetObjects:           txBacnetObjects,
-		ObjectData:              txObjectDatas,
-		ObjectDataBacnetObjects: txLinks,
+		BacnetObjects:   txBacnetObjects,
+		ObjectData:      txObjectDatas,
+		BacnetTemplates: txLinks,
 	}
 
 	runnerCalls := 0
@@ -1560,8 +1630,8 @@ func TestFacilityTransaction_BacnetObjectReplaceForObjectDataFailureDoesNotEscap
 	if len(baseLinks.links[objectDataID]) != 1 || baseLinks.links[objectDataID][0] != oldBacnetObjectID {
 		t.Fatalf("expected base object-data links to remain unchanged, got %+v", baseLinks.links[objectDataID])
 	}
-	if txBacnetObjects.createdCount != 1 || txLinks.addCalls != 1 || len(txLinks.deleteByObjectDataIDs) != 1 {
-		t.Fatalf("expected replace-for-object-data path before failure, got created=%d addCalls=%d deleteCalls=%d", txBacnetObjects.createdCount, txLinks.addCalls, len(txLinks.deleteByObjectDataIDs))
+	if txLinks.addCalls != 1 || len(txLinks.deleteByObjectDataIDs) != 1 {
+		t.Fatalf("expected replace-for-object-data path before failure, got addCalls=%d deleteCalls=%d", txLinks.addCalls, len(txLinks.deleteByObjectDataIDs))
 	}
 }
 

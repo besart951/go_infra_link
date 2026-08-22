@@ -12,12 +12,11 @@ import (
 )
 
 type objectDataTemplate struct {
-	objectDataRepo        domainObjectData.ObjectDataStore
-	bacnetObjectRepo      domainObjectData.BacnetObjectStore
-	objectDataBacnetStore domainObjectData.ObjectDataBacnetObjectStore
-	apparatRepo           domainFacility.ApparatRepository
-	alarmDefinitionRepo   domainFacility.AlarmDefinitionRepository
-	alarmTypeRepo         domainFacility.AlarmTypeRepository
+	objectDataRepo      domainObjectData.ObjectDataStore
+	templateStore       domainObjectData.BacnetObjectTemplateStore
+	apparatRepo         domainFacility.ApparatRepository
+	alarmDefinitionRepo domainFacility.AlarmDefinitionRepository
+	alarmTypeRepo       domainFacility.AlarmTypeRepository
 }
 
 func (m objectDataTemplate) create(ctx context.Context, input domainFacility.ObjectDataTemplateCreate) (*domainFacility.ObjectData, error) {
@@ -56,6 +55,7 @@ func (m objectDataTemplate) update(ctx context.Context, id uuid.UUID, input doma
 	if err != nil {
 		return nil, err
 	}
+	objectData.Base.Version = input.BaseVersion
 
 	if input.Description != nil {
 		objectData.Description = *input.Description
@@ -111,11 +111,12 @@ func (m objectDataTemplate) createBacnetObject(ctx context.Context, objectDataID
 		return err
 	}
 
-	bacnetObject.FieldDeviceID = nil
-	if err := m.bacnetObjectRepo.Create(ctx, bacnetObject); err != nil {
+	template := bacnetObjectToTemplate(objectDataID, *bacnetObject)
+	if err := m.templateStore.Create(ctx, &template); err != nil {
 		return err
 	}
-	return m.objectDataBacnetStore.Add(ctx, objectDataID, bacnetObject.ID)
+	*bacnetObject = *templateToBacnetObject(template)
+	return nil
 }
 
 func (m objectDataTemplate) updateBacnetObject(ctx context.Context, objectDataID uuid.UUID, bacnetObject *domainFacility.BacnetObject) error {
@@ -125,7 +126,7 @@ func (m objectDataTemplate) updateBacnetObject(ctx context.Context, objectDataID
 	if err := m.ensureActive(ctx, objectDataID); err != nil {
 		return err
 	}
-	if _, err := domain.GetByID(ctx, m.bacnetObjectRepo, bacnetObject.ID); err != nil {
+	if _, err := m.templateStore.GetByID(ctx, bacnetObject.ID); err != nil {
 		return err
 	}
 
@@ -140,11 +141,12 @@ func (m objectDataTemplate) updateBacnetObject(ctx context.Context, objectDataID
 		return err
 	}
 
-	bacnetObject.FieldDeviceID = nil
-	if err := m.bacnetObjectRepo.Update(ctx, bacnetObject); err != nil {
+	template := bacnetObjectToTemplate(objectDataID, *bacnetObject)
+	if err := m.templateStore.Update(ctx, &template); err != nil {
 		return err
 	}
-	return m.objectDataBacnetStore.Add(ctx, objectDataID, bacnetObject.ID)
+	*bacnetObject = *templateToBacnetObject(template)
+	return nil
 }
 
 func (m objectDataTemplate) replaceBacnetObjects(ctx context.Context, objectDataID uuid.UUID, inputs []domainFacility.BacnetObject) error {
@@ -155,22 +157,11 @@ func (m objectDataTemplate) replaceBacnetObjects(ctx context.Context, objectData
 		return err
 	}
 
-	if err := m.objectDataBacnetStore.DeleteByObjectDataID(ctx, objectDataID); err != nil {
-		return err
-	}
-
+	templates := make([]domainObjectData.BacnetObjectTemplate, len(inputs))
 	for i := range inputs {
-		bo := inputs[i]
-		bo.FieldDeviceID = nil
-		if err := m.bacnetObjectRepo.Create(ctx, &bo); err != nil {
-			return err
-		}
-		if err := m.objectDataBacnetStore.Add(ctx, objectDataID, bo.ID); err != nil {
-			return err
-		}
+		templates[i] = bacnetObjectToTemplate(objectDataID, inputs[i])
 	}
-
-	return nil
+	return m.templateStore.Replace(ctx, objectDataID, templates)
 }
 
 func (m objectDataTemplate) prepareBacnetObjects(ctx context.Context, inputs []domainFacility.BacnetObject) error {
@@ -235,14 +226,7 @@ func (m objectDataTemplate) resolveAlarmBinding(ctx context.Context, bacnetObjec
 }
 
 func (m objectDataTemplate) ensureSoftwareUnique(ctx context.Context, objectDataID uuid.UUID, softwareType domainFacility.BacnetSoftwareType, softwareNumber uint16, excludeID *uuid.UUID) error {
-	ids, err := m.objectDataRepo.GetBacnetObjectIDs(ctx, objectDataID)
-	if err != nil {
-		return err
-	}
-	if len(ids) == 0 {
-		return nil
-	}
-	items, err := m.bacnetObjectRepo.GetByIds(ctx, ids)
+	items, err := m.templateStore.ListByObjectDataID(ctx, objectDataID)
 	if err != nil {
 		return err
 	}
@@ -255,6 +239,52 @@ func (m objectDataTemplate) ensureSoftwareUnique(ctx context.Context, objectData
 		}
 	}
 	return nil
+}
+
+func bacnetObjectToTemplate(objectDataID uuid.UUID, item domainFacility.BacnetObject) domainObjectData.BacnetObjectTemplate {
+	template := domainObjectData.BacnetObjectTemplate{
+		ID: item.ID, CreatedAt: item.CreatedAt, UpdatedAt: item.UpdatedAt, Version: item.Base.Version,
+		ObjectDataID: objectDataID, TextFix: item.TextFix, Description: item.Description,
+		GMSVisible: item.GMSVisible, Optional: item.Optional, TextIndividual: item.TextIndividual,
+		SoftwareType: item.SoftwareType, SoftwareNumber: item.SoftwareNumber,
+		HardwareType: item.HardwareType, HardwareQuantity: item.HardwareQuantity,
+		SoftwareReferenceID: item.SoftwareReferenceID, StateTextID: item.StateTextID,
+		NotificationClassID: item.NotificationClassID, AlarmTypeID: item.AlarmTypeID,
+	}
+	template.AlarmValues = make([]domainObjectData.BacnetObjectTemplateAlarmValue, len(item.AlarmValues))
+	for i := range item.AlarmValues {
+		value := item.AlarmValues[i]
+		template.AlarmValues[i] = domainObjectData.BacnetObjectTemplateAlarmValue{
+			ID: value.ID, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt, Version: value.Version,
+			TemplateID: item.ID, AlarmTypeFieldID: value.AlarmTypeFieldID,
+			ValueNumber: value.ValueNumber, ValueInteger: value.ValueInteger, ValueBoolean: value.ValueBoolean,
+			ValueString: value.ValueString, ValueJSON: value.ValueJSON, UnitID: value.UnitID, Source: value.Source,
+		}
+	}
+	return template
+}
+
+func templateToBacnetObject(template domainObjectData.BacnetObjectTemplate) *domainFacility.BacnetObject {
+	item := &domainFacility.BacnetObject{
+		Base:    domain.Base{ID: template.ID, CreatedAt: template.CreatedAt, UpdatedAt: template.UpdatedAt, Version: template.Version},
+		TextFix: template.TextFix, Description: template.Description, GMSVisible: template.GMSVisible,
+		Optional: template.Optional, TextIndividual: template.TextIndividual,
+		SoftwareType: template.SoftwareType, SoftwareNumber: template.SoftwareNumber,
+		HardwareType: template.HardwareType, HardwareQuantity: template.HardwareQuantity,
+		SoftwareReferenceID: template.SoftwareReferenceID, StateTextID: template.StateTextID,
+		NotificationClassID: template.NotificationClassID, AlarmTypeID: template.AlarmTypeID,
+	}
+	item.AlarmValues = make([]domainFacility.BacnetObjectAlarmValue, len(template.AlarmValues))
+	for i := range template.AlarmValues {
+		value := template.AlarmValues[i]
+		item.AlarmValues[i] = domainFacility.BacnetObjectAlarmValue{
+			Base:           domain.Base{ID: value.ID, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt, Version: value.Version},
+			BacnetObjectID: template.ID, AlarmTypeFieldID: value.AlarmTypeFieldID,
+			ValueNumber: value.ValueNumber, ValueInteger: value.ValueInteger, ValueBoolean: value.ValueBoolean,
+			ValueString: value.ValueString, ValueJSON: value.ValueJSON, UnitID: value.UnitID, Source: value.Source,
+		}
+	}
+	return item
 }
 
 func (m objectDataTemplate) ensureActive(ctx context.Context, objectDataID uuid.UUID) error {

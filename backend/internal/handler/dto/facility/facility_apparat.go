@@ -16,6 +16,7 @@ type CreateApparatRequest struct {
 }
 
 type UpdateApparatRequest struct {
+	BaseVersion   uint64       `json:"base_version" binding:"required,min=1"`
 	ShortName     string       `json:"short_name" binding:"omitempty,min=3,max=3"`
 	Name          string       `json:"name" binding:"omitempty,max=250"`
 	Description   *string      `json:"description" binding:"omitempty,max=250"`
@@ -24,6 +25,7 @@ type UpdateApparatRequest struct {
 
 type ApparatResponse struct {
 	ID          uuid.UUID            `json:"id"`
+	Version     uint64               `json:"version"`
 	ShortName   string               `json:"short_name"`
 	Name        string               `json:"name"`
 	Description *string              `json:"description"`

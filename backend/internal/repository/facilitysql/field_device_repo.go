@@ -51,6 +51,34 @@ func (r *fieldDeviceRepo) GetByIds(ctx context.Context, ids []uuid.UUID) ([]*dom
 	return items, nil
 }
 
+// LockNumberSwapRows serializes all members of one dependency group.
+func (r *fieldDeviceRepo) LockNumberSwapRows(ctx context.Context, ids []uuid.UUID) ([]*domainFacility.FieldDevice, error) {
+	var records []*FieldDeviceRecord
+	query := activeFieldDevices(r.db.WithContext(ctx).Model(&FieldDeviceRecord{})).
+		Where("field_devices.id IN ?", ids).
+		Order("field_devices.id ASC")
+	if r.db.Dialector.Name() == "postgres" {
+		query = query.Clauses(clause.Locking{Strength: "UPDATE"})
+	}
+	if err := query.Find(&records).Error; err != nil {
+		return nil, err
+	}
+	return toFieldDeviceDomains(records), nil
+}
+
+func (r *fieldDeviceRepo) DeferNumberConstraint(ctx context.Context) error {
+	if r.db.Dialector.Name() != "postgres" {
+		return nil
+	}
+	var exists bool
+	if err := r.db.WithContext(ctx).Raw(
+		"SELECT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = ?)", fieldDeviceNumberConstraint,
+	).Scan(&exists).Error; err != nil || !exists {
+		return err
+	}
+	return r.db.WithContext(ctx).Exec("SET CONSTRAINTS uq_field_devices_number_scope DEFERRED").Error
+}
+
 func (r *fieldDeviceRepo) attachCanonicalSpecifications(ctx context.Context, items []*domainFacility.FieldDevice, ids []uuid.UUID) error {
 	var specifications []*domainFacility.Specification
 	if err := r.db.WithContext(ctx).Where("field_device_id IN ?", ids).Find(&specifications).Error; err != nil {
@@ -121,13 +149,13 @@ func (r *fieldDeviceRepo) Update(ctx context.Context, entity *domainFacility.Fie
 
 func updateFieldDeviceRecord(ctx context.Context, db *gorm.DB, entity *domainFacility.FieldDevice) error {
 	expectedVersion := entity.Version
+	if expectedVersion == 0 {
+		return domain.ErrInvalidArgument
+	}
 	entity.Base.TouchForUpdate(time.Now().UTC())
 	record := toFieldDeviceRecord(entity)
 	query := db.WithContext(ctx).Model(&FieldDeviceRecord{}).
-		Where("id = ?", entity.ID)
-	if expectedVersion > 0 {
-		query = query.Where("version = ?", expectedVersion)
-	}
+		Where("id = ? AND version = ?", entity.ID, expectedVersion)
 	// Select("*") persists every scalar record field, including nil pointers.
 	// That keeps new FieldDevice columns from being silently omitted by a second
 	// hand-maintained update map. Primary and creation fields stay immutable and
@@ -138,9 +166,9 @@ func updateFieldDeviceRecord(ctx context.Context, db *gorm.DB, entity *domainFac
 		Updates(record)
 	if result.Error != nil {
 		entity.Version = expectedVersion
-		return result.Error
+		return mapFieldDeviceWriteError(result.Error)
 	}
-	if expectedVersion > 0 && result.RowsAffected == 0 {
+	if result.RowsAffected == 0 {
 		entity.Version = expectedVersion
 		return domain.ErrConflict
 	}
@@ -156,11 +184,11 @@ func (r *fieldDeviceRepo) DeleteByIds(ctx context.Context, ids []uuid.UUID) erro
 }
 
 func (r *fieldDeviceRepo) DeleteAtVersion(ctx context.Context, command domainFacility.FieldDeviceDeleteCommand) error {
-	if command.BaseVersion == nil {
+	if command.BaseVersion == 0 {
 		return domain.ErrInvalidArgument
 	}
 	query := activeFieldDevices(r.db.WithContext(ctx).Model(&FieldDeviceRecord{}))
-	result := query.Where("field_devices.id = ? AND field_devices.version = ?", command.ID, *command.BaseVersion).Delete(&FieldDeviceRecord{})
+	result := query.Where("field_devices.id = ? AND field_devices.version = ?", command.ID, command.BaseVersion.Uint64()).Delete(&FieldDeviceRecord{})
 	if result.Error != nil {
 		return result.Error
 	}

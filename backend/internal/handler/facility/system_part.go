@@ -278,6 +278,7 @@ func (h *SystemPartHandler) UpdateSystemPart(c *gin.Context) {
 // @Tags facility-system-parts
 // @Produce json
 // @Param id path string true "System Part ID"
+// @Param base_version query integer true "Expected aggregate version" minimum(1)
 // @Success 204
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 404 {object} dto.ErrorResponse
@@ -289,8 +290,12 @@ func (h *SystemPartHandler) DeleteSystemPart(c *gin.Context) {
 	if !ok {
 		return
 	}
+	version, ok := parseRequiredBaseVersion(c)
+	if !ok {
+		return
+	}
 
-	if err := h.service.DeleteByID(c.Request.Context(), id); err != nil {
+	if err := deleteAtVersion(c.Request.Context(), h.service, id, version); err != nil {
 		respondLocalizedDomainError(c, err, "deletion_failed", "facility.deletion_failed",
 			localizedNotFound("facility.system_part_not_found"),
 			localizedReferenceInUse(),

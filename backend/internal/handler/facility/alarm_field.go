@@ -17,6 +17,7 @@ func NewAlarmFieldHandler(svc AlarmFieldService) *AlarmFieldHandler {
 		applyAlarmFieldUpdate,
 		respFn(toAlarmFieldResponse),
 		listRespFn(toAlarmFieldListResponse),
+		"alarm_field",
 		"facility.not_found",
 	)}
 }
@@ -66,6 +67,7 @@ func (h *AlarmFieldHandler) UpdateAlarmField(c *gin.Context) { h.crud.handleUpda
 // @Summary Delete an alarm field
 // @Tags facility-alarm-fields
 // @Param id path string true "Alarm Field ID"
+// @Param base_version query integer true "Expected aggregate version" minimum(1)
 // @Success 204
 // @Router /api/v1/facility/alarm-fields/{id} [delete]
 func (h *AlarmFieldHandler) DeleteAlarmField(c *gin.Context) { h.crud.handleDelete(c) }

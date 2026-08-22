@@ -20,6 +20,14 @@ type fakeFieldDeviceStore struct {
 	deletedBatches [][]uuid.UUID
 }
 
+func testBaseVersion() domain.AggregateVersion { return 1 }
+
+func (r *fakeFieldDeviceStore) LockNumberSwapRows(ctx context.Context, ids []uuid.UUID) ([]*domainFacility.FieldDevice, error) {
+	return r.GetByIds(ctx, ids)
+}
+
+func (r *fakeFieldDeviceStore) DeferNumberConstraint(context.Context) error { return nil }
+
 type versionedFieldDeviceStore struct {
 	*fakeFieldDeviceStore
 	lastDelete domainFacility.FieldDeviceDeleteCommand
@@ -28,7 +36,7 @@ type versionedFieldDeviceStore struct {
 func (r *versionedFieldDeviceStore) DeleteAtVersion(_ context.Context, command domainFacility.FieldDeviceDeleteCommand) error {
 	r.lastDelete = command
 	item := r.items[command.ID]
-	if item == nil || command.BaseVersion == nil || item.Version != *command.BaseVersion {
+	if item == nil || command.BaseVersion == 0 || item.Version != command.BaseVersion.Uint64() {
 		return domain.ErrConflict
 	}
 	delete(r.items, command.ID)
@@ -43,17 +51,17 @@ func TestFieldDeviceDeleteChecksVersionInsideAggregateTransaction(t *testing.T) 
 	service := facility.NewFieldDeviceService(repo, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 	staleVersion := uint64(3)
 
-	if err := service.Delete(context.Background(), domainFacility.FieldDeviceDeleteCommand{ID: id, BaseVersion: &staleVersion}); !errors.Is(err, domain.ErrConflict) {
+	if err := service.Delete(context.Background(), domainFacility.FieldDeviceDeleteCommand{ID: id, BaseVersion: domain.AggregateVersion(staleVersion)}); !errors.Is(err, domain.ErrConflict) {
 		t.Fatalf("stale delete error = %v", err)
 	}
 	if repo.items[id] == nil {
 		t.Fatal("stale delete removed the aggregate")
 	}
 	currentVersion := uint64(4)
-	if err := service.Delete(context.Background(), domainFacility.FieldDeviceDeleteCommand{ID: id, BaseVersion: &currentVersion}); err != nil {
+	if err := service.Delete(context.Background(), domainFacility.FieldDeviceDeleteCommand{ID: id, BaseVersion: domain.AggregateVersion(currentVersion)}); err != nil {
 		t.Fatal(err)
 	}
-	if repo.items[id] != nil || repo.lastDelete.BaseVersion == nil || *repo.lastDelete.BaseVersion != currentVersion {
+	if repo.items[id] != nil || repo.lastDelete.BaseVersion.Uint64() != currentVersion {
 		t.Fatalf("delete command was not enforced: %+v", repo.lastDelete)
 	}
 }
@@ -1098,7 +1106,7 @@ func newFieldDevice(
 	apparatNr int,
 ) *domainFacility.FieldDevice {
 	return &domainFacility.FieldDevice{
-		Base:                      domain.Base{ID: id},
+		Base:                      domain.Base{ID: id, Version: 1},
 		SPSControllerSystemTypeID: spsControllerSystemTypeID,
 		ApparatID:                 apparatID,
 		SystemPartID:              systemPartID,
@@ -1227,8 +1235,8 @@ func TestFieldDeviceService_BulkUpdate_AllowsSwapApparatNr(t *testing.T) {
 	)
 
 	updates := []domainFacility.BulkFieldDeviceUpdate{
-		{ID: fd1ID, ApparatNr: new(2)},
-		{ID: fd2ID, ApparatNr: new(1)},
+		{ID: fd1ID, BaseVersion: testBaseVersion(), ApparatNr: new(2)},
+		{ID: fd2ID, BaseVersion: testBaseVersion(), ApparatNr: new(1)},
 	}
 	result := svc.BulkUpdate(context.Background(), updates)
 
@@ -1299,7 +1307,7 @@ func TestFieldDeviceService_BulkUpdate_DetectsApparatNrConflict(t *testing.T) {
 	)
 
 	updates := []domainFacility.BulkFieldDeviceUpdate{
-		{ID: fd1ID, ApparatNr: new(3)},
+		{ID: fd1ID, BaseVersion: testBaseVersion(), ApparatNr: new(3)},
 	}
 	result := svc.BulkUpdate(context.Background(), updates)
 
@@ -1372,7 +1380,7 @@ func TestFieldDeviceService_BulkUpdate_PartialUpdate_ApparatNr_Succeeds(t *testi
 	)
 
 	updates := []domainFacility.BulkFieldDeviceUpdate{
-		{ID: fd1ID, ApparatNr: new(2)},
+		{ID: fd1ID, BaseVersion: testBaseVersion(), ApparatNr: new(2)},
 	}
 
 	// Act
@@ -1440,7 +1448,7 @@ func TestFieldDeviceService_BulkUpdate_PartialUpdate_ApparatNr_Conflict(t *testi
 	)
 
 	updates := []domainFacility.BulkFieldDeviceUpdate{
-		{ID: fd1ID, ApparatNr: new(2)},
+		{ID: fd1ID, BaseVersion: testBaseVersion(), ApparatNr: new(2)},
 	}
 
 	// Act
@@ -1519,7 +1527,7 @@ func TestFieldDeviceService_BulkUpdate_PartialUpdate_ApparatNr_DifferentSystemPa
 	)
 
 	updates := []domainFacility.BulkFieldDeviceUpdate{
-		{ID: fd1ID, ApparatNr: new(2)},
+		{ID: fd1ID, BaseVersion: testBaseVersion(), ApparatNr: new(2)},
 	}
 
 	// Act
@@ -1586,8 +1594,8 @@ func TestFieldDeviceService_BulkUpdate_TextIndividuellOnly_Succeeds(t *testing.T
 	)
 
 	updates := []domainFacility.BulkFieldDeviceUpdate{
-		{ID: fd1ID, TextIndividuell: new("klj")},
-		{ID: fd2ID, TextIndividuell: new("kj")},
+		{ID: fd1ID, BaseVersion: testBaseVersion(), TextIndividuell: new("klj")},
+		{ID: fd2ID, BaseVersion: testBaseVersion(), TextIndividuell: new("kj")},
 	}
 
 	result := svc.BulkUpdate(context.Background(), updates)
@@ -1664,6 +1672,7 @@ func TestFieldDeviceService_BulkUpdate_AllowsClearingOptionalTextFields(t *testi
 	result := svc.BulkUpdate(context.Background(), []domainFacility.BulkFieldDeviceUpdate{
 		{
 			ID:                 fdID,
+			BaseVersion:        testBaseVersion(),
 			HasBMK:             true,
 			HasDescription:     true,
 			HasTextIndividuell: true,
@@ -1752,7 +1761,8 @@ func TestFieldDeviceService_BulkUpdate_ClearsExistingSpecificationFields(t *test
 
 	result := svc.BulkUpdate(context.Background(), []domainFacility.BulkFieldDeviceUpdate{
 		{
-			ID: fdID,
+			ID:          fdID,
+			BaseVersion: testBaseVersion(),
 			Specification: &domainFacility.SpecificationPatch{
 				HasSpecificationSupplier: true,
 				HasAdditionalInfoSize:    true,
@@ -1872,7 +1882,8 @@ func TestFieldDeviceService_BulkUpdate_ClearOnlyPatchDoesNotCreateEmptySpecifica
 
 	result := svc.BulkUpdate(context.Background(), []domainFacility.BulkFieldDeviceUpdate{
 		{
-			ID: fdID,
+			ID:          fdID,
+			BaseVersion: testBaseVersion(),
 			Specification: &domainFacility.SpecificationPatch{
 				HasSpecificationSupplier: true,
 			},

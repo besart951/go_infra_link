@@ -16,7 +16,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func newExportService(db *gorm.DB, repos *Repositories, cfg ServiceConfig, jobs *facilityservice.CopyJobManager) (*exportservice.Service, error) {
+func newExportService(db *gorm.DB, repos *Repositories, cfg ServiceConfig, jobs *facilityservice.FacilityJobManager) (*exportservice.Service, error) {
 	fileStore, err := exportinfra.NewLocalFileStore(resolveExportDirectory(cfg))
 	if err != nil {
 		return nil, fmt.Errorf("export file store: %w", err)

@@ -10,6 +10,18 @@ import (
 	"github.com/google/uuid"
 )
 
+type aggregateVersionLocker interface {
+	LockAtVersion(context.Context, uuid.UUID, uint64) error
+}
+
+func lockAtVersion(ctx context.Context, repository any, id uuid.UUID, version uint64) error {
+	locker, ok := repository.(aggregateVersionLocker)
+	if !ok {
+		return domain.ErrInvalidArgument
+	}
+	return locker.LockAtVersion(ctx, id, version)
+}
+
 type ProjectRepository struct {
 	domainProject.ProjectRepository
 	audit audit[domainProject.Project]
@@ -29,6 +41,10 @@ func (r *ProjectRepository) Update(ctx context.Context, entity *domainProject.Pr
 
 func (r *ProjectRepository) DeleteByIds(ctx context.Context, ids []uuid.UUID) error {
 	return r.audit.deleteByIds(ctx, r.ProjectRepository, ids)
+}
+
+func (r *ProjectRepository) LockAtVersion(ctx context.Context, id uuid.UUID, version uint64) error {
+	return lockAtVersion(ctx, r.ProjectRepository, id, version)
 }
 
 func (r *ProjectRepository) GetPaginatedListForUser(ctx context.Context, params domain.PaginationParams, userID uuid.UUID) (*domain.PaginatedList[domainProject.Project], error) {
@@ -62,6 +78,9 @@ func (r *ProjectControlCabinetRepository) Update(ctx context.Context, entity *do
 func (r *ProjectControlCabinetRepository) DeleteByIds(ctx context.Context, ids []uuid.UUID) error {
 	return r.audit.deleteByIds(ctx, r.ProjectControlCabinetRepository, ids)
 }
+func (r *ProjectControlCabinetRepository) LockAtVersion(ctx context.Context, id uuid.UUID, version uint64) error {
+	return lockAtVersion(ctx, r.ProjectControlCabinetRepository, id, version)
+}
 func (r *ProjectControlCabinetRepository) DeleteByControlCabinetIDs(ctx context.Context, ids []uuid.UUID) error {
 	if len(ids) == 0 {
 		return nil
@@ -94,6 +113,9 @@ func (r *ProjectSPSControllerRepository) Update(ctx context.Context, entity *dom
 }
 func (r *ProjectSPSControllerRepository) DeleteByIds(ctx context.Context, ids []uuid.UUID) error {
 	return r.audit.deleteByIds(ctx, r.ProjectSPSControllerRepository, ids)
+}
+func (r *ProjectSPSControllerRepository) LockAtVersion(ctx context.Context, id uuid.UUID, version uint64) error {
+	return lockAtVersion(ctx, r.ProjectSPSControllerRepository, id, version)
 }
 func (r *ProjectSPSControllerRepository) DeleteBySPSControllerIDs(ctx context.Context, ids []uuid.UUID) error {
 	if len(ids) == 0 {
@@ -168,6 +190,9 @@ func (r *ProjectFieldDeviceRepository) Update(ctx context.Context, entity *domai
 }
 func (r *ProjectFieldDeviceRepository) DeleteByIds(ctx context.Context, ids []uuid.UUID) error {
 	return r.audit.deleteByIds(ctx, r.ProjectFieldDeviceRepository, ids)
+}
+func (r *ProjectFieldDeviceRepository) LockAtVersion(ctx context.Context, id uuid.UUID, version uint64) error {
+	return lockAtVersion(ctx, r.ProjectFieldDeviceRepository, id, version)
 }
 func (r *ProjectFieldDeviceRepository) DeleteByFieldDeviceIDs(ctx context.Context, ids []uuid.UUID) error {
 	if len(ids) == 0 {

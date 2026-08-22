@@ -20,6 +20,42 @@ func NewStepStore(db *gorm.DB) *StepStore {
 	return &StepStore{db: db}
 }
 
+func (s *StepStore) Prepare(ctx context.Context, steps []facilityjobs.Step) error {
+	if len(steps) == 0 {
+		return nil
+	}
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var count int64
+		key := steps[0].Key
+		if err := tx.Model(&itemRecord{}).
+			Where("owner_id = ? AND job_id = ?", key.OwnerID, key.JobID).
+			Count(&count).Error; err != nil {
+			return err
+		}
+		if count > 0 {
+			return nil
+		}
+		now := time.Now().UTC()
+		records := make([]itemRecord, len(steps))
+		for index, step := range steps {
+			records[index] = preparedItemRecord(step, now)
+		}
+		return tx.CreateInBatches(records, 500).Error
+	})
+}
+
+func (s *StepStore) ListItems(ctx context.Context, ownerID, jobID uuid.UUID) ([]facilityjobs.Item, error) {
+	var records []itemRecord
+	err := s.db.WithContext(ctx).
+		Where("owner_id = ? AND job_id = ?", ownerID, jobID).
+		Order("ordinal ASC").Find(&records).Error
+	items := make([]facilityjobs.Item, len(records))
+	for index, record := range records {
+		items[index] = record.toDomain()
+	}
+	return items, err
+}
+
 func (s *StepStore) Execute(
 	ctx context.Context,
 	step facilityjobs.Step,
@@ -96,6 +132,9 @@ func lockOrCreateItem(tx *gorm.DB, step facilityjobs.Step) (itemRecord, bool, er
 }
 
 func completedResult(tx *gorm.DB, step facilityjobs.Step, item itemRecord) (facilityjobs.StepResult, bool, error) {
+	if !step.PersistIDMapping {
+		return facilityjobs.StepResult{Result: item.Result}, true, nil
+	}
 	var mapping mappingRecord
 	if err := tx.Where(mappingQuery(step)).First(&mapping).Error; err != nil {
 		return facilityjobs.StepResult{}, false, err
@@ -104,11 +143,13 @@ func completedResult(tx *gorm.DB, step facilityjobs.Step, item itemRecord) (faci
 }
 
 func completeStep(tx *gorm.DB, step facilityjobs.Step, result facilityjobs.StepResult) error {
-	if result.TargetID == uuid.Nil {
-		return errors.New("facility job step target ID is required")
-	}
-	if err := saveMapping(tx, step, result.TargetID); err != nil {
-		return err
+	if step.PersistIDMapping {
+		if result.TargetID == uuid.Nil {
+			return errors.New("facility job step target ID is required")
+		}
+		if err := saveMapping(tx, step, result.TargetID); err != nil {
+			return err
+		}
 	}
 	updates := map[string]any{
 		"status": facilityjobs.ItemStatusCompleted, "result": []byte(result.Result),

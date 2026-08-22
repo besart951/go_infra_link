@@ -1,7 +1,7 @@
 import { ListEntityUseCase } from '$lib/application/useCases/listEntityUseCase.js';
 import { fetchAllPages } from '$lib/components/facility/shared/paginatedListFetcher.js';
 import type { Apparat, FieldDeviceOptions, SystemPart } from '$lib/domain/facility/index.js';
-import type { CopyJobKind, CopyJobStatus } from '$lib/domain/facility/copy-job.js';
+import type { FacilityJobKind, FacilityJobStatus } from '$lib/domain/facility/facility-job.js';
 import type { CrudRepository } from '$lib/domain/ports/crudRepository.js';
 import type { FieldDeviceRepository } from '$lib/domain/ports/facility/fieldDeviceRepository.js';
 import { apparatRepository } from '$lib/infrastructure/api/apparatRepository.js';
@@ -13,11 +13,11 @@ import {
 } from '$lib/infrastructure/realtime/realtimeJsonStream.js';
 import { z } from 'zod';
 
-export interface FacilityCopyJobProgressEvent {
-  type: 'facility.copy_job.progress' | 'facility.job.progress';
+export interface FacilityJobProgressEvent {
+  type: 'facility.job.progress';
   job_id: string;
-  kind: CopyJobKind;
-  status: CopyJobStatus;
+  kind: FacilityJobKind;
+  status: FacilityJobStatus;
   progress: number;
   stage: string;
   job_type?: 'copy' | 'export' | 'bulk' | 'delete' | 'restore';
@@ -86,7 +86,7 @@ export interface FacilityReferenceDataStream {
 interface FacilityReferenceDataCacheOptions {
   createStream?: (
     onChange: () => void,
-    onCopyJobProgress: (event: FacilityCopyJobProgressEvent) => void,
+    onJobProgress: (event: FacilityJobProgressEvent) => void,
     onOpen: () => void,
     onFacilityChange: (event: FacilityChangeEvent) => void
   ) => FacilityReferenceDataStream;
@@ -115,8 +115,8 @@ const facilityReferenceDataChangedEventSchema = z.object({
   at: z.string()
 });
 
-const facilityCopyJobProgressEventSchema = z.object({
-  type: z.union([z.literal('facility.copy_job.progress'), z.literal('facility.job.progress')]),
+const facilityJobProgressEventSchema = z.object({
+  type: z.literal('facility.job.progress'),
   job_id: z.string().uuid(),
   kind: z.enum([
     'control_cabinet',
@@ -175,7 +175,7 @@ const facilityChangeEventSchema = z.object({
 
 const facilityRealtimeEventSchema = z.union([
   facilityReferenceDataChangedEventSchema,
-  facilityCopyJobProgressEventSchema,
+  facilityJobProgressEventSchema,
   facilityChangeEventSchema
 ]);
 
@@ -185,7 +185,7 @@ export class FacilityReferenceDataCache {
   private readonly fieldDevices: Pick<FieldDeviceRepository, 'getOptions'>;
   private readonly stream: FacilityReferenceDataStream;
   private readonly listeners = new Set<(data: FacilityReferenceData) => void>();
-  private readonly copyJobListeners = new Set<(event: FacilityCopyJobProgressEvent) => void>();
+  private readonly jobListeners = new Set<(event: FacilityJobProgressEvent) => void>();
   private readonly facilityChangeListeners = new Set<(event: FacilityChangeEvent) => void>();
   private readonly realtimeOpenListeners = new Set<() => void>();
   private readonly ttlMs: number;
@@ -217,13 +217,13 @@ export class FacilityReferenceDataCache {
     this.stream =
       options.createStream?.(
         () => this.handleReferenceDataChange(),
-        (event) => this.notifyCopyJobProgress(event),
+        (event) => this.notifyJobProgress(event),
         () => this.notifyRealtimeOpen(),
         (event) => this.notifyFacilityChange(event)
       ) ??
       createFacilityReferenceDataStream(
         () => this.handleReferenceDataChange(),
-        (event) => this.notifyCopyJobProgress(event),
+        (event) => this.notifyJobProgress(event),
         () => this.notifyRealtimeOpen(),
         (event) => this.notifyFacilityChange(event)
       );
@@ -231,7 +231,7 @@ export class FacilityReferenceDataCache {
 
   /**
    * Opens the single facility realtime stream for every signed-in user. Users
-   * without both reference-data permissions still receive their own copy-job
+   * without both reference-data permissions still receive their own job
    * progress, while reference data is fetched only when it is authorized.
    */
   start(options: FacilityReferenceDataStartOptions = {}): void {
@@ -293,10 +293,10 @@ export class FacilityReferenceDataCache {
     };
   }
 
-  subscribeCopyJobProgress(listener: (event: FacilityCopyJobProgressEvent) => void): () => void {
-    this.copyJobListeners.add(listener);
+  subscribeJobProgress(listener: (event: FacilityJobProgressEvent) => void): () => void {
+    this.jobListeners.add(listener);
     return () => {
-      this.copyJobListeners.delete(listener);
+      this.jobListeners.delete(listener);
     };
   }
 
@@ -404,8 +404,8 @@ export class FacilityReferenceDataCache {
     }
   }
 
-  private notifyCopyJobProgress(event: FacilityCopyJobProgressEvent): void {
-    for (const listener of this.copyJobListeners) {
+  private notifyJobProgress(event: FacilityJobProgressEvent): void {
+    for (const listener of this.jobListeners) {
       listener(event);
     }
   }
@@ -460,7 +460,7 @@ export function withOptionRelations(
 
 function createFacilityReferenceDataStream(
   onChange: () => void,
-  onCopyJobProgress: (event: FacilityCopyJobProgressEvent) => void,
+  onJobProgress: (event: FacilityJobProgressEvent) => void,
   onOpen: () => void,
   onFacilityChange: (event: FacilityChangeEvent) => void
 ): FacilityReferenceDataStream {
@@ -472,8 +472,8 @@ function createFacilityReferenceDataStream(
         onChange();
         return;
       }
-      if (event.type === 'facility.copy_job.progress' || event.type === 'facility.job.progress') {
-        onCopyJobProgress(event);
+      if (event.type === 'facility.job.progress') {
+        onJobProgress(event);
         return;
       }
       if (event.type === 'facility.changed') {

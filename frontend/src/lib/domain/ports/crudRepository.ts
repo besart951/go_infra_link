@@ -1,5 +1,10 @@
 import type { ListRepository, ListParams, PaginatedResponse } from './listRepository.js';
 
+export interface VersionedDeleteCommand {
+  id: string;
+  base_version: number;
+}
+
 /**
  * Generic CRUD repository port.
  * Extends ListRepository with standard get/create/update/delete operations.
@@ -14,5 +19,5 @@ export interface CrudRepository<T, C, U> extends ListRepository<T> {
   getBulk?(ids: string[], signal?: AbortSignal): Promise<T[]>;
   create(data: C, signal?: AbortSignal): Promise<T>;
   update(id: string, data: U, signal?: AbortSignal): Promise<T>;
-  delete(id: string, signal?: AbortSignal): Promise<void>;
+  delete(command: VersionedDeleteCommand, signal?: AbortSignal): Promise<void>;
 }

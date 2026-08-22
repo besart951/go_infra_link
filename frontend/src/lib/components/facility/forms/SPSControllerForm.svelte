@@ -29,7 +29,7 @@
   import { useLiveValidation } from '$lib/hooks/useLiveValidation.svelte.js';
   import { createTranslator } from '$lib/i18n/translator.js';
   import { t as translate } from '$lib/i18n/index.js';
-  import { copyOperation } from '$lib/state/copyOperation.svelte.js';
+  import { facilityJobState } from '$lib/state/facilityJobState.svelte.js';
   import CopyIcon from '@lucide/svelte/icons/copy';
   import LoaderCircleIcon from '@lucide/svelte/icons/loader-circle';
   import Trash2Icon from '@lucide/svelte/icons/trash-2';
@@ -42,6 +42,11 @@
     onSuccess?: (controller: SPSController) => void;
     onCancel?: () => void;
   }
+
+  type PersistedSystemTypeEntry = SPSControllerSystemTypeEntry & {
+    id: string;
+    aggregate_version: number;
+  };
 
   let {
     initialData,
@@ -407,7 +412,11 @@
       return;
     }
     try {
-      await spsControllerFormService.deleteSystemType(entry.id);
+      if (!entry.aggregate_version) throw new Error('Missing aggregate version');
+      await spsControllerFormService.deleteSystemType({
+        id: entry.id,
+        aggregate_version: entry.aggregate_version
+      });
       systemTypes = systemTypes.filter((_, i) => i !== index);
     } catch (e) {
       console.error(e);
@@ -429,33 +438,37 @@
     return systemTypes.some((entry) => !entry.id);
   }
 
-  function changedPersistedSystemTypes(): Array<SPSControllerSystemTypeEntry & { id: string }> {
-    return systemTypes.filter((entry): entry is SPSControllerSystemTypeEntry & { id: string } => {
-      if (!entry.id) return false;
-      const persisted = persistedSystemTypeValues[entry.id];
-      return (
-        persisted !== undefined &&
-        (persisted.number !== entry.number || persisted.document_name !== entry.document_name)
-      );
-    });
+  function isChangedSystemType(
+    entry: SPSControllerSystemTypeEntry
+  ): entry is PersistedSystemTypeEntry {
+    if (!entry.id || !entry.aggregate_version) return false;
+    const persisted = persistedSystemTypeValues[entry.id];
+    return (
+      persisted !== undefined &&
+      (persisted.number !== entry.number || persisted.document_name !== entry.document_name)
+    );
   }
 
   async function persistChangedSystemTypes(): Promise<void> {
-    const changed = changedPersistedSystemTypes();
+    const changed = systemTypes.filter(isChangedSystemType);
     if (changed.length === 0) return;
 
-    await Promise.all(
+    const updated = await Promise.all(
       changed.map((entry) =>
-        spsControllerFormService.updateSystemType(entry.id, {
+        spsControllerFormService.updateSystemType({
+          id: entry.id,
+          aggregate_version: entry.aggregate_version,
           number: entry.number,
           document_name: entry.document_name
         })
       )
     );
+    const updatesById = Object.fromEntries(updated.map((entry) => [entry.id, entry]));
+    systemTypes = systemTypes.map((entry) => updatesById[entry.id ?? ''] ?? entry);
     persistedSystemTypeValues = {
       ...persistedSystemTypeValues,
       ...Object.fromEntries(
-        changed.map(({ id, number, document_name }) => [id, { number, document_name }])
+        updated.map(({ id, number, document_name }) => [id, { number, document_name }])
       )
     };
   }
@@ -465,20 +478,15 @@
     const systemTypeEntryId = entry?.id;
     if (!systemTypeEntryId) return;
     try {
-      const result = await copyOperation.run({
-        start: (operationId) =>
-          projectId
-            ? spsControllerFormService.copyProjectSystemType(
-                projectId,
-                systemTypeEntryId,
-                operationId
-              )
-            : spsControllerFormService.copySystemType(systemTypeEntryId, operationId),
-        onCompleted: () => loadSystemTypes(),
-        onFailed: () => {
-          error = translate('facility.copy_failed');
-        }
-      });
+      const result = await facilityJobState.submit((operationId) =>
+        projectId
+          ? spsControllerFormService.copyProjectSystemType(
+              projectId,
+              systemTypeEntryId,
+              operationId
+            )
+          : spsControllerFormService.copySystemType(systemTypeEntryId, operationId)
+      );
       if (!result.started) return;
     } catch (e) {
       console.error(e);
@@ -511,6 +519,7 @@
     try {
       if (initialData) {
         const res = await spsControllerFormService.update(initialData.id, {
+          base_version: initialData.version,
           ga_device,
           device_name,
           ip_address: ip_address || undefined,
@@ -789,9 +798,9 @@
                         aria-label={$t('common.copy')}
                         title={$t('common.copy')}
                         class="pointer-events-auto h-7 w-7"
-                        disabled={loading || copyOperation.isPending}
+                        disabled={loading || facilityJobState.isPending}
                       >
-                        {#if copyOperation.isPending}
+                        {#if facilityJobState.isPending}
                           <LoaderCircleIcon class="h-4 w-4 animate-spin" />
                         {:else}
                           <CopyIcon class="h-4 w-4" />

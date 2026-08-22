@@ -1,7 +1,6 @@
 package facility
 
 import (
-	"context"
 	"errors"
 	"net/http"
 
@@ -18,12 +17,12 @@ import (
 type FieldDeviceHandler struct {
 	service       FieldDeviceService
 	collaboration ProjectFieldDeviceChangeBroadcaster
-	copyJobs      *facilityservice.CopyJobManager
+	facilityJobs  *facilityservice.FacilityJobManager
 }
 
-func NewFieldDeviceHandlerWithCopyJobs(service FieldDeviceService, broadcaster ProjectRefreshBroadcaster, copyJobs *facilityservice.CopyJobManager) *FieldDeviceHandler {
+func NewFieldDeviceHandlerWithFacilityJobs(service FieldDeviceService, broadcaster ProjectRefreshBroadcaster, facilityJobs *facilityservice.FacilityJobManager) *FieldDeviceHandler {
 	handler := NewFieldDeviceHandler(service, broadcaster)
-	handler.copyJobs = copyJobs
+	handler.facilityJobs = facilityJobs
 	return handler
 }
 
@@ -65,7 +64,7 @@ func (h *FieldDeviceHandler) MultiCreateFieldDevices(c *gin.Context) {
 				items[i].FieldDevice.ID = uuid.New()
 			}
 		}
-		if submitFieldDeviceBulkJob(c, h.copyJobs, facilityservice.FacilityJobTaskMultiCreateFieldDevices, facilityservice.FieldDeviceMultiCreateTaskPayload{Items: items}, len(items)) {
+		if submitFieldDeviceBulkJob(c, h.facilityJobs, facilityservice.FacilityJobTaskMultiCreateFieldDevices, facilityservice.FieldDeviceMultiCreateTaskPayload{Items: items}, len(items)) {
 			return
 		}
 	}
@@ -122,7 +121,7 @@ func (h *FieldDeviceHandler) CopyFieldDevice(c *gin.Context) {
 	if !ok {
 		return
 	}
-	startPersistedFacilityCopyJob(c, h.copyJobs, facilityservice.CopyJobKindFieldDevice, id)
+	enqueueFacilityCopy(c, h.facilityJobs, facilityservice.FacilityJobKindFieldDevice, id)
 }
 
 // ListFieldDevices godoc
@@ -337,10 +336,6 @@ func (h *FieldDeviceHandler) UpdateFieldDevice(c *gin.Context) {
 	if !bindJSON(c, &req) {
 		return
 	}
-	if req.BaseVersion == nil {
-		markLegacyBaseVersion(c)
-	}
-
 	ctx := c.Request.Context()
 
 	fieldDevice, err := h.service.GetByID(ctx, id)
@@ -351,10 +346,7 @@ func (h *FieldDeviceHandler) UpdateFieldDevice(c *gin.Context) {
 		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
 	}
-	baseVersion := fieldDevice.Version
-	if req.BaseVersion != nil {
-		baseVersion = *req.BaseVersion
-	}
+	baseVersion := req.BaseVersion
 
 	applyFieldDeviceUpdate(fieldDevice, req)
 
@@ -385,7 +377,7 @@ func (h *FieldDeviceHandler) UpdateFieldDevice(c *gin.Context) {
 // @Tags facility-field-devices
 // @Produce json
 // @Param id path string true "Field Device ID"
-// @Param base_version query integer false "Expected aggregate version; required after the compatibility release"
+// @Param base_version query integer true "Expected aggregate version" minimum(1)
 // @Success 204
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
@@ -400,19 +392,14 @@ func (h *FieldDeviceHandler) DeleteFieldDevice(c *gin.Context) {
 	if !bindQuery(c, &query) {
 		return
 	}
-	if query.BaseVersion == nil {
-		markLegacyBaseVersion(c)
-	}
 	ctx := c.Request.Context()
 	projectIDs := captureDeleteAudience(ctx, h.collaboration, "field_device", id)
-	command := domainFacility.FieldDeviceDeleteCommand{ID: id, BaseVersion: query.BaseVersion}
-	err := deleteFieldDevice(ctx, h.service, command)
+	command := domainFacility.FieldDeviceDeleteCommand{ID: id, BaseVersion: domain.AggregateVersion(query.BaseVersion)}
+	err := h.service.Delete(ctx, command)
 	if err != nil {
-		if query.BaseVersion != nil {
-			current, getErr := h.service.GetByID(ctx, id)
-			if getErr == nil && respondWriteConflict(c, err, "field_device", id, *query.BaseVersion, []string{"field_device"}, current.Version, toFieldDeviceResponse(*current)) {
-				return
-			}
+		current, getErr := h.service.GetByID(ctx, id)
+		if getErr == nil && respondWriteConflict(c, err, "field_device", id, query.BaseVersion, []string{"field_device"}, current.Version, toFieldDeviceResponse(*current)) {
+			return
 		}
 		respondLocalizedDomainError(c, err, "deletion_failed", "facility.deletion_failed",
 			localizedNotFound("facility.field_device_not_found"),
@@ -556,6 +543,7 @@ func (h *FieldDeviceHandler) UpdateFieldDeviceSpecification(c *gin.Context) {
 // @Summary Delete the specification owned by a field device
 // @Tags facility-field-devices
 // @Param id path string true "Field Device ID"
+// @Param base_version query integer true "Expected specification version" minimum(1)
 // @Success 204
 // @Failure 404 {object} dto.ErrorResponse
 // @Router /api/v1/facility/field-devices/{id}/specification [delete]
@@ -564,7 +552,11 @@ func (h *FieldDeviceHandler) DeleteFieldDeviceSpecification(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if err := h.service.DeleteSpecification(c.Request.Context(), fieldDeviceID); err != nil {
+	version, ok := parseRequiredBaseVersion(c)
+	if !ok {
+		return
+	}
+	if err := h.service.DeleteSpecificationAtVersion(c.Request.Context(), fieldDeviceID, version.Uint64()); err != nil {
 		respondLocalizedDomainError(c, err, "deletion_failed", "facility.deletion_failed", localizedNotFound("facility.specification_not_found"))
 		return
 	}
@@ -591,7 +583,7 @@ func (h *FieldDeviceHandler) BulkUpdateFieldDevices(c *gin.Context) {
 
 	updates := toBulkFieldDeviceUpdates(req.Updates)
 	if len(updates) > 500 {
-		if submitFieldDeviceBulkJob(c, h.copyJobs, facilityservice.FacilityJobTaskBulkUpdateFieldDevices, facilityservice.FieldDeviceBulkUpdateTaskPayload{Updates: updates}, len(updates)) {
+		if submitFieldDeviceBulkJob(c, h.facilityJobs, facilityservice.FacilityJobTaskBulkUpdateFieldDevices, facilityservice.FieldDeviceBulkUpdateTaskPayload{Updates: updates}, len(updates)) {
 			return
 		}
 	}
@@ -627,12 +619,12 @@ func (h *FieldDeviceHandler) BulkDeleteFieldDevices(c *gin.Context) {
 		return
 	}
 	if len(commands) > 500 {
-		if submitFieldDeviceBulkJob(c, h.copyJobs, facilityservice.FacilityJobTaskBulkDeleteFieldDevices, facilityservice.FieldDeviceBulkDeleteTaskPayload{Commands: commands}, len(commands)) {
+		if submitFieldDeviceBulkJob(c, h.facilityJobs, facilityservice.FacilityJobTaskBulkDeleteFieldDevices, facilityservice.FieldDeviceBulkDeleteTaskPayload{Commands: commands}, len(commands)) {
 			return
 		}
 	}
 
-	result := bulkDeleteFieldDevices(c.Request.Context(), h.service, commands)
+	result := h.service.BulkDeleteCommands(c.Request.Context(), commands)
 	for _, item := range result.Results {
 		if item.Success {
 			h.broadcastChange(c, item.ID, "deleted")
@@ -643,48 +635,13 @@ func (h *FieldDeviceHandler) BulkDeleteFieldDevices(c *gin.Context) {
 }
 
 type fieldDeviceDeleteQuery struct {
-	BaseVersion *uint64 `form:"base_version" binding:"omitempty,min=1"`
-}
-
-type versionedFieldDeviceDeleteService interface {
-	Delete(ctx context.Context, command domainFacility.FieldDeviceDeleteCommand) error
-	BulkDeleteCommands(ctx context.Context, commands []domainFacility.FieldDeviceDeleteCommand) *domainFacility.BulkOperationResult
-}
-
-func deleteFieldDevice(ctx context.Context, service FieldDeviceService, command domainFacility.FieldDeviceDeleteCommand) error {
-	if versioned, ok := service.(versionedFieldDeviceDeleteService); ok {
-		return versioned.Delete(ctx, command)
-	}
-	return service.DeleteByID(ctx, command.ID)
-}
-
-func bulkDeleteFieldDevices(ctx context.Context, service FieldDeviceService, commands []domainFacility.FieldDeviceDeleteCommand) *domainFacility.BulkOperationResult {
-	if versioned, ok := service.(versionedFieldDeviceDeleteService); ok {
-		return versioned.BulkDeleteCommands(ctx, commands)
-	}
-	ids := make([]uuid.UUID, len(commands))
-	for index := range commands {
-		ids[index] = commands[index].ID
-	}
-	return service.BulkDelete(ctx, ids)
+	BaseVersion uint64 `form:"base_version" binding:"required,min=1"`
 }
 
 func fieldDeviceDeleteCommands(c *gin.Context, request dto.BulkDeleteFieldDeviceRequest) ([]domainFacility.FieldDeviceDeleteCommand, bool) {
-	if len(request.Items) > 0 {
-		commands := make([]domainFacility.FieldDeviceDeleteCommand, len(request.Items))
-		for index, item := range request.Items {
-			commands[index] = domainFacility.FieldDeviceDeleteCommand{ID: item.ID, BaseVersion: item.BaseVersion}
-		}
-		return commands, true
-	}
-	if len(request.IDs) == 0 {
-		respondInvalidArgument(c, "ids or versioned items are required")
-		return nil, false
-	}
-	markLegacyBaseVersion(c)
-	commands := make([]domainFacility.FieldDeviceDeleteCommand, len(request.IDs))
-	for index, id := range request.IDs {
-		commands[index] = domainFacility.FieldDeviceDeleteCommand{ID: id}
+	commands := make([]domainFacility.FieldDeviceDeleteCommand, len(request.Items))
+	for index, item := range request.Items {
+		commands[index] = domainFacility.FieldDeviceDeleteCommand{ID: item.ID, BaseVersion: domain.AggregateVersion(item.BaseVersion)}
 	}
 	return commands, true
 }
@@ -708,7 +665,7 @@ func toBulkFieldDeviceUpdate(item dto.BulkUpdateFieldDeviceItem) domainFacility.
 		bacnetObjects = &mapped
 	}
 	return domainFacility.BulkFieldDeviceUpdate{
-		ID: item.ID, BaseVersion: item.BaseVersion,
+		ID: item.ID, BaseVersion: domain.AggregateVersion(item.BaseVersion),
 		BMK: item.BMK.Value, HasBMK: item.BMK.Set,
 		Description: item.Description.Value, HasDescription: item.Description.Set,
 		TextIndividuell: item.TextIndividuell.Value, HasTextIndividuell: item.TextIndividuell.Set,
@@ -722,6 +679,7 @@ func toBulkOperationResponse(result *domainFacility.BulkOperationResult) dto.Bul
 	for i, r := range result.Results {
 		results[i] = dto.BulkOperationResultItem{
 			ID:                r.ID,
+			DependencyGroupID: r.DependencyGroupID,
 			Success:           r.Success,
 			Version:           r.Version,
 			Merged:            r.Merged,

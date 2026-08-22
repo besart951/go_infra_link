@@ -62,6 +62,45 @@ func TestNewFacilityCapabilitiesKeepFocusedFunctions(t *testing.T) {
 	}
 }
 
+func TestFacilityCopyCompatibilityWasRemoved(t *testing.T) {
+	root := filepath.Dir(backendRoot(t))
+	forbidden := []string{
+		"Copy" + "Job", "facility.copy_" + "job.progress", "/facility/copy-" + "jobs",
+		"X-Copy-" + "Operation-ID", "facility-copy-" + "job", "copy" + "Operation",
+		"CopyProgress" + "Indicator",
+	}
+	for _, relative := range []string{"backend", "frontend/src"} {
+		assertTreeExcludes(t, filepath.Join(root, relative), forbidden)
+	}
+}
+
+func assertTreeExcludes(t *testing.T, root string, forbidden []string) {
+	t.Helper()
+	err := filepath.WalkDir(root, func(path string, entry os.DirEntry, walkErr error) error {
+		if walkErr != nil || entry.IsDir() || !isSourceFile(path) {
+			return walkErr
+		}
+		contents, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		for _, symbol := range forbidden {
+			if strings.Contains(string(contents), symbol) {
+				t.Errorf("removed Facility copy compatibility symbol %q remains in %s", symbol, path)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func isSourceFile(path string) bool {
+	extension := filepath.Ext(path)
+	return extension == ".go" || extension == ".ts" || extension == ".svelte"
+}
+
 func assertPersistenceAgnostic(t *testing.T, path string) {
 	t.Helper()
 	contents, err := os.ReadFile(path)

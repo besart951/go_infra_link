@@ -10,6 +10,7 @@
   import type { LayoutData } from './$types.js';
   import { loadAuth } from '$lib/stores/auth.svelte.js';
   import { goto } from '$app/navigation';
+  import { resolve } from '$app/paths';
   import { createTranslator } from '$lib/i18n/translator.js';
   import { initNetworkStatus, networkStatus } from '$lib/stores/network.js';
   import { initAppearance, setCurrentAppearanceUserId } from '$lib/stores/appearance.js';
@@ -19,9 +20,9 @@
   import { facilityDetailCache } from '$lib/services/facilityDetailCache.js';
   import { projectDetailService } from '$lib/components/project/ProjectDetailService.js';
   import { appNavigationDataCache } from '$lib/services/appNavigationDataCache.js';
-  import { copyOperation } from '$lib/state/copyOperation.svelte.js';
+  import { facilityJobState } from '$lib/state/facilityJobState.svelte.js';
   import { clearActivityCache } from '$lib/activity/activityCache.js';
-  import CopyProgressIndicator from '$lib/components/facility/CopyProgressIndicator.svelte';
+  import FacilityJobPanel from '$lib/components/facility/FacilityJobPanel.svelte';
 
   const translator = createTranslator();
 
@@ -30,9 +31,13 @@
   onMount(async () => {
     initNetworkStatus();
     await loadAuth();
+    if (!data.user && data.backendAvailable !== false) {
+      await goto(resolve('/login'));
+      return;
+    }
     setCurrentAppearanceUserId(data.user?.id ?? null);
     initAppearance(data.user?.id ?? null);
-    copyOperation.initialize(data.user?.id);
+    facilityJobState.initialize(data.user?.id);
     facilityReferenceDataCache.start({
       currentUserId: data.user?.id,
       refreshReferenceData:
@@ -43,18 +48,12 @@
   });
 
   onDestroy(() => {
-    copyOperation.dispose();
+    facilityJobState.dispose();
     facilityReferenceDataCache.stop();
     facilityDetailCache.stop();
     projectDetailService.clearProjectContextCache();
     appNavigationDataCache.clear();
     clearActivityCache();
-  });
-
-  $effect(() => {
-    if (!data.user && data.backendAvailable !== false) {
-      goto('/login');
-    }
   });
 
   const breadcrumbForPath = (pathname: string) => getBreadcrumbForPath(pathname, $translator);
@@ -126,7 +125,7 @@
       </div>
     </Sidebar.Inset>
     <Toasts />
-    <CopyProgressIndicator />
+    <FacilityJobPanel />
   </Sidebar.Provider>
 {:else if data.backendAvailable === false}
   <div class="flex h-screen w-full items-center justify-center p-4">

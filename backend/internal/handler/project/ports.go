@@ -70,7 +70,7 @@ type ProjectLifecycleService interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*domainProject.Project, error)
 	List(ctx context.Context, requesterID uuid.UUID, page, limit int, search string, status *domainProject.ProjectStatus, phaseID *uuid.UUID) (*domain.PaginatedList[domainProject.Project], error)
 	Update(ctx context.Context, project *domainProject.Project) error
-	DeleteByID(ctx context.Context, id uuid.UUID) error
+	DeleteAtVersion(ctx context.Context, id uuid.UUID, baseVersion uint64) error
 }
 
 type ProjectChangeService interface {
@@ -101,16 +101,16 @@ type ProjectWorkflowService interface {
 type ProjectFacilityLinkService interface {
 	CreateControlCabinet(ctx context.Context, projectID, controlCabinetID uuid.UUID) (*domainProject.ProjectControlCabinet, error)
 	CopyControlCabinet(ctx context.Context, projectID, controlCabinetID uuid.UUID) (*domainFacility.ControlCabinet, error)
-	UpdateControlCabinet(ctx context.Context, linkID, projectID, controlCabinetID uuid.UUID) (*domainProject.ProjectControlCabinet, error)
-	DeleteControlCabinet(ctx context.Context, linkID, projectID uuid.UUID) error
+	UpdateControlCabinet(ctx context.Context, command domainProject.FacilityLinkUpdate) (*domainProject.ProjectControlCabinet, error)
+	DeleteControlCabinet(ctx context.Context, command domainProject.FacilityLinkDelete) error
 	CreateSPSController(ctx context.Context, projectID, spsControllerID uuid.UUID) (*domainProject.ProjectSPSController, error)
 	CopySPSController(ctx context.Context, projectID, spsControllerID uuid.UUID) (*domainFacility.SPSController, error)
 	CopySPSControllerSystemType(ctx context.Context, projectID, systemTypeID uuid.UUID) (*domainFacility.SPSControllerSystemType, error)
-	UpdateSPSController(ctx context.Context, linkID, projectID, spsControllerID uuid.UUID) (*domainProject.ProjectSPSController, error)
-	DeleteSPSController(ctx context.Context, linkID, projectID uuid.UUID) error
+	UpdateSPSController(ctx context.Context, command domainProject.FacilityLinkUpdate) (*domainProject.ProjectSPSController, error)
+	DeleteSPSController(ctx context.Context, command domainProject.FacilityLinkDelete) error
 	CreateFieldDevice(ctx context.Context, projectID, fieldDeviceID uuid.UUID) (*domainProject.ProjectFieldDevice, error)
-	UpdateFieldDevice(ctx context.Context, linkID, projectID, fieldDeviceID uuid.UUID) (*domainProject.ProjectFieldDevice, error)
-	DeleteFieldDevice(ctx context.Context, linkID, projectID uuid.UUID) error
+	UpdateFieldDevice(ctx context.Context, command domainProject.FacilityLinkUpdate) (*domainProject.ProjectFieldDevice, error)
+	DeleteFieldDevice(ctx context.Context, command domainProject.FacilityLinkDelete) error
 	MultiCreateFieldDevices(ctx context.Context, projectID uuid.UUID, fieldDeviceIDs []uuid.UUID) ([]uuid.UUID, []string)
 	MultiCreateAndAssignFieldDevices(ctx context.Context, projectID uuid.UUID, items []domainFacility.FieldDeviceCreateItem) (*domainFacility.FieldDeviceMultiCreateResult, error)
 	ListControlCabinets(ctx context.Context, projectID uuid.UUID, page, limit int) (*domain.PaginatedList[domainProject.ProjectControlCabinet], error)

@@ -16,7 +16,10 @@ func Connect(cfg config.DBConfig) (*gorm.DB, error) {
 
 	switch cfg.Type {
 	case "postgres":
-		dialector = postgres.Open(cfg.Dsn)
+		dialector = postgres.New(postgres.Config{
+			DSN:                  cfg.Dsn,
+			PreferSimpleProtocol: true,
+		})
 
 	default:
 		return nil, fmt.Errorf("unsupported database type: %s (supported: postgres)", cfg.Type)

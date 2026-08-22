@@ -6,6 +6,7 @@ import type { Apparat, FieldDeviceOptions, SystemPart } from '$lib/domain/facili
 
 const systemPart: SystemPart = {
   id: 'system-part-air',
+  version: 1,
   short_name: 'Abl',
   name: 'Abluft',
   created_at: '2026-01-01T00:00:00Z',
@@ -14,6 +15,7 @@ const systemPart: SystemPart = {
 
 const apparat: Apparat = {
   id: 'apparat-damper',
+  version: 1,
   short_name: 'Abk',
   name: 'Abschaltung',
   created_at: '2026-01-01T00:00:00Z',
@@ -199,7 +201,7 @@ describe('FacilityReferenceDataCache', () => {
     const cache = new FacilityReferenceDataCache(
       { apparats, systemParts, fieldDevices },
       {
-        createStream: (_onChange, _onCopyJobProgress, _onOpen, onFacilityChange) => {
+        createStream: (_onChange, _onJobProgress, _onOpen, onFacilityChange) => {
           notifyFacilityChange = onFacilityChange;
           return { connect: vi.fn(), disconnect: vi.fn() };
         }

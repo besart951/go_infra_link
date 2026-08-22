@@ -33,10 +33,10 @@ type Service interface {
 
 type Handler struct {
 	service Service
-	jobs    *facilityservice.CopyJobManager
+	jobs    *facilityservice.FacilityJobManager
 }
 
-func NewHandler(service Service, jobs ...*facilityservice.CopyJobManager) *Handler {
+func NewHandler(service Service, jobs ...*facilityservice.FacilityJobManager) *Handler {
 	handler := &Handler{service: service}
 	if len(jobs) > 0 {
 		handler.jobs = jobs[0]
@@ -303,8 +303,8 @@ func (h *Handler) submitControlCabinetRestore(c *gin.Context, cabinetID uuid.UUI
 		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "restore_failed", "facility.update_failed")
 		return
 	}
-	job, err := h.jobs.SubmitTask(c.Request.Context(), facilityservice.CopyJob{
-		ID: jobID, OwnerID: actorID, Kind: facilityservice.CopyJobKindControlCabinet,
+	job, err := h.jobs.SubmitTask(c.Request.Context(), facilityservice.FacilityJob{
+		ID: jobID, OwnerID: actorID, Kind: facilityservice.FacilityJobKindControlCabinet,
 		Class: facilityservice.FacilityJobClassMutation, Type: facilityservice.FacilityJobTypeRestore,
 		Task: domainHistory.TaskRestoreControlCabinet, Payload: payload,
 		Admission: &facilityservice.FacilityAggregateAdmission{
@@ -320,14 +320,11 @@ func (h *Handler) submitControlCabinetRestore(c *gin.Context, cabinetID uuid.UUI
 		handlerutil.RespondLocalizedError(c, status, code, "facility.aggregate_locked")
 		return
 	}
-	c.JSON(http.StatusAccepted, sharedpresenter.ToCopyJobResponse(job))
+	c.JSON(http.StatusAccepted, sharedpresenter.ToFacilityJobResponse(job))
 }
 
 func historyOperationID(c *gin.Context) (uuid.UUID, bool) {
 	raw := strings.TrimSpace(c.GetHeader("Idempotency-Key"))
-	if raw == "" {
-		raw = strings.TrimSpace(c.GetHeader("X-Copy-Operation-ID"))
-	}
 	if raw == "" {
 		return uuid.New(), true
 	}

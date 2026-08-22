@@ -2,6 +2,7 @@ import type { Pagination } from '../utils/index.js';
 
 export interface ProjectControlCabinetLink {
   id: string;
+  version: number;
   project_id: string;
   control_cabinet_id: string;
   created_at: string;
@@ -10,6 +11,7 @@ export interface ProjectControlCabinetLink {
 
 export interface ProjectSPSControllerLink {
   id: string;
+  version: number;
   project_id: string;
   sps_controller_id: string;
   created_at: string;
@@ -18,10 +20,17 @@ export interface ProjectSPSControllerLink {
 
 export interface ProjectFieldDeviceLink {
   id: string;
+  version: number;
   project_id: string;
   field_device_id: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface ProjectLinkDeleteCommand {
+  project_id: string;
+  link_id: string;
+  base_version: number;
 }
 
 export interface ProjectFieldDeviceMultiCreateResponse {

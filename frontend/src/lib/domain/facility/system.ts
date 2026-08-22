@@ -3,6 +3,7 @@ import type { Pagination } from '../utils/index.js';
 // SystemType
 export interface SystemType {
   id: string;
+  version: number;
   number_min: number;
   number_max: number;
   name: string;
@@ -17,6 +18,7 @@ export interface CreateSystemTypeRequest {
 }
 
 export interface UpdateSystemTypeRequest {
+  base_version: number;
   number_min?: number;
   number_max?: number;
   name?: string;
@@ -35,6 +37,7 @@ export interface SystemTypeListResponse extends Pagination<SystemType> {
 // SystemPart
 export interface SystemPart {
   id: string;
+  version: number;
   short_name: string;
   name: string;
   description?: string;
@@ -49,6 +52,7 @@ export interface CreateSystemPartRequest {
 }
 
 export interface UpdateSystemPartRequest {
+  base_version: number;
   short_name?: string;
   name?: string;
   description?: string;

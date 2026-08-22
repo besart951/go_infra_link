@@ -15,13 +15,17 @@ type CreateSystemTypeRequest struct {
 }
 
 type UpdateSystemTypeRequest struct {
-	NumberMin int    `json:"number_min"`
-	NumberMax int    `json:"number_max"`
-	Name      string `json:"name" binding:"omitempty,max=150"`
+	BaseVersion uint64 `json:"base_version" binding:"required,min=1"`
+	NumberMin   int    `json:"number_min"`
+	NumberMax   int    `json:"number_max"`
+	Name        string `json:"name" binding:"omitempty,max=150"`
 }
+
+func (r UpdateSystemTypeRequest) ExpectedVersion() uint64 { return r.BaseVersion }
 
 type SystemTypeResponse struct {
 	ID        uuid.UUID `json:"id"`
+	Version   uint64    `json:"version"`
 	NumberMin int       `json:"number_min"`
 	NumberMax int       `json:"number_max"`
 	Name      string    `json:"name"`

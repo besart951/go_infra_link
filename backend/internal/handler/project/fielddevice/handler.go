@@ -22,8 +22,8 @@ import (
 
 type FacilityLinkService interface {
 	CreateFieldDevice(ctx context.Context, projectID, fieldDeviceID uuid.UUID) (*domainProject.ProjectFieldDevice, error)
-	UpdateFieldDevice(ctx context.Context, linkID, projectID, fieldDeviceID uuid.UUID) (*domainProject.ProjectFieldDevice, error)
-	DeleteFieldDevice(ctx context.Context, linkID, projectID uuid.UUID) error
+	UpdateFieldDevice(ctx context.Context, command domainProject.FacilityLinkUpdate) (*domainProject.ProjectFieldDevice, error)
+	DeleteFieldDevice(ctx context.Context, command domainProject.FacilityLinkDelete) error
 	MultiCreateFieldDevices(ctx context.Context, projectID uuid.UUID, fieldDeviceIDs []uuid.UUID) ([]uuid.UUID, []string)
 	MultiCreateAndAssignFieldDevices(ctx context.Context, projectID uuid.UUID, items []domainFacility.FieldDeviceCreateItem) (*domainFacility.FieldDeviceMultiCreateResult, error)
 	ListFieldDevices(ctx context.Context, projectID uuid.UUID, page, limit int) (*domain.PaginatedList[domainProject.ProjectFieldDevice], error)
@@ -86,7 +86,7 @@ func (h *Handler) CreateProjectFieldDeviceExport(c *gin.Context) {
 		handlerutil.RespondLocalizedError(c, http.StatusUnauthorized, "unauthorized", "errors.unauthorized")
 		return
 	}
-	operationID, err := handlerutil.ParseCopyOperationID(c)
+	operationID, err := handlerutil.ParseIdempotencyKey(c)
 	if err != nil {
 		handlerutil.RespondLocalizedError(c, http.StatusBadRequest, "invalid_operation_id", "errors.invalid_request")
 		return
@@ -328,19 +328,10 @@ func (h *Handler) UpdateProjectFieldDevice(c *gin.Context) {
 		return
 	}
 
-	var updated *domainProject.ProjectFieldDevice
-	var err error
-	if req.BaseVersion != nil {
-		if versioned, ok := h.facilityLink.(interface {
-			UpdateFieldDeviceAtVersion(context.Context, uuid.UUID, uuid.UUID, uuid.UUID, uint64) (*domainProject.ProjectFieldDevice, error)
-		}); ok {
-			updated, err = versioned.UpdateFieldDeviceAtVersion(c.Request.Context(), linkID, projectID, req.FieldDeviceID, *req.BaseVersion)
-		} else {
-			updated, err = h.facilityLink.UpdateFieldDevice(c.Request.Context(), linkID, projectID, req.FieldDeviceID)
-		}
-	} else {
-		updated, err = h.facilityLink.UpdateFieldDevice(c.Request.Context(), linkID, projectID, req.FieldDeviceID)
-	}
+	updated, err := h.facilityLink.UpdateFieldDevice(c.Request.Context(), domainProject.FacilityLinkUpdate{
+		LinkID: linkID, ProjectID: projectID, TargetID: req.FieldDeviceID,
+		BaseVersion: domain.AggregateVersion(req.BaseVersion),
+	})
 	if err != nil {
 		handlerutil.RespondDomainError(c, err,
 			handlerutil.LocalizedError(http.StatusInternalServerError, "update_failed", "project.update_failed"),
@@ -363,6 +354,7 @@ func (h *Handler) UpdateProjectFieldDevice(c *gin.Context) {
 // @Produce json
 // @Param id path string true "Project ID"
 // @Param linkId path string true "Link ID"
+// @Param base_version query integer true "Expected link version" minimum(1)
 // @Success 204
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 404 {object} dto.ErrorResponse
@@ -387,11 +379,18 @@ func (h *Handler) DeleteProjectFieldDevice(c *gin.Context) {
 	if !ok {
 		return
 	}
+	version, ok := projectshared.RequiredBaseVersion(c)
+	if !ok {
+		return
+	}
 
-	if err := h.facilityLink.DeleteFieldDevice(c.Request.Context(), linkID, projectID); err != nil {
+	if err := h.facilityLink.DeleteFieldDevice(c.Request.Context(), domainProject.FacilityLinkDelete{
+		LinkID: linkID, ProjectID: projectID, BaseVersion: version,
+	}); err != nil {
 		handlerutil.RespondDomainError(c, err,
 			handlerutil.LocalizedError(http.StatusInternalServerError, "deletion_failed", "project.deletion_failed"),
 			handlerutil.MapError(domain.ErrNotFound, handlerutil.LocalizedError(http.StatusNotFound, "not_found", "project.link_not_found")),
+			handlerutil.MapError(domain.ErrConflict, handlerutil.LocalizedError(http.StatusConflict, "write_conflict", "errors.write_conflict")),
 		)
 		return
 	}

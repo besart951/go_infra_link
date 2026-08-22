@@ -59,13 +59,6 @@ func TestBacnetReferenceUsageRepo_CountByResource(t *testing.T) {
 		NotificationClassID: &notificationClass.ID,
 		AlarmTypeID:         &alarmType.ID,
 	})
-	templateObject := seedBacnetReferenceUsageRecord(t, db, &domainFacility.BacnetObject{
-		TextFix:        "AI2",
-		SoftwareType:   domainFacility.BacnetSoftwareTypeAI,
-		SoftwareNumber: 2,
-		StateTextID:    &stateText.ID,
-		AlarmTypeID:    &alarmType.ID,
-	})
 	objectData := seedBacnetReferenceUsageRecord(t, db, &domainFacility.ObjectData{
 		Description: "Template",
 		Version:     "1.0",
@@ -74,8 +67,14 @@ func TestBacnetReferenceUsageRepo_CountByResource(t *testing.T) {
 	if err := db.Model(objectData).Association("Apparats").Append(apparat); err != nil {
 		t.Fatalf("expected object data apparat association to succeed, got %v", err)
 	}
-	if err := db.Model(objectData).Association("BacnetObjects").Append(templateObject); err != nil {
-		t.Fatalf("expected object data bacnet association to succeed, got %v", err)
+	now := time.Now().UTC()
+	templateObject := BacnetObjectTemplateRecord{
+		ID: uuid.New(), CreatedAt: now, UpdatedAt: now, Version: 1, ObjectDataID: objectData.ID,
+		TextFix: "AI2", SoftwareType: domainFacility.BacnetSoftwareTypeAI, SoftwareNumber: 2,
+		StateTextID: &stateText.ID, AlarmTypeID: &alarmType.ID,
+	}
+	if err := db.Create(&templateObject).Error; err != nil {
+		t.Fatalf("create canonical bacnet template: %v", err)
 	}
 
 	tests := []struct {
@@ -137,6 +136,7 @@ func newBacnetReferenceUsageRepoTestDB(t *testing.T) *gorm.DB {
 		&domainFacility.AlarmType{},
 		&domainFacility.AlarmDefinition{},
 		&domainFacility.BacnetObject{},
+		&BacnetObjectTemplateRecord{},
 		&domainFacility.ObjectData{},
 	}
 	if err := db.AutoMigrate(models...); err != nil {

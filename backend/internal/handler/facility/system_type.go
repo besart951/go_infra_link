@@ -17,6 +17,7 @@ func NewSystemTypeHandler(svc SystemTypeService) *SystemTypeHandler {
 		applySystemTypeUpdate,
 		respFn(toSystemTypeResponse),
 		listRespFn(toSystemTypeListResponse),
+		"system_type",
 		"facility.system_type_not_found",
 	)}
 }
@@ -79,6 +80,7 @@ func (h *SystemTypeHandler) UpdateSystemType(c *gin.Context) { h.crud.handleUpda
 // @Tags facility-system-types
 // @Produce json
 // @Param id path string true "System Type ID"
+// @Param base_version query integer true "Expected aggregate version" minimum(1)
 // @Success 204
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse

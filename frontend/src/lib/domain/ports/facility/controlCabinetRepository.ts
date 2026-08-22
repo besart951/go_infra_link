@@ -16,7 +16,7 @@ export interface ControlCabinetRepository extends CrudRepository<
     id: string,
     operationId: string,
     signal?: AbortSignal
-  ): Promise<import('$lib/domain/facility/index.js').CopyJob>;
+  ): Promise<import('$lib/domain/facility/index.js').FacilityJob>;
   validate(
     data: { id?: string; building_id: string; control_cabinet_nr?: string },
     signal?: AbortSignal

@@ -58,6 +58,7 @@ func (w fieldDeviceSpecificationWriter) updatePatchInTx(ctx context.Context, fie
 	if err != nil {
 		return nil, err
 	}
+	spec.Version = patch.BaseVersion
 	applySpecificationPatch(spec, patch)
 	if err := w.writer.service.validateSpecification(spec); err != nil {
 		return nil, err

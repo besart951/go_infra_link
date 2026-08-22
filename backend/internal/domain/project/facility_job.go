@@ -8,9 +8,9 @@ const (
 	TaskCopyProjectSPSControllerSystemType = "project.spscontrollersystemtype.copy.v1"
 )
 
-// FacilityCopyJobPayload is the durable command for project-scoped hierarchy
+// ProjectFacilityCopyCommand is the durable command for project-scoped hierarchy
 // copies. It contains identifiers only; the worker reloads current source data.
-type FacilityCopyJobPayload struct {
+type ProjectFacilityCopyCommand struct {
 	ProjectID uuid.UUID `json:"project_id"`
 	SourceID  uuid.UUID `json:"source_id"`
 }

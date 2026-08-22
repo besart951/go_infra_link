@@ -187,6 +187,48 @@ var migrations = []migration{
 		blueGreenCompatible: true,
 		apply:               migrateFacilityImportStaging,
 	},
+	{
+		version:             "202608220004",
+		description:         "field_device_cursor_indexes",
+		blueGreenCompatible: true,
+		apply:               migrateFieldDeviceCursorIndexes,
+	},
+	{
+		version:             "202608220005",
+		description:         "field_device_cursor_covering_indexes",
+		blueGreenCompatible: true,
+		apply:               migrateFieldDeviceCursorCoveringIndexes,
+	},
+	{
+		version:             "202608220006",
+		description:         "field_device_cursor_value_projection",
+		blueGreenCompatible: true,
+		apply:               migrateFieldDeviceCursorValues,
+	},
+	{
+		version:             "202608220007",
+		description:         "field_device_bulk_update_plans",
+		blueGreenCompatible: true,
+		apply:               migrateFieldDeviceBulkUpdatePlans,
+	},
+	{
+		version:             "202608220008",
+		description:         "project_field_device_cursor_projection",
+		blueGreenCompatible: true,
+		apply:               migrateProjectFieldDeviceCursorProjection,
+	},
+	{
+		version:             "202608220009",
+		description:         "field_device_building_cursor_projection",
+		blueGreenCompatible: true,
+		apply:               migrateFieldDeviceBuildingCursorProjection,
+	},
+	{
+		version:             "202608220010",
+		description:         "field_device_combined_search_index",
+		blueGreenCompatible: true,
+		apply:               migrateFieldDeviceCombinedSearchIndex,
+	},
 }
 
 type MigrationOptions struct {

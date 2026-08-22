@@ -6,12 +6,19 @@ import (
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	"github.com/besart951/go_infra_link/backend/internal/domain/project"
+	"github.com/besart951/go_infra_link/backend/internal/repository/gormbase"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 type projectControlCabinetRepo struct {
 	db *gorm.DB
+}
+
+func (r *projectControlCabinetRepo) LockAtVersion(ctx context.Context, id uuid.UUID, version uint64) error {
+	return gormbase.LockVersion(ctx, r.db, gormbase.VersionLock{
+		Model: &ProjectControlCabinetRecord{}, ID: id, Version: version,
+	})
 }
 
 func NewProjectControlCabinetRepository(db *gorm.DB) project.ProjectControlCabinetRepository {

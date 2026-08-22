@@ -12,6 +12,7 @@ export type ProjectStatus = 'planned' | 'ongoing' | 'completed';
 
 export interface Project {
   id: string;
+  version: number;
   name: string;
   description: string;
   status: ProjectStatus;

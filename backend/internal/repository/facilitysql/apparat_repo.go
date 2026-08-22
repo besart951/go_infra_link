@@ -69,16 +69,17 @@ func (r *apparatRepo) Create(ctx context.Context, entity *domainFacility.Apparat
 func (r *apparatRepo) Update(ctx context.Context, entity *domainFacility.Apparat) error {
 	base := entity.GetBase()
 	expectedVersion := base.Version
+	if expectedVersion == 0 {
+		return domain.ErrInvalidArgument
+	}
 	base.TouchForUpdate(time.Now().UTC())
 
 	// The aggregate has one owned relation, so it needs a transaction. Keep the
 	// scalar write on the same optimistic-concurrency path as BaseRepository;
 	// Select("*") is important because a nil Description is an intentional clear.
 	err := r.DB().WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		query := tx.Model(&domainFacility.Apparat{}).Where("id = ?", entity.ID)
-		if expectedVersion > 0 {
-			query = query.Where("version = ?", expectedVersion)
-		}
+		query := tx.Model(&domainFacility.Apparat{}).
+			Where("id = ? AND version = ?", entity.ID, expectedVersion)
 		result := query.
 			Select("*").
 			Omit("id", "created_at", clause.Associations).
@@ -86,7 +87,7 @@ func (r *apparatRepo) Update(ctx context.Context, entity *domainFacility.Apparat
 		if result.Error != nil {
 			return result.Error
 		}
-		if expectedVersion > 0 && result.RowsAffected == 0 {
+		if result.RowsAffected == 0 {
 			return domain.ErrConflict
 		}
 

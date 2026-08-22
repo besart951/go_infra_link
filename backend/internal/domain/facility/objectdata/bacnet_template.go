@@ -29,6 +29,7 @@ type BacnetObjectTemplate struct {
 	StateTextID         *uuid.UUID
 	NotificationClassID *uuid.UUID
 	AlarmTypeID         *uuid.UUID
+	AlarmValues         []BacnetObjectTemplateAlarmValue
 }
 
 type BacnetObjectTemplateAlarmValue struct {
@@ -48,6 +49,11 @@ type BacnetObjectTemplateAlarmValue struct {
 }
 
 type BacnetObjectTemplateStore interface {
+	GetByID(context.Context, uuid.UUID) (*BacnetObjectTemplate, error)
+	GetByIDs(context.Context, []uuid.UUID) ([]BacnetObjectTemplate, error)
 	ListByObjectDataID(context.Context, uuid.UUID) ([]BacnetObjectTemplate, error)
+	Create(context.Context, *BacnetObjectTemplate) error
+	Update(context.Context, *BacnetObjectTemplate) error
+	DeleteAtVersion(context.Context, uuid.UUID, uint64) error
 	Replace(context.Context, uuid.UUID, []BacnetObjectTemplate) error
 }

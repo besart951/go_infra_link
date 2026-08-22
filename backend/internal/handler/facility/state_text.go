@@ -18,6 +18,7 @@ func NewStateTextHandler(svc StateTextService) *StateTextHandler {
 		applyStateTextUpdate,
 		respFn(toStateTextResponse),
 		listRespFn(toStateTextListResponse),
+		"state_text",
 		"facility.state_text_not_found",
 	)}
 }
@@ -78,6 +79,7 @@ func (h *StateTextHandler) UpdateStateText(c *gin.Context) { h.crud.handleUpdate
 // @Tags facility-state-texts
 // @Produce json
 // @Param id path string true "State Text ID"
+// @Param base_version query integer true "Expected aggregate version" minimum(1)
 // @Success 204
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse

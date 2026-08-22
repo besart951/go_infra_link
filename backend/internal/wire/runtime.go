@@ -20,8 +20,9 @@ type RuntimeAdapters struct {
 	ProjectCollaboration     *realtime.ProjectCollaborationHub
 	SystemNotificationStream *realtime.SystemNotificationHub
 	FacilityReferenceData    *realtime.FacilityReferenceDataHub
-	CopyJobs                 *facilityservice.CopyJobManager
+	FacilityJobs             *facilityservice.FacilityJobManager
 	FacilityJobSteps         facilityjobs.StepStore
+	FieldDeviceUpdatePlans   facilityjobs.FieldDeviceUpdatePlanStore
 	DB                       *gorm.DB
 	bus                      apprealtime.Bus
 	ownsBus                  bool
@@ -78,20 +79,23 @@ func NewRuntimeAdaptersWithBusAndStore(bus apprealtime.Bus, nodeID string, ownsB
 		realtime.WithFacilityReferenceDataBus(bus, nodeID),
 	)
 	var jobSteps facilityjobs.StepStore
+	var updatePlans facilityjobs.FieldDeviceUpdatePlanStore
 	if db != nil {
 		jobSteps = facilityjobsql.NewStepStore(db)
+		updatePlans = facilityjobsql.NewFieldDeviceUpdatePlanStore(db)
 	}
 	return &RuntimeAdapters{
 		ProjectCollaboration: realtime.NewProjectCollaborationHub(options...),
 		SystemNotificationStream: realtime.NewSystemNotificationHub(
 			realtime.WithSystemNotificationBus(bus, nodeID),
 		),
-		FacilityReferenceData: facilityReferenceData,
-		CopyJobs:              facilityservice.NewCopyJobManagerWithDB(facilityReferenceData, db),
-		FacilityJobSteps:      jobSteps,
-		DB:                    db,
-		bus:                   bus,
-		ownsBus:               ownsBus,
+		FacilityReferenceData:  facilityReferenceData,
+		FacilityJobs:           facilityservice.NewFacilityJobManagerWithDB(facilityReferenceData, db),
+		FacilityJobSteps:       jobSteps,
+		FieldDeviceUpdatePlans: updatePlans,
+		DB:                     db,
+		bus:                    bus,
+		ownsBus:                ownsBus,
 	}
 }
 
@@ -111,8 +115,8 @@ func (r *RuntimeAdapters) Close() {
 		return
 	}
 	r.closeOnce.Do(func() {
-		if r.CopyJobs != nil {
-			r.CopyJobs.Close()
+		if r.FacilityJobs != nil {
+			r.FacilityJobs.Close()
 		}
 		if r.ProjectCollaboration != nil {
 			r.ProjectCollaboration.Close()

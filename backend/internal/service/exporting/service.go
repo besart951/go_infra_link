@@ -40,7 +40,7 @@ type Service struct {
 	workbook domainExport.WorkbookGenerator
 	zip      domainExport.ZipGenerator
 	files    domainExport.FileStore
-	jobs     *facilityservice.CopyJobManager
+	jobs     *facilityservice.FacilityJobManager
 	cfg      Config
 }
 
@@ -49,7 +49,7 @@ func NewService(
 	workbook domainExport.WorkbookGenerator,
 	zip domainExport.ZipGenerator,
 	files domainExport.FileStore,
-	jobs *facilityservice.CopyJobManager,
+	jobs *facilityservice.FacilityJobManager,
 	cfg Config,
 ) *Service {
 	if cfg.PageSize <= 0 || cfg.PageSize > 500 {
@@ -57,7 +57,7 @@ func NewService(
 	}
 	service := &Service{data: data, workbook: workbook, zip: zip, files: files, jobs: jobs, cfg: cfg}
 	if jobs != nil {
-		jobs.RegisterTask(fieldDeviceExportTask, service.run)
+		jobs.RegisterTask(fieldDeviceExportTask, facilityservice.FacilityJobHandlerFunc(service.run))
 	}
 	return service
 }
@@ -73,9 +73,9 @@ func (s *Service) Create(ctx context.Context, ownerID, operationID uuid.UUID, re
 	if err != nil {
 		return domainExport.Job{}, fmt.Errorf("encode export request: %w", err)
 	}
-	job, err := s.jobs.SubmitTask(ctx, facilityservice.CopyJob{
+	job, err := s.jobs.SubmitTask(ctx, facilityservice.FacilityJob{
 		ID: operationID, OwnerID: ownerID,
-		Kind:  facilityservice.CopyJobKindFieldDevice,
+		Kind:  facilityservice.FacilityJobKindFieldDevice,
 		Class: facilityservice.FacilityJobClassExport,
 		Type:  facilityservice.FacilityJobTypeExport,
 		Task:  fieldDeviceExportTask, Payload: payload,
@@ -97,7 +97,8 @@ func (s *Service) Get(_ context.Context, ownerID, id uuid.UUID) (domainExport.Jo
 	return s.toExportJob(job)
 }
 
-func (s *Service) run(ctx context.Context, job facilityservice.CopyJob, report func(facilityservice.FacilityJobProgress)) (facilityservice.FacilityJobTaskResult, error) {
+func (s *Service) run(ctx context.Context, execution facilityservice.FacilityJobExecution) (facilityservice.FacilityJobTaskResult, error) {
+	job, report := execution.Job, execution.Reporter.Report
 	var req domainExport.Request
 	if err := json.Unmarshal(job.Payload, &req); err != nil {
 		return facilityservice.FacilityJobTaskResult{}, fmt.Errorf("decode export request: %w", err)
@@ -194,9 +195,9 @@ func workbookShardNames(controllers []domainExport.Controller) []string {
 	return names
 }
 
-func (s *Service) toExportJob(job facilityservice.CopyJob) (domainExport.Job, error) {
+func (s *Service) toExportJob(job facilityservice.FacilityJob) (domainExport.Job, error) {
 	status := domainExport.Status(job.Status)
-	if job.Status == facilityservice.CopyJobStatusRunning {
+	if job.Status == facilityservice.FacilityJobStatusRunning {
 		status = domainExport.StatusProcessing
 	}
 	result := exportResult{}

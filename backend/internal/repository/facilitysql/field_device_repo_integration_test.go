@@ -73,14 +73,14 @@ func TestFieldDeviceRepo_DeleteAtVersionIsConditional(t *testing.T) {
 	})
 	stale := device.Version + 1
 
-	err := deleter.DeleteAtVersion(t.Context(), domainFacility.FieldDeviceDeleteCommand{ID: device.ID, BaseVersion: &stale})
+	err := deleter.DeleteAtVersion(t.Context(), domainFacility.FieldDeviceDeleteCommand{ID: device.ID, BaseVersion: domain.AggregateVersion(stale)})
 	if !errors.Is(err, domain.ErrConflict) {
 		t.Fatalf("stale delete error = %v", err)
 	}
 	if items, _ := repo.GetByIds(t.Context(), []uuid.UUID{device.ID}); len(items) != 1 {
 		t.Fatal("stale delete removed the field device")
 	}
-	if err := deleter.DeleteAtVersion(t.Context(), domainFacility.FieldDeviceDeleteCommand{ID: device.ID, BaseVersion: &device.Version}); err != nil {
+	if err := deleter.DeleteAtVersion(t.Context(), domainFacility.FieldDeviceDeleteCommand{ID: device.ID, BaseVersion: domain.AggregateVersion(device.Version)}); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -234,7 +234,6 @@ func TestFieldDeviceRepoUpdatePersistsEveryScalarRecordField(t *testing.T) {
 	initialVersion := fieldDevice.Version
 
 	updatedBMK := "FD-02"
-	specificationID := uuid.New()
 	fieldDevice.BMK = &updatedBMK
 	fieldDevice.Description = nil
 	fieldDevice.TextIndividuell = nil
@@ -242,7 +241,6 @@ func TestFieldDeviceRepoUpdatePersistsEveryScalarRecordField(t *testing.T) {
 	fieldDevice.SPSControllerSystemTypeID = uuid.New()
 	fieldDevice.SystemPartID = uuid.New()
 	fieldDevice.ApparatID = uuid.New()
-	fieldDevice.SpecificationID = &specificationID
 	if err := repo.Update(ctx, fieldDevice); err != nil {
 		t.Fatalf("update field device: %v", err)
 	}
@@ -263,9 +261,6 @@ func TestFieldDeviceRepoUpdatePersistsEveryScalarRecordField(t *testing.T) {
 	}
 	if stored.SPSControllerSystemTypeID != fieldDevice.SPSControllerSystemTypeID || stored.SystemPartID != fieldDevice.SystemPartID || stored.ApparatID != fieldDevice.ApparatID {
 		t.Fatalf("reference ids were not persisted: %+v", stored)
-	}
-	if stored.SpecificationID == nil || *stored.SpecificationID != specificationID {
-		t.Fatalf("specification id = %v, want %s", stored.SpecificationID, specificationID)
 	}
 }
 

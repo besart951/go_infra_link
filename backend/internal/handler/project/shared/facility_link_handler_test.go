@@ -21,30 +21,31 @@ import (
 
 func TestFacilityLinkHandlerStartCopyPersistsProjectCommand(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	manager := newDurableCopyJobManager(t)
+	manager := newDurableFacilityJobManager(t)
 
 	projectID := uuid.New()
 	actorID := uuid.New()
 	operationID := uuid.New()
 	sourceID := uuid.New()
-	received := make(chan domainproject.FacilityCopyJobPayload, 1)
-	manager.RegisterTask(domainproject.TaskCopyProjectControlCabinet, func(_ context.Context, job facilityservice.CopyJob, _ func(facilityservice.FacilityJobProgress)) (facilityservice.FacilityJobTaskResult, error) {
-		var payload domainproject.FacilityCopyJobPayload
+	received := make(chan domainproject.ProjectFacilityCopyCommand, 1)
+	manager.RegisterTask(domainproject.TaskCopyProjectControlCabinet, facilityservice.FacilityJobHandlerFunc(func(_ context.Context, execution facilityservice.FacilityJobExecution) (facilityservice.FacilityJobTaskResult, error) {
+		job := execution.Job
+		var payload domainproject.ProjectFacilityCopyCommand
 		if err := json.Unmarshal(job.Payload, &payload); err != nil {
 			return facilityservice.FacilityJobTaskResult{}, err
 		}
 		received <- payload
 		return facilityservice.FacilityJobTaskResult{}, nil
-	})
+	}))
 
 	handler := NewFacilityLinkHandler(nil, nil)
-	handler.ConfigureCopyJobs(manager)
+	handler.ConfigureFacilityJobs(manager)
 	c, recorder := copyRequestContext(projectID, operationID, actorID)
 
 	handler.StartCopy(c, ProjectCopyCommand{
 		ProjectID: projectID,
 		SourceID:  sourceID,
-		Kind:      facilityservice.CopyJobKindControlCabinet,
+		Kind:      facilityservice.FacilityJobKindControlCabinet,
 		Task:      domainproject.TaskCopyProjectControlCabinet,
 	})
 	if recorder.Code != http.StatusAccepted {
@@ -62,10 +63,10 @@ func TestFacilityLinkHandlerStartCopyPersistsProjectCommand(t *testing.T) {
 }
 
 func TestFacilityLinkHandlerRejectsCopyWithoutDurableStore(t *testing.T) {
-	manager := facilityservice.NewCopyJobManager(nil)
+	manager := facilityservice.NewFacilityJobManager(nil)
 	t.Cleanup(manager.Close)
 	handler := NewFacilityLinkHandler(nil, nil)
-	handler.ConfigureCopyJobs(manager)
+	handler.ConfigureFacilityJobs(manager)
 	c, recorder := copyRequestContext(uuid.New(), uuid.New(), uuid.New())
 
 	handler.StartCopy(c, ProjectCopyCommand{Task: domainproject.TaskCopyProjectControlCabinet})
@@ -74,13 +75,13 @@ func TestFacilityLinkHandlerRejectsCopyWithoutDurableStore(t *testing.T) {
 	}
 }
 
-func newDurableCopyJobManager(t *testing.T) *facilityservice.CopyJobManager {
+func newDurableFacilityJobManager(t *testing.T) *facilityservice.FacilityJobManager {
 	t.Helper()
 	db, err := gorm.Open(sqlite.Open(filepath.Join(t.TempDir(), "facility-jobs.db")), &gorm.Config{Logger: logger.Default.LogMode(logger.Silent)})
 	if err != nil {
 		t.Fatalf("open database: %v", err)
 	}
-	if err := facilityservice.MigrateCopyJobs(db); err != nil {
+	if err := facilityservice.MigrateFacilityJobs(db); err != nil {
 		t.Fatalf("migrate jobs: %v", err)
 	}
 	sqlDB, err := db.DB()
@@ -88,7 +89,7 @@ func newDurableCopyJobManager(t *testing.T) *facilityservice.CopyJobManager {
 		t.Fatalf("database handle: %v", err)
 	}
 	t.Cleanup(func() { _ = sqlDB.Close() })
-	manager := facilityservice.NewCopyJobManagerWithDB(nil, db)
+	manager := facilityservice.NewFacilityJobManagerWithDB(nil, db)
 	t.Cleanup(manager.Close)
 	return manager
 }
@@ -97,7 +98,7 @@ func copyRequestContext(projectID, operationID, actorID uuid.UUID) (*gin.Context
 	recorder := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(recorder)
 	request := httptest.NewRequest(http.MethodPost, "/projects/"+projectID.String()+"/copy", nil)
-	request.Header.Set("X-Copy-Operation-ID", operationID.String())
+	request.Header.Set("Idempotency-Key", operationID.String())
 	c.Request = request
 	c.Set(middleware.ContextUserIDKey, actorID)
 	return c, recorder

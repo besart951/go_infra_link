@@ -128,6 +128,7 @@ export class ProjectSettingsPageState {
     this.saving = true;
     try {
       const payload: UpdateProjectRequest = {
+        base_version: this.project.version,
         name: this.form.name.trim(),
         description: this.form.description.trim(),
         status: this.form.status,
@@ -161,7 +162,7 @@ export class ProjectSettingsPageState {
 
     this.saving = true;
     try {
-      await deleteProject(this.projectId);
+      await deleteProject(this.projectId, this.project.version);
       addToast(translate('projects.settings.deleted'), 'success');
       return true;
     } catch (error) {

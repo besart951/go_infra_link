@@ -27,11 +27,12 @@ import type {
   MultiCreateFieldDeviceResponse,
   ObjectDataListParams,
   SPSController,
-  CopyJob
+  FacilityJob
 } from '$lib/domain/facility/index.js';
-import { toCopyJob } from '$lib/domain/facility/copy-job.js';
+import { toFacilityJob } from '$lib/domain/facility/facility-job.js';
 import { api } from '$lib/api/client.js';
 import { apiClient } from '$lib/api/generated/client.js';
+import { versionedDeletePath, versionedProjectLinkDeletePath } from './versionedMutation.js';
 
 function buildQuery(params: Record<string, string | number | boolean | undefined>): string {
   const searchParams = new URLSearchParams();
@@ -108,11 +109,8 @@ export const projectRepository: ProjectRepository = {
     });
   },
 
-  async delete(id: string, signal?: AbortSignal): Promise<void> {
-    await apiClient.DELETE('/api/v1/projects/{id}', {
-      params: { path: { id } },
-      signal
-    });
+  async delete(command, signal?: AbortSignal): Promise<void> {
+    await api<void>(versionedDeletePath('/projects', command), { method: 'DELETE', signal });
   },
 
   // ──────────────────────────────────────────────────────────────────────
@@ -210,13 +208,9 @@ export const projectRepository: ProjectRepository = {
     });
   },
 
-  async removeControlCabinet(
-    projectId: string,
-    linkId: string,
-    signal?: AbortSignal
-  ): Promise<void> {
-    await apiClient.DELETE('/api/v1/projects/{id}/control-cabinets/{linkId}', {
-      params: { path: { id: projectId, linkId } },
+  async removeControlCabinet(command, signal?: AbortSignal): Promise<void> {
+    await api<void>(versionedProjectLinkDeletePath('control-cabinets', command), {
+      method: 'DELETE',
       signal
     });
   },
@@ -226,13 +220,13 @@ export const projectRepository: ProjectRepository = {
     controlCabinetId: string,
     operationId: string,
     signal?: AbortSignal
-  ): Promise<CopyJob> {
+  ): Promise<FacilityJob> {
     const { data } = await apiClient.POST(
       '/api/v1/projects/{id}/control-cabinets/{controlCabinetId}/copy',
       {
         params: {
           path: { id: projectId, controlCabinetId },
-          header: { 'X-Copy-Operation-ID': operationId }
+          header: { 'Idempotency-Key': operationId }
         },
         signal
       }
@@ -240,7 +234,7 @@ export const projectRepository: ProjectRepository = {
     if (!data) {
       throw new Error('Copy job response is empty');
     }
-    return toCopyJob(data);
+    return toFacilityJob(data);
   },
 
   // ──────────────────────────────────────────────────────────────────────
@@ -270,13 +264,9 @@ export const projectRepository: ProjectRepository = {
     });
   },
 
-  async removeSPSController(
-    projectId: string,
-    linkId: string,
-    signal?: AbortSignal
-  ): Promise<void> {
-    await apiClient.DELETE('/api/v1/projects/{id}/sps-controllers/{linkId}', {
-      params: { path: { id: projectId, linkId } },
+  async removeSPSController(command, signal?: AbortSignal): Promise<void> {
+    await api<void>(versionedProjectLinkDeletePath('sps-controllers', command), {
+      method: 'DELETE',
       signal
     });
   },
@@ -286,13 +276,13 @@ export const projectRepository: ProjectRepository = {
     spsControllerId: string,
     operationId: string,
     signal?: AbortSignal
-  ): Promise<CopyJob> {
+  ): Promise<FacilityJob> {
     const { data } = await apiClient.POST(
       '/api/v1/projects/{id}/sps-controllers/{spsControllerId}/copy',
       {
         params: {
           path: { id: projectId, spsControllerId },
-          header: { 'X-Copy-Operation-ID': operationId }
+          header: { 'Idempotency-Key': operationId }
         },
         signal
       }
@@ -300,7 +290,7 @@ export const projectRepository: ProjectRepository = {
     if (!data) {
       throw new Error('Copy job response is empty');
     }
-    return toCopyJob(data);
+    return toFacilityJob(data);
   },
 
   // ──────────────────────────────────────────────────────────────────────
@@ -360,9 +350,9 @@ export const projectRepository: ProjectRepository = {
     );
   },
 
-  async removeFieldDevice(projectId: string, linkId: string, signal?: AbortSignal): Promise<void> {
-    await apiClient.DELETE('/api/v1/projects/{id}/field-devices/{linkId}', {
-      params: { path: { id: projectId, linkId } },
+  async removeFieldDevice(command, signal?: AbortSignal): Promise<void> {
+    await api<void>(versionedProjectLinkDeletePath('field-devices', command), {
+      method: 'DELETE',
       signal
     });
   }

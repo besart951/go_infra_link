@@ -1,4 +1,4 @@
-import type { CrudRepository } from '$lib/domain/ports/crudRepository.js';
+import type { CrudRepository, VersionedDeleteCommand } from '$lib/domain/ports/crudRepository.js';
 
 /**
  * Generic use case for creating, updating, and deleting entities.
@@ -18,8 +18,8 @@ export class ManageEntityUseCase<T, C, U> {
     return this.repository.update(id, data, signal);
   }
 
-  async delete(id: string, signal?: AbortSignal): Promise<void> {
-    return this.repository.delete(id, signal);
+  async delete(command: VersionedDeleteCommand, signal?: AbortSignal): Promise<void> {
+    return this.repository.delete(command, signal);
   }
 
   async get(id: string, signal?: AbortSignal): Promise<T> {

@@ -9,6 +9,7 @@ import type {
   UpdateAlarmTypeRequest
 } from '$lib/domain/facility/index.js';
 import { api } from '$lib/api/client.js';
+import { versionedDeletePath } from './versionedMutation.js';
 
 export const alarmTypeRepository: AlarmTypeRepository = {
   async list(params = {}, signal?: AbortSignal) {
@@ -53,8 +54,8 @@ export const alarmTypeRepository: AlarmTypeRepository = {
     });
   },
 
-  async delete(id: string, signal?: AbortSignal): Promise<void> {
-    return api<void>(`/facility/alarm-types/${id}`, {
+  async delete(command, signal?: AbortSignal): Promise<void> {
+    return api<void>(versionedDeletePath('/facility/alarm-types', command), {
       method: 'DELETE',
       signal
     });
@@ -84,8 +85,8 @@ export const alarmTypeRepository: AlarmTypeRepository = {
     });
   },
 
-  async deleteField(id: string, signal?: AbortSignal): Promise<void> {
-    return api<void>(`/facility/alarm-type-fields/${id}`, {
+  async deleteField(command, signal?: AbortSignal): Promise<void> {
+    return api<void>(versionedDeletePath('/facility/alarm-type-fields', command), {
       method: 'DELETE',
       signal
     });

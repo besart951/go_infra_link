@@ -7,6 +7,7 @@ function context(name: string, permissions = ['project.fielddevice.read']): Proj
   return {
     project: {
       id: projectId,
+      version: 1,
       name,
       description: '',
       status: 'planned',

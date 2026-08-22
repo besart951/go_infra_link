@@ -68,6 +68,7 @@
     try {
       if (initialData) {
         const res = await manageNotificationClass.update(initialData.id, {
+          base_version: initialData.version,
           event_category,
           nc,
           object_description,

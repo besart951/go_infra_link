@@ -18,6 +18,7 @@ type CreateObjectDataRequest struct {
 }
 
 type UpdateObjectDataRequest struct {
+	BaseVersion   uint64               `json:"base_version" binding:"required,min=1"`
 	Description   *string              `json:"description"`
 	Version       *string              `json:"version"`
 	IsActive      *bool                `json:"is_active"`
@@ -28,6 +29,7 @@ type UpdateObjectDataRequest struct {
 
 type ObjectDataResponse struct {
 	ID            uuid.UUID              `json:"id"`
+	Revision      uint64                 `json:"revision"`
 	Description   string                 `json:"description"`
 	Version       string                 `json:"version"`
 	IsActive      bool                   `json:"is_active"`

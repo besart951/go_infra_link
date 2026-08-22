@@ -1,0 +1,45 @@
+services:
+  facility-benchmark-db:
+    image: postgres:18.3
+    shm_size: 2gb
+    environment:
+      POSTGRES_DB: go_infra_link_benchmark
+      POSTGRES_USER: benchmark
+      POSTGRES_PASSWORD: benchmark
+    command:
+      - postgres
+      - -c
+      - shared_buffers=2GB
+      - -c
+      - effective_cache_size=6GB
+      - -c
+      - work_mem=32MB
+      - -c
+      - maintenance_work_mem=1GB
+      - -c
+      - random_page_cost=1.1
+      - -c
+      - track_io_timing=on
+      - -c
+      - jit=off
+      - -c
+      - fsync=on
+      - -c
+      - synchronous_commit=on
+    ports:
+      - "55433:5432"
+    deploy:
+      resources:
+        limits:
+          cpus: "4"
+          memory: 8G
+    volumes:
+      - facility_benchmark_pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U benchmark -d go_infra_link_benchmark"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  facility_benchmark_pgdata:

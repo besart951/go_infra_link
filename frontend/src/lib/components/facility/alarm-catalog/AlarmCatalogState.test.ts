@@ -16,6 +16,7 @@ vi.mock('$lib/infrastructure/api/bacnetReferenceUsageRepository.js', () => ({
 
 const unit: Unit = {
   id: 'unit-1',
+  version: 1,
   code: 'C',
   symbol: '°C',
   name: 'Celsius'
@@ -23,6 +24,7 @@ const unit: Unit = {
 
 const field: AlarmField = {
   id: 'field-1',
+  version: 1,
   key: 'temperature',
   label: 'Temperature',
   data_type: 'number',
@@ -32,6 +34,7 @@ const field: AlarmField = {
 function alarmType(id: string, code: string): AlarmType {
   return {
     id,
+    version: 1,
     code,
     name: code,
     created_at: '2026-01-01T00:00:00Z',
@@ -42,6 +45,7 @@ function alarmType(id: string, code: string): AlarmType {
 function mapping(id: string, alarmTypeId: string): AlarmTypeField {
   return {
     id,
+    version: 1,
     alarm_type_id: alarmTypeId,
     alarm_field_id: field.id,
     alarm_field: field,
@@ -172,10 +176,11 @@ describe('AlarmCatalogState', () => {
   it('deletes mapping and reloads mappings for current selected type', async () => {
     const { state, toast, typeRepository } = createState();
     state.selectedTypeId = 'type-2';
+    state.typeFields = [mapping('mapping-2', 'type-2')];
 
     await state.deleteMapping('mapping-2');
 
-    expect(typeRepository.deleteField).toHaveBeenCalledWith('mapping-2');
+    expect(typeRepository.deleteField).toHaveBeenCalledWith({ id: 'mapping-2', base_version: 1 });
     expect(typeRepository.getWithFields).toHaveBeenCalledWith('type-2');
     expect(toast).toHaveBeenCalledWith(
       't:facility.alarm_catalog_page.toasts.mapping_deleted',
@@ -184,8 +189,9 @@ describe('AlarmCatalogState', () => {
   });
 
   it('deleting selected type clears selection before reload selects next available type', async () => {
-    const { state, type2, typeRepository } = createState();
+    const { state, type1, type2, typeRepository } = createState();
     state.selectedTypeId = 'type-1';
+    state.types = [type1, type2];
     vi.mocked(typeRepository.list).mockResolvedValueOnce({
       items: [type2],
       total: 1,
@@ -195,7 +201,7 @@ describe('AlarmCatalogState', () => {
 
     await state.deleteType('type-1');
 
-    expect(typeRepository.delete).toHaveBeenCalledWith('type-1');
+    expect(typeRepository.delete).toHaveBeenCalledWith({ id: 'type-1', base_version: 1 });
     expect(state.selectedTypeId).toBe('type-2');
     expect(typeRepository.getWithFields).toHaveBeenCalledWith('type-2');
   });
@@ -217,13 +223,18 @@ describe('AlarmCatalogState', () => {
   it('updates existing catalog entries instead of creating duplicates', async () => {
     const { state, fieldRepository, type1, typeRepository, unitRepository } = createState();
 
+    state.units = [unit];
+    state.fields = [field];
+    state.types = [type1];
+
     state.editUnit(unit);
     state.unitForm.name = 'Celsius updated';
     await state.createUnit();
     expect(unitRepository.update).toHaveBeenCalledWith(unit.id, {
       code: 'C',
       symbol: '°C',
-      name: 'Celsius updated'
+      name: 'Celsius updated',
+      base_version: 1
     });
     expect(unitRepository.create).not.toHaveBeenCalled();
 
@@ -234,19 +245,24 @@ describe('AlarmCatalogState', () => {
       key: 'temperature',
       label: 'Temperature updated',
       data_type: 'number',
-      default_unit_code: 'C'
+      default_unit_code: 'C',
+      base_version: 1
     });
 
     state.editType(type1);
     state.typeForm.name = 'Type updated';
     await state.createType();
-    expect(typeRepository.update).toHaveBeenCalledWith(type1.id, { name: 'Type updated' });
+    expect(typeRepository.update).toHaveBeenCalledWith(type1.id, {
+      name: 'Type updated',
+      base_version: 1
+    });
   });
 
   it('updates an existing mapping without allowing its alarm field to change', async () => {
     const { state, typeRepository } = createState();
     state.selectedTypeId = 'type-1';
     const existing = mapping('mapping-1', 'type-1');
+    state.typeFields = [existing];
     state.editMapping(existing);
     state.mapForm.display_order = 7;
     state.mapForm.ui_group = 'limits';
@@ -258,7 +274,8 @@ describe('AlarmCatalogState', () => {
       is_required: true,
       is_user_editable: true,
       ui_group: 'limits',
-      default_unit_id: undefined
+      default_unit_id: undefined,
+      base_version: 1
     });
     expect(typeRepository.createField).not.toHaveBeenCalled();
   });

@@ -58,6 +58,7 @@
     await formState.handleSubmit(async () => {
       if (initialData) {
         return await manageApparat.update(initialData.id, {
+          base_version: initialData.version,
           short_name: trimmedShortName,
           name,
           description: description || undefined,

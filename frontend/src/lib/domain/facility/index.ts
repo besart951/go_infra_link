@@ -13,5 +13,5 @@ export * from './fieldDeviceMultiCreate.js';
 export * from './field-device-export.js';
 export * from './alarm-type.js';
 export * from './bacnet-reference-usage.js';
-export * from './copy-job.js';
+export * from './facility-job.js';
 export * from './delete-impact.js';

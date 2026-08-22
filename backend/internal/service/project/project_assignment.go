@@ -43,6 +43,13 @@ type projectAssignmentTarget struct {
 	id   uuid.UUID
 }
 
+type projectAssignmentUpdate struct {
+	linkID      uuid.UUID
+	projectID   uuid.UUID
+	target      projectAssignmentTarget
+	baseVersion domain.AggregateVersion
+}
+
 type projectAssignmentResult struct {
 	controlCabinet *domainProject.ProjectControlCabinet
 	spsController  *domainProject.ProjectSPSController
@@ -78,40 +85,43 @@ func (a projectAssignment) assignFieldDevice(ctx context.Context, projectID, fie
 	return result.fieldDevice, nil
 }
 
-func (a projectAssignment) updateControlCabinet(ctx context.Context, linkID, projectID, controlCabinetID uuid.UUID, baseVersion ...uint64) (*domainProject.ProjectControlCabinet, error) {
-	result, err := a.update(ctx, linkID, projectID, projectAssignmentTarget{kind: projectAssignmentControlCabinet, id: controlCabinetID}, baseVersion...)
+func (a projectAssignment) updateControlCabinet(ctx context.Context, command projectAssignmentUpdate) (*domainProject.ProjectControlCabinet, error) {
+	command.target.kind = projectAssignmentControlCabinet
+	result, err := a.update(ctx, command)
 	if err != nil {
 		return nil, err
 	}
 	return result.controlCabinet, nil
 }
 
-func (a projectAssignment) updateSPSController(ctx context.Context, linkID, projectID, spsControllerID uuid.UUID, baseVersion ...uint64) (*domainProject.ProjectSPSController, error) {
-	result, err := a.update(ctx, linkID, projectID, projectAssignmentTarget{kind: projectAssignmentSPSController, id: spsControllerID}, baseVersion...)
+func (a projectAssignment) updateSPSController(ctx context.Context, command projectAssignmentUpdate) (*domainProject.ProjectSPSController, error) {
+	command.target.kind = projectAssignmentSPSController
+	result, err := a.update(ctx, command)
 	if err != nil {
 		return nil, err
 	}
 	return result.spsController, nil
 }
 
-func (a projectAssignment) updateFieldDevice(ctx context.Context, linkID, projectID, fieldDeviceID uuid.UUID, baseVersion ...uint64) (*domainProject.ProjectFieldDevice, error) {
-	result, err := a.update(ctx, linkID, projectID, projectAssignmentTarget{kind: projectAssignmentFieldDevice, id: fieldDeviceID}, baseVersion...)
+func (a projectAssignment) updateFieldDevice(ctx context.Context, command projectAssignmentUpdate) (*domainProject.ProjectFieldDevice, error) {
+	command.target.kind = projectAssignmentFieldDevice
+	result, err := a.update(ctx, command)
 	if err != nil {
 		return nil, err
 	}
 	return result.fieldDevice, nil
 }
 
-func (a projectAssignment) removeControlCabinet(ctx context.Context, linkID, projectID uuid.UUID) error {
-	return a.remove(ctx, linkID, projectID, projectAssignmentControlCabinet)
+func (a projectAssignment) removeControlCabinet(ctx context.Context, linkID, projectID uuid.UUID, baseVersion uint64) error {
+	return a.remove(ctx, linkID, projectID, projectAssignmentControlCabinet, baseVersion)
 }
 
-func (a projectAssignment) removeSPSController(ctx context.Context, linkID, projectID uuid.UUID) error {
-	return a.remove(ctx, linkID, projectID, projectAssignmentSPSController)
+func (a projectAssignment) removeSPSController(ctx context.Context, linkID, projectID uuid.UUID, baseVersion uint64) error {
+	return a.remove(ctx, linkID, projectID, projectAssignmentSPSController, baseVersion)
 }
 
-func (a projectAssignment) removeFieldDevice(ctx context.Context, linkID, projectID uuid.UUID) error {
-	return a.remove(ctx, linkID, projectID, projectAssignmentFieldDevice)
+func (a projectAssignment) removeFieldDevice(ctx context.Context, linkID, projectID uuid.UUID, baseVersion uint64) error {
+	return a.remove(ctx, linkID, projectID, projectAssignmentFieldDevice, baseVersion)
 }
 
 func (s *ProjectFacilityLinkService) assignments() projectAssignment {
@@ -169,7 +179,8 @@ func (a projectAssignment) assign(ctx context.Context, projectID uuid.UUID, targ
 	}
 }
 
-func (a projectAssignment) update(ctx context.Context, linkID, projectID uuid.UUID, target projectAssignmentTarget, baseVersion ...uint64) (*projectAssignmentResult, error) {
+func (a projectAssignment) update(ctx context.Context, command projectAssignmentUpdate) (*projectAssignmentResult, error) {
+	linkID, projectID, target := command.linkID, command.projectID, command.target
 	switch target.kind {
 	case projectAssignmentControlCabinet:
 		entity, err := domain.GetByID(ctx, a.deps.projectControlCabinetRepo, linkID)
@@ -179,7 +190,7 @@ func (a projectAssignment) update(ctx context.Context, linkID, projectID uuid.UU
 		if entity.ProjectID != projectID {
 			return nil, domain.ErrNotFound
 		}
-		if len(baseVersion) > 0 && entity.Version != baseVersion[0] {
+		if entity.Version != command.baseVersion.Uint64() {
 			return nil, domain.ErrConflict
 		}
 		entity.ControlCabinetID = target.id
@@ -198,7 +209,7 @@ func (a projectAssignment) update(ctx context.Context, linkID, projectID uuid.UU
 		if entity.ProjectID != projectID {
 			return nil, domain.ErrNotFound
 		}
-		if len(baseVersion) > 0 && entity.Version != baseVersion[0] {
+		if entity.Version != command.baseVersion.Uint64() {
 			return nil, domain.ErrConflict
 		}
 		entity.SPSControllerID = target.id
@@ -217,7 +228,7 @@ func (a projectAssignment) update(ctx context.Context, linkID, projectID uuid.UU
 		if entity.ProjectID != projectID {
 			return nil, domain.ErrNotFound
 		}
-		if len(baseVersion) > 0 && entity.Version != baseVersion[0] {
+		if entity.Version != command.baseVersion.Uint64() {
 			return nil, domain.ErrConflict
 		}
 		entity.FieldDeviceID = target.id
@@ -230,7 +241,10 @@ func (a projectAssignment) update(ctx context.Context, linkID, projectID uuid.UU
 	}
 }
 
-func (a projectAssignment) remove(ctx context.Context, linkID, projectID uuid.UUID, kind projectAssignmentKind) error {
+func (a projectAssignment) remove(ctx context.Context, linkID, projectID uuid.UUID, kind projectAssignmentKind, baseVersion uint64) error {
+	if err := a.lockLinkVersion(ctx, kind, linkID, baseVersion); err != nil {
+		return err
+	}
 	switch kind {
 	case projectAssignmentControlCabinet:
 		entity, err := domain.GetByID(ctx, a.deps.projectControlCabinetRepo, linkID)
@@ -309,6 +323,19 @@ func (a projectAssignment) remove(ctx context.Context, linkID, projectID uuid.UU
 			return err
 		}
 		return a.deleteFieldDevicesWithChildren(ctx, []uuid.UUID{fieldDeviceID})
+	default:
+		return domain.ErrInvalidArgument
+	}
+}
+
+func (a projectAssignment) lockLinkVersion(ctx context.Context, kind projectAssignmentKind, id uuid.UUID, version uint64) error {
+	switch kind {
+	case projectAssignmentControlCabinet:
+		return lockAggregateVersion(ctx, a.deps.projectControlCabinetRepo, id, version)
+	case projectAssignmentSPSController:
+		return lockAggregateVersion(ctx, a.deps.projectSPSControllerRepo, id, version)
+	case projectAssignmentFieldDevice:
+		return lockAggregateVersion(ctx, a.deps.projectFieldDeviceRepo, id, version)
 	default:
 		return domain.ErrInvalidArgument
 	}

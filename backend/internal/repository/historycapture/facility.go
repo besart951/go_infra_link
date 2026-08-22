@@ -190,6 +190,24 @@ type FieldDeviceStore struct {
 	store *historysql.Store
 }
 
+func (r *FieldDeviceStore) LockNumberSwapRows(ctx context.Context, ids []uuid.UUID) ([]*domainFacility.FieldDevice, error) {
+	store, ok := r.FieldDeviceStore.(interface {
+		LockNumberSwapRows(context.Context, []uuid.UUID) ([]*domainFacility.FieldDevice, error)
+	})
+	if !ok {
+		return nil, domain.ErrInvalidArgument
+	}
+	return store.LockNumberSwapRows(ctx, ids)
+}
+
+func (r *FieldDeviceStore) DeferNumberConstraint(ctx context.Context) error {
+	store, ok := r.FieldDeviceStore.(interface{ DeferNumberConstraint(context.Context) error })
+	if !ok {
+		return domain.ErrInvalidArgument
+	}
+	return store.DeferNumberConstraint(ctx)
+}
+
 func WrapFieldDevice(next domainFieldDevice.FieldDeviceStore, store *historysql.Store) domainFieldDevice.FieldDeviceStore {
 	return &FieldDeviceStore{FieldDeviceStore: next, audit: newAudit[domainFacility.FieldDevice]("field_devices", store), store: store}
 }

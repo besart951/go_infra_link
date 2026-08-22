@@ -15,12 +15,12 @@ type ObjectDataHandler struct {
 	service        ObjectDataService
 	bacnetService  BacnetObjectService
 	apparatService ApparatService
-	copyJobs       *facilityservice.CopyJobManager
+	facilityJobs   *facilityservice.FacilityJobManager
 }
 
-func NewObjectDataHandlerWithCopyJobs(service ObjectDataService, bacnetService BacnetObjectService, apparatService ApparatService, copyJobs *facilityservice.CopyJobManager) *ObjectDataHandler {
+func NewObjectDataHandlerWithFacilityJobs(service ObjectDataService, bacnetService BacnetObjectService, apparatService ApparatService, facilityJobs *facilityservice.FacilityJobManager) *ObjectDataHandler {
 	handler := NewObjectDataHandler(service, bacnetService, apparatService)
-	handler.copyJobs = copyJobs
+	handler.facilityJobs = facilityJobs
 	return handler
 }
 
@@ -101,7 +101,7 @@ func (h *ObjectDataHandler) CopyObjectData(c *gin.Context) {
 	if !ok {
 		return
 	}
-	startPersistedFacilityCopyJob(c, h.copyJobs, facilityservice.CopyJobKindObjectData, id)
+	enqueueFacilityCopy(c, h.facilityJobs, facilityservice.FacilityJobKindObjectData, id)
 }
 
 // ListObjectData godoc
@@ -214,6 +214,7 @@ func (h *ObjectDataHandler) UpdateObjectData(c *gin.Context) {
 // @Tags facility-object-data
 // @Produce json
 // @Param id path string true "Object Data ID"
+// @Param base_version query integer true "Expected aggregate revision" minimum(1)
 // @Success 204
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
@@ -223,8 +224,12 @@ func (h *ObjectDataHandler) DeleteObjectData(c *gin.Context) {
 	if !ok {
 		return
 	}
+	version, ok := parseRequiredBaseVersion(c)
+	if !ok {
+		return
+	}
 
-	if err := h.service.DeleteByID(c.Request.Context(), id); err != nil {
+	if err := deleteAtVersion(c.Request.Context(), h.service, id, version); err != nil {
 		respondLocalizedDomainError(c, err, "deletion_failed", "facility.deletion_failed",
 			localizedNotFound("facility.object_data_not_found"),
 			localizedBacnetReferenceInUse(),

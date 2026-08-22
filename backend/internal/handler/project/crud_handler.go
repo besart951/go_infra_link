@@ -230,10 +230,7 @@ func (h *ProjectHandler) UpdateProject(c *gin.Context) {
 		)
 		return
 	}
-	baseVersion := proj.Version
-	if req.BaseVersion != nil {
-		baseVersion = *req.BaseVersion
-	}
+	baseVersion := req.BaseVersion
 
 	ApplyProjectUpdate(proj, req)
 
@@ -263,6 +260,7 @@ func (h *ProjectHandler) UpdateProject(c *gin.Context) {
 // @Tags projects
 // @Produce json
 // @Param id path string true "Project ID"
+// @Param base_version query integer true "Expected aggregate version" minimum(1)
 // @Success 204
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
@@ -276,11 +274,16 @@ func (h *ProjectHandler) DeleteProject(c *gin.Context) {
 	if !projectshared.EnsureProjectAccessAndPermission(c, h.access, id, domainUser.PermissionProjectDelete) {
 		return
 	}
+	version, ok := projectshared.RequiredBaseVersion(c)
+	if !ok {
+		return
+	}
 
-	if err := h.lifecycle.DeleteByID(c.Request.Context(), id); err != nil {
+	if err := h.lifecycle.DeleteAtVersion(c.Request.Context(), id, version.Uint64()); err != nil {
 		handlerutil.RespondDomainError(c, err,
 			handlerutil.LocalizedError(http.StatusInternalServerError, "deletion_failed", "project.deletion_failed"),
 			handlerutil.MapError(domain.ErrNotFound, handlerutil.LocalizedError(http.StatusNotFound, "not_found", "project.project_not_found")),
+			handlerutil.MapError(domain.ErrConflict, handlerutil.LocalizedError(http.StatusConflict, "write_conflict", "errors.write_conflict")),
 		)
 		return
 	}

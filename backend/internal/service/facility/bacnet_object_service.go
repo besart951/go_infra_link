@@ -11,13 +11,14 @@ import (
 )
 
 type BacnetObjectService struct {
-	repo                  domainObjectData.BacnetObjectStore
-	fieldDeviceRepo       domainFieldDevice.FieldDeviceStore
-	objectDataRepo        domainObjectData.ObjectDataStore
-	objectDataBacnetStore domainObjectData.ObjectDataBacnetObjectStore
-	alarmDefinitionRepo   domainFacility.AlarmDefinitionRepository
-	alarmTypeRepo         domainFacility.AlarmTypeRepository
-	tx                    txCoordinator
+	repo                domainObjectData.BacnetObjectStore
+	fieldDeviceRepo     domainFieldDevice.FieldDeviceStore
+	objectDataRepo      domainObjectData.ObjectDataStore
+	templateStore       domainObjectData.BacnetObjectTemplateStore
+	alarmValueRepo      domainFacility.BacnetObjectAlarmValueRepository
+	alarmDefinitionRepo domainFacility.AlarmDefinitionRepository
+	alarmTypeRepo       domainFacility.AlarmTypeRepository
+	tx                  txCoordinator
 }
 
 func (s *BacnetObjectService) resolveAlarmBindingForTemplate(ctx context.Context, bacnetObject *domainFacility.BacnetObject) error {
@@ -44,22 +45,82 @@ func (s *BacnetObjectService) validateRequiredFields(bacnetObject *domainFacilit
 	return bacnetObject.Validate(prefix)
 }
 
-func NewBacnetObjectService(
-	repo domainObjectData.BacnetObjectStore,
-	fieldDeviceRepo domainFieldDevice.FieldDeviceStore,
-	objectDataRepo domainObjectData.ObjectDataStore,
-	objectDataBacnetStore domainObjectData.ObjectDataBacnetObjectStore,
-	alarmDefinitionRepo domainFacility.AlarmDefinitionRepository,
-	alarmTypeRepo domainFacility.AlarmTypeRepository,
-) *BacnetObjectService {
+type BacnetObjectDependencies struct {
+	Objects          domainObjectData.BacnetObjectStore
+	FieldDevices     domainFieldDevice.FieldDeviceStore
+	ObjectData       domainObjectData.ObjectDataStore
+	Templates        domainObjectData.BacnetObjectTemplateStore
+	AlarmValues      domainFacility.BacnetObjectAlarmValueRepository
+	AlarmDefinitions domainFacility.AlarmDefinitionRepository
+	AlarmTypes       domainFacility.AlarmTypeRepository
+}
+
+func NewBacnetObjectService(deps BacnetObjectDependencies) *BacnetObjectService {
 	return &BacnetObjectService{
-		repo:                  repo,
-		fieldDeviceRepo:       fieldDeviceRepo,
-		objectDataRepo:        objectDataRepo,
-		objectDataBacnetStore: objectDataBacnetStore,
-		alarmDefinitionRepo:   alarmDefinitionRepo,
-		alarmTypeRepo:         alarmTypeRepo,
+		repo:                deps.Objects,
+		fieldDeviceRepo:     deps.FieldDevices,
+		objectDataRepo:      deps.ObjectData,
+		templateStore:       deps.Templates,
+		alarmValueRepo:      deps.AlarmValues,
+		alarmDefinitionRepo: deps.AlarmDefinitions,
+		alarmTypeRepo:       deps.AlarmTypes,
 	}
+}
+
+func (s *BacnetObjectService) ReplaceAlarmValues(ctx context.Context, id uuid.UUID, version uint64, values []domainFacility.BacnetObjectAlarmValue) (uint64, error) {
+	return runWithFacilityTxResult(ctx, s.transaction(), func(txCtx context.Context, txService *BacnetObjectService) (uint64, error) {
+		return txService.replaceAlarmValues(txCtx, id, version, values)
+	})
+}
+
+func (s *BacnetObjectService) replaceAlarmValues(ctx context.Context, id uuid.UUID, version uint64, values []domainFacility.BacnetObjectAlarmValue) (uint64, error) {
+	if id == uuid.Nil || version == 0 {
+		return 0, domain.ErrInvalidArgument
+	}
+	instances, err := s.repo.GetByIds(ctx, []uuid.UUID{id})
+	if err != nil {
+		return 0, err
+	}
+	if len(instances) > 0 {
+		return s.replaceInstanceAlarmValues(ctx, instances[0], version, values)
+	}
+	return s.replaceTemplateAlarmValues(ctx, id, version, values)
+}
+
+func (s *BacnetObjectService) replaceInstanceAlarmValues(ctx context.Context, object *domainFacility.BacnetObject, version uint64, values []domainFacility.BacnetObjectAlarmValue) (uint64, error) {
+	object.Version = version
+	if err := s.repo.Update(ctx, object); err != nil {
+		return 0, err
+	}
+	if err := s.alarmValueRepo.ReplaceForBacnetObject(ctx, object.ID, values); err != nil {
+		return 0, err
+	}
+	return object.Version, nil
+}
+
+func (s *BacnetObjectService) replaceTemplateAlarmValues(ctx context.Context, id uuid.UUID, version uint64, values []domainFacility.BacnetObjectAlarmValue) (uint64, error) {
+	template, err := s.templateStore.GetByID(ctx, id)
+	if err != nil {
+		return 0, err
+	}
+	template.Version = version
+	template.AlarmValues = templateAlarmValues(id, values)
+	if err := s.templateStore.Update(ctx, template); err != nil {
+		return 0, err
+	}
+	return template.Version, nil
+}
+
+func templateAlarmValues(templateID uuid.UUID, values []domainFacility.BacnetObjectAlarmValue) []domainObjectData.BacnetObjectTemplateAlarmValue {
+	result := make([]domainObjectData.BacnetObjectTemplateAlarmValue, len(values))
+	for index, value := range values {
+		result[index] = domainObjectData.BacnetObjectTemplateAlarmValue{
+			ID: value.ID, TemplateID: templateID, AlarmTypeFieldID: value.AlarmTypeFieldID,
+			ValueNumber: value.ValueNumber, ValueInteger: value.ValueInteger, ValueBoolean: value.ValueBoolean,
+			ValueString: value.ValueString, ValueJSON: value.ValueJSON, UnitID: value.UnitID, Source: value.Source,
+		}
+	}
+	return result
 }
 
 func (s *BacnetObjectService) bindTransactions(tx txCoordinator) {
@@ -74,20 +135,48 @@ func (s *BacnetObjectService) transaction() facilityTx[*BacnetObjectService] {
 
 func (s *BacnetObjectService) objectDataTemplate() objectDataTemplate {
 	return objectDataTemplate{
-		objectDataRepo:        s.objectDataRepo,
-		bacnetObjectRepo:      s.repo,
-		objectDataBacnetStore: s.objectDataBacnetStore,
-		alarmDefinitionRepo:   s.alarmDefinitionRepo,
-		alarmTypeRepo:         s.alarmTypeRepo,
+		objectDataRepo:      s.objectDataRepo,
+		templateStore:       s.templateStore,
+		alarmDefinitionRepo: s.alarmDefinitionRepo,
+		alarmTypeRepo:       s.alarmTypeRepo,
 	}
 }
 
 func (s *BacnetObjectService) GetByID(ctx context.Context, id uuid.UUID) (*domainFacility.BacnetObject, error) {
-	return domain.GetByID(ctx, s.repo, id)
+	items, err := s.repo.GetByIds(ctx, []uuid.UUID{id})
+	if err == nil && len(items) > 0 {
+		return items[0], nil
+	}
+	template, templateErr := s.templateStore.GetByID(ctx, id)
+	if templateErr != nil {
+		return nil, templateErr
+	}
+	return templateToBacnetObject(*template), nil
 }
 
 func (s *BacnetObjectService) GetByIDs(ctx context.Context, ids []uuid.UUID) ([]*domainFacility.BacnetObject, error) {
-	return s.repo.GetByIds(ctx, ids)
+	instances, err := s.repo.GetByIds(ctx, ids)
+	if err != nil {
+		return nil, err
+	}
+	found := make(map[uuid.UUID]struct{}, len(instances))
+	for _, item := range instances {
+		found[item.ID] = struct{}{}
+	}
+	missing := make([]uuid.UUID, 0, len(ids)-len(found))
+	for _, id := range ids {
+		if _, ok := found[id]; !ok {
+			missing = append(missing, id)
+		}
+	}
+	templates, err := s.templateStore.GetByIDs(ctx, missing)
+	if err != nil {
+		return nil, err
+	}
+	for _, template := range templates {
+		instances = append(instances, templateToBacnetObject(template))
+	}
+	return instances, nil
 }
 
 func (s *BacnetObjectService) DeleteByID(ctx context.Context, id uuid.UUID) error {
@@ -98,6 +187,26 @@ func (s *BacnetObjectService) DeleteByID(ctx context.Context, id uuid.UUID) erro
 		return err
 	}
 	return s.repo.DeleteByIds(ctx, []uuid.UUID{id})
+}
+
+func (s *BacnetObjectService) DeleteAtVersion(ctx context.Context, id uuid.UUID, version uint64) error {
+	if id == uuid.Nil || version == 0 {
+		return domain.ErrInvalidArgument
+	}
+	instances, err := s.repo.GetByIds(ctx, []uuid.UUID{id})
+	if err != nil {
+		return err
+	}
+	if len(instances) == 0 {
+		return s.templateStore.DeleteAtVersion(ctx, id, version)
+	}
+	deleter, ok := s.repo.(interface {
+		DeleteAtVersion(context.Context, uuid.UUID, uint64) error
+	})
+	if !ok {
+		return domain.ErrInvalidArgument
+	}
+	return deleter.DeleteAtVersion(ctx, id, version)
 }
 
 // CreateWithParent creates a bacnet object either for a field device (fieldDeviceID)

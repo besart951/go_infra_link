@@ -7,6 +7,7 @@ import type { Pagination } from '../utils/index.js';
 
 export interface Building {
   id: string;
+  version: number;
   iws_code: string;
   building_group: number;
   created_at: string;
@@ -19,6 +20,7 @@ export interface CreateBuildingRequest {
 }
 
 export interface UpdateBuildingRequest {
+  base_version: number;
   iws_code?: string;
   building_group?: number;
 }

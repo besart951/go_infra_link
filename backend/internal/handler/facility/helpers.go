@@ -92,9 +92,29 @@ func bindQuery(c *gin.Context, dst any) bool {
 	return handlerutil.BindQuery(c, dst)
 }
 
-func markLegacyBaseVersion(c *gin.Context) {
-	c.Header("Deprecation", "true")
-	c.Header("Warning", `299 - "base_version becomes mandatory in the next API release"`)
+type versionedDeleter interface {
+	DeleteAtVersion(context.Context, uuid.UUID, uint64) error
+}
+
+func parseRequiredBaseVersion(c *gin.Context) (domain.AggregateVersion, bool) {
+	var query requiredBaseVersionQuery
+	if !bindQuery(c, &query) {
+		return 0, false
+	}
+	version, err := domain.NewAggregateVersion(query.BaseVersion)
+	if err != nil {
+		respondInvalidArgument(c, "base_version must be at least 1")
+		return 0, false
+	}
+	return version, true
+}
+
+func deleteAtVersion(ctx context.Context, service any, id uuid.UUID, version domain.AggregateVersion) error {
+	deleter, ok := service.(versionedDeleter)
+	if !ok {
+		return domain.ErrInvalidArgument
+	}
+	return deleter.DeleteAtVersion(ctx, id, version.Uint64())
 }
 
 func parseUUIDParam(c *gin.Context, name string) (uuid.UUID, bool) {

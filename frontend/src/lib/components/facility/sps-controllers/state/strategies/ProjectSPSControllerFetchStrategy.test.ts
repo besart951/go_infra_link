@@ -28,6 +28,7 @@ vi.mock('$lib/infrastructure/api/controlCabinetRepository.js', () => ({
 const controllers: SPSController[] = [
   {
     id: 'controller-1',
+    version: 1,
     control_cabinet_id: 'cabinet-1',
     device_name: 'SPS 1',
     ga_device: 'GA-1',
@@ -36,6 +37,7 @@ const controllers: SPSController[] = [
   },
   {
     id: 'controller-2',
+    version: 1,
     control_cabinet_id: 'cabinet-1',
     device_name: 'SPS 2',
     ga_device: 'GA-2',
@@ -44,6 +46,7 @@ const controllers: SPSController[] = [
   },
   {
     id: 'controller-3',
+    version: 1,
     control_cabinet_id: 'cabinet-2',
     device_name: 'SPS 3',
     ga_device: 'GA-3',
@@ -58,6 +61,7 @@ describe('ProjectSPSControllerFetchStrategy', () => {
     mockListSPSControllers.mockResolvedValue({
       items: controllers.map((controller) => ({
         id: `link-${controller.id}`,
+        version: 1,
         project_id: 'project-1',
         sps_controller_id: controller.id
       }))
@@ -66,6 +70,7 @@ describe('ProjectSPSControllerFetchStrategy', () => {
     mockGetBulkCabinets.mockResolvedValue([
       {
         id: 'cabinet-1',
+        version: 1,
         control_cabinet_nr: 'CC-1',
         building_id: 'building-1',
         created_at: '2026-01-01T00:00:00Z',
@@ -73,6 +78,7 @@ describe('ProjectSPSControllerFetchStrategy', () => {
       },
       {
         id: 'cabinet-2',
+        version: 1,
         control_cabinet_nr: 'CC-2',
         building_id: 'building-2',
         created_at: '2026-01-01T00:00:00Z',

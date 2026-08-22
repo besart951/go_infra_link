@@ -7,12 +7,13 @@ import type {
   CreateControlCabinetRequest,
   UpdateControlCabinetRequest,
   ControlCabinetDeleteImpact,
-  CopyJob
+  FacilityJob
 } from '$lib/domain/facility/index.js';
-import { toCopyJob } from '$lib/domain/facility/copy-job.js';
+import { toFacilityJob } from '$lib/domain/facility/facility-job.js';
 import { api } from '$lib/api/client.js';
 import { apiClient } from '$lib/api/generated/client.js';
 import { buildListUrl, mapPaginatedResponse } from './listHelpers.js';
+import { versionedDeletePath } from './versionedMutation.js';
 
 export const controlCabinetRepository: ControlCabinetRepository = {
   async list(params: ListParams, signal?: AbortSignal): Promise<PaginatedResponse<ControlCabinet>> {
@@ -37,18 +38,18 @@ export const controlCabinetRepository: ControlCabinetRepository = {
     return response.items;
   },
 
-  async copy(id: string, operationId: string, signal?: AbortSignal): Promise<CopyJob> {
+  async copy(id: string, operationId: string, signal?: AbortSignal): Promise<FacilityJob> {
     const { data } = await apiClient.POST('/api/v1/facility/control-cabinets/{id}/copy', {
       params: {
         path: { id },
-        header: { 'X-Copy-Operation-ID': operationId }
+        header: { 'Idempotency-Key': operationId }
       },
       signal
     });
     if (!data) {
       throw new Error('Copy job response is empty');
     }
-    return toCopyJob(data);
+    return toFacilityJob(data);
   },
 
   async create(data: CreateControlCabinetRequest, signal?: AbortSignal): Promise<ControlCabinet> {
@@ -71,8 +72,8 @@ export const controlCabinetRepository: ControlCabinetRepository = {
     });
   },
 
-  async delete(id: string, signal?: AbortSignal): Promise<void> {
-    return api<void>(`/facility/control-cabinets/${id}`, {
+  async delete(command, signal?: AbortSignal): Promise<void> {
+    return api<void>(versionedDeletePath('/facility/control-cabinets', command), {
       method: 'DELETE',
       signal
     });

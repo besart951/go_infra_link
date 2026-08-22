@@ -172,25 +172,22 @@ func (s *FieldDeviceService) Validate(ctx context.Context, fieldDevice *domainFa
 	return s.ensureApparatNrAvailable(ctx, fieldDevice, excludeID)
 }
 
-func (s *FieldDeviceService) DeleteByID(ctx context.Context, id uuid.UUID) error {
-	return s.Delete(ctx, domainFacility.FieldDeviceDeleteCommand{ID: id})
-}
-
 type fieldDeviceVersionedDeleteStore interface {
 	DeleteAtVersion(ctx context.Context, command domainFacility.FieldDeviceDeleteCommand) error
 }
 
 func (s *FieldDeviceService) Delete(ctx context.Context, command domainFacility.FieldDeviceDeleteCommand) error {
+	if command.BaseVersion == 0 {
+		return domain.ErrInvalidArgument
+	}
 	return s.transaction().run(ctx, func(txCtx context.Context, txService *FieldDeviceService) error {
 		current, err := domain.GetByID(txCtx, txService.repo, command.ID)
 		if err != nil {
 			return err
 		}
-		if command.BaseVersion != nil && current.Version != *command.BaseVersion {
+		if current.Version != command.BaseVersion.Uint64() {
 			return domain.ErrConflict
 		}
-		version := current.Version
-		command.BaseVersion = &version
 		return txService.deleteFieldDevice(txCtx, command)
 	})
 }
@@ -264,25 +261,30 @@ func (s *FieldDeviceService) GetSpecification(ctx context.Context, fieldDeviceID
 	return specifications[0], nil
 }
 
-func (s *FieldDeviceService) DeleteSpecification(ctx context.Context, fieldDeviceID uuid.UUID) error {
+func (s *FieldDeviceService) DeleteSpecificationAtVersion(ctx context.Context, fieldDeviceID uuid.UUID, version uint64) error {
 	return s.transaction().run(ctx, func(txCtx context.Context, txService *FieldDeviceService) error {
 		fieldDevice, err := domain.GetByID(txCtx, txService.repo, fieldDeviceID)
 		if err != nil {
 			return err
 		}
 		specifications, err := txService.specificationRepo.GetByFieldDeviceIDs(txCtx, []uuid.UUID{fieldDeviceID})
-		if err != nil {
-			return err
-		}
-		if len(specifications) == 0 || specifications[0] == nil {
+		if err != nil || len(specifications) == 0 {
+			if err != nil {
+				return err
+			}
 			return domain.ErrNotFound
 		}
-		fieldDevice.SpecificationID = nil
-		fieldDevice.Specification = nil
-		if err := txService.repo.Update(txCtx, fieldDevice); err != nil {
+		deleter, ok := txService.specificationRepo.(interface {
+			DeleteAtVersion(context.Context, uuid.UUID, uint64) error
+		})
+		if !ok {
+			return domain.ErrInvalidArgument
+		}
+		if err := deleter.DeleteAtVersion(txCtx, specifications[0].ID, version); err != nil {
 			return err
 		}
-		if err := txService.specificationRepo.DeleteByIds(txCtx, []uuid.UUID{specifications[0].ID}); err != nil {
+		fieldDevice.SpecificationID, fieldDevice.Specification = nil, nil
+		if err := txService.repo.Update(txCtx, fieldDevice); err != nil {
 			return err
 		}
 		return txService.recordFieldDeviceChange(txCtx, changecapture.ActionUpdated, fieldDevice.ID)
@@ -752,16 +754,6 @@ func (s *FieldDeviceService) MultiCreate(ctx context.Context, items []domainFaci
 // Uniqueness constraints are checked against the database (excluding batch items) AND internally within the batch.
 func (s *FieldDeviceService) BulkUpdate(ctx context.Context, updates []domainFacility.BulkFieldDeviceUpdate) *domainFacility.BulkOperationResult {
 	return s.writer().bulkUpdate(ctx, updates)
-}
-
-// BulkDelete deletes multiple field devices in a single operation.
-// It processes each deletion independently and returns detailed results.
-func (s *FieldDeviceService) BulkDelete(ctx context.Context, ids []uuid.UUID) *domainFacility.BulkOperationResult {
-	commands := make([]domainFacility.FieldDeviceDeleteCommand, len(ids))
-	for index, id := range ids {
-		commands[index] = domainFacility.FieldDeviceDeleteCommand{ID: id}
-	}
-	return s.BulkDeleteCommands(ctx, commands)
 }
 
 func (s *FieldDeviceService) BulkDeleteCommands(ctx context.Context, commands []domainFacility.FieldDeviceDeleteCommand) *domainFacility.BulkOperationResult {

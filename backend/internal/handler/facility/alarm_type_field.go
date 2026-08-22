@@ -68,6 +68,7 @@ func (h *AlarmTypeFieldHandler) UpdateAlarmTypeField(c *gin.Context) {
 		return
 	}
 	applyAlarmTypeFieldUpdate(item, req)
+	item.Version = req.BaseVersion
 	if err := h.service.Update(ctx, item); respondLocalizedValidationOrError(c, err, "facility.update_failed") {
 		return
 	}
@@ -78,6 +79,7 @@ func (h *AlarmTypeFieldHandler) UpdateAlarmTypeField(c *gin.Context) {
 // @Summary Delete an alarm type field mapping
 // @Tags facility-alarm-types
 // @Param id path string true "Alarm Type Field ID"
+// @Param base_version query integer true "Expected aggregate version" minimum(1)
 // @Success 204
 // @Router /api/v1/facility/alarm-type-fields/{id} [delete]
 func (h *AlarmTypeFieldHandler) DeleteAlarmTypeField(c *gin.Context) {
@@ -85,7 +87,11 @@ func (h *AlarmTypeFieldHandler) DeleteAlarmTypeField(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if err := h.service.DeleteByID(c.Request.Context(), id); err != nil {
+	version, ok := parseRequiredBaseVersion(c)
+	if !ok {
+		return
+	}
+	if err := deleteAtVersion(c.Request.Context(), h.service, id, version); err != nil {
 		respondLocalizedDomainError(c, err, "deletion_failed", "facility.deletion_failed",
 			localizedNotFound("facility.not_found"),
 		)

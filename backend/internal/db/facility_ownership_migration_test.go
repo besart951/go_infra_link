@@ -48,6 +48,22 @@ func TestFacilityOwnershipMigrationReportsConflictingIDs(t *testing.T) {
 	}
 }
 
+func TestFacilityOwnershipMigrationSupportsFreshCanonicalSchema(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open("file:"+uuid.NewString()+"?mode=memory&cache=shared"), &gorm.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := autoMigrateCurrentSchema(db); err != nil {
+		t.Fatal(err)
+	}
+	if db.Migrator().HasTable("object_data_bacnet_objects") || db.Migrator().HasColumn("field_devices", "specification_id") {
+		t.Fatal("fresh schema contains legacy ownership structures")
+	}
+	if err := migrateFacilityOwnership(db); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func ownershipMigrationDB(t *testing.T) *gorm.DB {
 	t.Helper()
 	db, err := gorm.Open(sqlite.Open("file:"+uuid.NewString()+"?mode=memory&cache=shared"), &gorm.Config{})
@@ -55,6 +71,12 @@ func ownershipMigrationDB(t *testing.T) *gorm.DB {
 		t.Fatal(err)
 	}
 	if err := autoMigrateCurrentSchema(db); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Exec(`CREATE TABLE object_data_bacnet_objects (object_data_id blob NOT NULL, bacnet_object_id blob NOT NULL)`).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Exec(`ALTER TABLE field_devices ADD COLUMN specification_id blob`).Error; err != nil {
 		t.Fatal(err)
 	}
 	return db

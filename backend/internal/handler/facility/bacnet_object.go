@@ -115,12 +115,9 @@ func (h *BacnetObjectHandler) UpdateBacnetObject(c *gin.Context) {
 		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
 	}
-	baseVersion := existing.Version
+	baseVersion := req.BaseVersion
 	previousFieldDeviceID := existing.FieldDeviceID
-	if req.BaseVersion != nil {
-		baseVersion = *req.BaseVersion
-		existing.Version = *req.BaseVersion
-	}
+	existing.Version = req.BaseVersion
 
 	applyBacnetObjectPatch(existing, req.BacnetObjectPatchInput)
 	if req.FieldDeviceID != nil {
@@ -148,9 +145,22 @@ func (h *BacnetObjectHandler) UpdateBacnetObject(c *gin.Context) {
 	}
 }
 
-// DeleteBacnetObject deletes one BACnet object.
+// DeleteBacnetObject godoc
+// @Summary Delete one BACnet instance or template
+// @Tags facility-bacnet-objects
+// @Param id path string true "BACnet object ID"
+// @Param base_version query integer true "Expected owner version" minimum(1)
+// @Success 204
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 409 {object} dto.ErrorResponse
+// @Router /api/v1/facility/bacnet-objects/{id} [delete]
 func (h *BacnetObjectHandler) DeleteBacnetObject(c *gin.Context) {
 	id, ok := parseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+	version, ok := parseRequiredBaseVersion(c)
 	if !ok {
 		return
 	}
@@ -159,7 +169,7 @@ func (h *BacnetObjectHandler) DeleteBacnetObject(c *gin.Context) {
 		respondLocalizedDomainError(c, err, "deletion_failed", "facility.deletion_failed", localizedNotFound("facility.bacnet_object_not_found"))
 		return
 	}
-	if err := h.service.DeleteByID(c.Request.Context(), id); err != nil {
+	if err := deleteAtVersion(c.Request.Context(), h.service, id, version); err != nil {
 		respondLocalizedDomainError(c, err, "deletion_failed", "facility.deletion_failed",
 			localizedNotFound("facility.bacnet_object_not_found"),
 		)

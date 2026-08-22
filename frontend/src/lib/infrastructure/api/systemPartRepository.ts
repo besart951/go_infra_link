@@ -7,6 +7,7 @@ import type {
 } from '$lib/domain/facility/index.js';
 import { api } from '$lib/api/client.js';
 import { buildListUrl, mapPaginatedResponse } from './listHelpers.js';
+import { versionedDeletePath } from './versionedMutation.js';
 
 export const systemPartRepository: SystemPartRepository = {
   async list(params: ListParams, signal?: AbortSignal): Promise<PaginatedResponse<SystemPart>> {
@@ -41,8 +42,8 @@ export const systemPartRepository: SystemPartRepository = {
     });
   },
 
-  async delete(id: string, signal?: AbortSignal): Promise<void> {
-    return api<void>(`/facility/system-parts/${id}`, {
+  async delete(command, signal?: AbortSignal): Promise<void> {
+    return api<void>(versionedDeletePath('/facility/system-parts', command), {
       method: 'DELETE',
       signal
     });

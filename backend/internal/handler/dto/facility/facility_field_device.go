@@ -21,7 +21,7 @@ type CreateFieldDeviceRequest struct {
 }
 
 type UpdateFieldDeviceRequest struct {
-	BaseVersion               *uint64              `json:"base_version" binding:"omitempty,min=1"`
+	BaseVersion               uint64               `json:"base_version" binding:"required,min=1"`
 	BMK                       *string              `json:"bmk" binding:"omitempty,max=10"`
 	Description               *string              `json:"description" binding:"omitempty,max=250"`
 	TextIndividuell           *string              `json:"text_fix" binding:"omitempty,max=250"`
@@ -122,7 +122,7 @@ type SpecificationInput struct {
 // BulkUpdateFieldDeviceItem represents a single field device update in a bulk operation
 type BulkUpdateFieldDeviceItem struct {
 	ID              uuid.UUID                     `json:"id" binding:"required"`
-	BaseVersion     *uint64                       `json:"base_version" binding:"omitempty,min=1"`
+	BaseVersion     uint64                        `json:"base_version" binding:"required,min=1"`
 	BMK             OptionalString                `json:"bmk"`
 	Description     OptionalString                `json:"description"`
 	TextIndividuell OptionalString                `json:"text_fix"`
@@ -141,6 +141,7 @@ type BulkUpdateFieldDeviceRequest struct {
 // BulkOperationResultItem represents the result of a single item in a bulk operation
 type BulkOperationResultItem struct {
 	ID                uuid.UUID            `json:"id"`
+	DependencyGroupID uuid.UUID            `json:"dependency_group_id,omitempty"`
 	Success           bool                 `json:"success"`
 	Version           uint64               `json:"version,omitempty"`
 	Merged            bool                 `json:"merged,omitempty"`
@@ -161,13 +162,12 @@ type BulkUpdateFieldDeviceResponse struct {
 
 // BulkDeleteFieldDeviceRequest represents a request to delete multiple field devices
 type BulkDeleteFieldDeviceRequest struct {
-	IDs   []uuid.UUID                 `json:"ids,omitempty"`
-	Items []BulkDeleteFieldDeviceItem `json:"items,omitempty" binding:"omitempty,dive"`
+	Items []BulkDeleteFieldDeviceItem `json:"items" binding:"required,min=1,dive"`
 }
 
 type BulkDeleteFieldDeviceItem struct {
 	ID          uuid.UUID `json:"id" binding:"required"`
-	BaseVersion *uint64   `json:"base_version" binding:"required,min=1"`
+	BaseVersion uint64    `json:"base_version" binding:"required,min=1"`
 }
 
 // BulkDeleteFieldDeviceResponse represents the response from a bulk delete operation

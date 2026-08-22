@@ -9,6 +9,7 @@ import type {
 import type { BacnetObject } from '$lib/domain/facility/bacnet-object.js';
 import { api } from '$lib/api/client.js';
 import { buildListUrl, mapPaginatedResponse } from './listHelpers.js';
+import { versionedDeletePath } from './versionedMutation.js';
 
 export const objectDataRepository: ObjectDataRepository = {
   async list(params: ListParams, signal?: AbortSignal): Promise<PaginatedResponse<ObjectData>> {
@@ -44,8 +45,8 @@ export const objectDataRepository: ObjectDataRepository = {
     });
   },
 
-  async delete(id: string, signal?: AbortSignal): Promise<void> {
-    return api<void>(`/facility/object-data/${id}`, {
+  async delete(command, signal?: AbortSignal): Promise<void> {
+    return api<void>(versionedDeletePath('/facility/object-data', command), {
       method: 'DELETE',
       signal
     });

@@ -241,6 +241,7 @@ describe('useFieldDeviceEditing', () => {
       updates: [
         {
           id: 'fd-1',
+          base_version: 1,
           bmk: 'FD-UPDATED',
           description: 'Updated description',
           specification: {
@@ -300,6 +301,7 @@ describe('useFieldDeviceEditing', () => {
       updates: [
         {
           id: 'fd-1',
+          base_version: 1,
           specification: {
             specification_supplier: 'Supplier B'
           }
@@ -324,6 +326,7 @@ describe('useFieldDeviceEditing', () => {
       updates: [
         {
           id: 'fd-1',
+          base_version: 1,
           bacnet_objects: [
             {
               id: 'bo-1',
@@ -348,6 +351,7 @@ describe('useFieldDeviceEditing', () => {
       updates: [
         {
           id: 'fd-1',
+          base_version: 1,
           bacnet_objects: [
             {
               id: 'bo-1',
@@ -475,6 +479,7 @@ describe('useFieldDeviceEditing', () => {
       updates: [
         {
           id: device.id,
+          base_version: 1,
           apparat_nr: 1,
           apparat_id: 'app-abk'
         }

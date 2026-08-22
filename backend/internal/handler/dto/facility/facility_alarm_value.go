@@ -20,7 +20,8 @@ type AlarmValueInput struct {
 }
 
 type PutAlarmValuesRequest struct {
-	Values []AlarmValueInput `json:"values" binding:"required"`
+	BaseVersion uint64            `json:"base_version" binding:"required,min=1"`
+	Values      []AlarmValueInput `json:"values" binding:"required"`
 }
 
 type AlarmValueResponse struct {
@@ -39,5 +40,6 @@ type AlarmValueResponse struct {
 }
 
 type AlarmValuesResponse struct {
-	Items []AlarmValueResponse `json:"items"`
+	Version uint64               `json:"version"`
+	Items   []AlarmValueResponse `json:"items"`
 }

@@ -1,7 +1,10 @@
 <script lang="ts">
   import type { ExcelReadSession } from '$lib/domain/excel/index.js';
   import type { CreateObjectDataRequest } from '$lib/domain/facility/object-data.js';
-  import type { CreateBacnetObjectRequest } from '$lib/domain/facility/bacnet-object.js';
+  import type {
+    BacnetObject,
+    CreateBacnetObjectRequest
+  } from '$lib/domain/facility/bacnet-object.js';
   import ExcelSessionActionSection from './ExcelSessionActionSection.svelte';
   import ExcelSessionWarningSection from './ExcelSessionWarningSection.svelte';
   import ExcelSessionPreparedSummary from './ExcelSessionPreparedSummary.svelte';
@@ -746,18 +749,18 @@
         const createdBacnetObjects = await objectDataRepository.getBacnetObjects(
           createdObjectData.id
         );
-        const createdSoftwareIdMap = new Map<string, string>();
+        const createdSoftwareObjects = new Map<string, BacnetObject>();
         createdBacnetObjects.forEach((bacnet) => {
-          createdSoftwareIdMap.set(
+          createdSoftwareObjects.set(
             toSoftwareId(bacnet.software_type, bacnet.software_number),
-            bacnet.id
+            bacnet
           );
         });
 
         for (const link of item.plannedSoftwareReferenceLinks) {
-          const fromId = createdSoftwareIdMap.get(link.fromSoftwareId);
-          const toId = createdSoftwareIdMap.get(link.toSoftwareId);
-          if (!fromId || !toId) {
+          const from = createdSoftwareObjects.get(link.fromSoftwareId);
+          const target = createdSoftwareObjects.get(link.toSoftwareId);
+          if (!from || !target) {
             unresolvedSoftwareLinks.push({
               objectDataId: item.objectDataId,
               from: link.fromSoftwareId,
@@ -766,7 +769,10 @@
             continue;
           }
 
-          await updateBacnetObject(fromId, { software_reference_id: toId });
+          await updateBacnetObject(from.id, {
+            base_version: from.aggregate_version,
+            software_reference_id: target.id
+          });
         }
 
         success += 1;

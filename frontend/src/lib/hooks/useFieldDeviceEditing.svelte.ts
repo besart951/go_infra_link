@@ -401,6 +401,7 @@ export function useFieldDeviceEditing(options: UseFieldDeviceEditingOptions = {}
             ...updated,
             specification: {
               id: '', // Temporary, will be filled on next refresh
+              version: 1,
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString(),
               field_device_id: updated.id,

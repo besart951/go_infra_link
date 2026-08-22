@@ -6,5 +6,5 @@ import (
 )
 
 func migrateFacilityJobs(db *gorm.DB) error {
-	return facilityservice.MigrateCopyJobs(db)
+	return facilityservice.MigrateFacilityJobs(db)
 }

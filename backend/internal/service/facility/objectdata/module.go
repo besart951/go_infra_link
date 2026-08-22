@@ -7,11 +7,11 @@ import (
 )
 
 type Repositories struct {
-	ObjectData              domainObjectData.ObjectDataStore
-	BacnetObjects           domainObjectData.BacnetObjectStore
-	ObjectDataBacnetObjects domainObjectData.ObjectDataBacnetObjectStore
-	Apparats                domainFacility.ApparatRepository
-	FieldDevices            domainFieldDevice.FieldDeviceStore
-	AlarmDefinitions        domainFacility.AlarmDefinitionRepository
-	AlarmTypes              domainFacility.AlarmTypeRepository
+	ObjectData       domainObjectData.ObjectDataStore
+	BacnetObjects    domainObjectData.BacnetObjectStore
+	BacnetTemplates  domainObjectData.BacnetObjectTemplateStore
+	Apparats         domainFacility.ApparatRepository
+	FieldDevices     domainFieldDevice.FieldDeviceStore
+	AlarmDefinitions domainFacility.AlarmDefinitionRepository
+	AlarmTypes       domainFacility.AlarmTypeRepository
 }

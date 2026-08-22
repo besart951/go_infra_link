@@ -3,14 +3,15 @@ import type { ListParams, PaginatedResponse } from '$lib/domain/ports/listReposi
 import type {
   SPSControllerSystemType,
   SPSControllerSystemTypeListResponse,
-  CopyJob,
+  FacilityJob,
   UpdateSPSControllerSystemTypeRequest
 } from '$lib/domain/facility/index.js';
-import { toCopyJob } from '$lib/domain/facility/copy-job.js';
+import { toFacilityJob } from '$lib/domain/facility/facility-job.js';
 import { ApiException, api } from '$lib/api/client.js';
 import { apiClient } from '$lib/api/generated/client.js';
 import { clearCachedFetchById, createCachedFetchById } from './createCachedFetchById.js';
 import { buildListUrl, mapPaginatedResponse } from './listHelpers.js';
+import { versionedDeletePath } from './versionedMutation.js';
 
 interface ListCacheEntry {
   expiresAt: number;
@@ -175,11 +176,14 @@ export const spsControllerSystemTypeRepository: SPSControllerSystemTypeRepositor
     data: UpdateSPSControllerSystemTypeRequest,
     signal?: AbortSignal
   ): Promise<SPSControllerSystemType> {
-    const { data: response } = await apiClient.PUT('/api/v1/facility/sps-controller-system-types/{id}', {
-      params: { path: { id } },
-      body: data,
-      signal
-    });
+    const { data: response } = await apiClient.PUT(
+      '/api/v1/facility/sps-controller-system-types/{id}',
+      {
+        params: { path: { id } },
+        body: data,
+        signal
+      }
+    );
     if (!isSPSControllerSystemType(response)) {
       throw new Error('SPS controller system type update response is empty');
     }
@@ -188,13 +192,13 @@ export const spsControllerSystemTypeRepository: SPSControllerSystemTypeRepositor
     return response;
   },
 
-  async copy(id: string, operationId: string, signal?: AbortSignal): Promise<CopyJob> {
+  async copy(id: string, operationId: string, signal?: AbortSignal): Promise<FacilityJob> {
     const { data } = await apiClient.POST(
       '/api/v1/facility/sps-controller-system-types/{id}/copy',
       {
         params: {
           path: { id },
-          header: { 'X-Copy-Operation-ID': operationId }
+          header: { 'Idempotency-Key': operationId }
         },
         signal
       }
@@ -202,10 +206,10 @@ export const spsControllerSystemTypeRepository: SPSControllerSystemTypeRepositor
     if (!data) {
       throw new Error('Copy job response is empty');
     }
-    return toCopyJob(data);
+    return toFacilityJob(data);
   },
-  async delete(id: string, signal?: AbortSignal): Promise<void> {
-    await api<void>(`/facility/sps-controller-system-types/${id}`, {
+  async delete(command, signal?: AbortSignal): Promise<void> {
+    await api<void>(versionedDeletePath('/facility/sps-controller-system-types', command), {
       method: 'DELETE',
       signal
     });

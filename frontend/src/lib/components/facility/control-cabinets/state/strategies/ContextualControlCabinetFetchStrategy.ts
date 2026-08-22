@@ -4,6 +4,7 @@ import { ContextualDataTableFetchStrategy } from '$lib/state/table/ContextualDat
 import type { ControlCabinetFilters } from '../types.js';
 import { FacilityControlCabinetFetchStrategy } from './FacilityControlCabinetFetchStrategy.js';
 import { ProjectControlCabinetFetchStrategy } from './ProjectControlCabinetFetchStrategy.js';
+import type { ProjectControlCabinetLink } from '$lib/domain/project/index.js';
 
 export class ContextualControlCabinetFetchStrategy extends ContextualDataTableFetchStrategy<
   ControlCabinet,
@@ -26,7 +27,7 @@ export class ContextualControlCabinetFetchStrategy extends ContextualDataTableFe
     return this.getActiveProjectStrategy()?.getBuildingFilterOptions() ?? [];
   }
 
-  getLinkId(controlCabinetId: string): string | undefined {
-    return this.getActiveProjectStrategy()?.getLinkId(controlCabinetId);
+  getLink(controlCabinetId: string): ProjectControlCabinetLink | undefined {
+    return this.getActiveProjectStrategy()?.getLink(controlCabinetId);
   }
 }

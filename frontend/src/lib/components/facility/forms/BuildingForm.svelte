@@ -61,6 +61,7 @@
     await formState.handleSubmit(async () => {
       if (initialData) {
         return await manageBuilding.update(initialData.id, {
+          base_version: initialData.version,
           iws_code,
           building_group: Number(building_group)
         });

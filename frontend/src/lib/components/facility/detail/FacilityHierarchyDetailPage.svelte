@@ -251,7 +251,7 @@
     key: keyof Entity,
     value: string | number
   ) {
-    const base = { base_version: current.version };
+    const base = { base_version: requiredVersion(current.version) };
     switch (kind) {
       case 'control-cabinets':
         return { ...base, [key]: value };
@@ -264,6 +264,11 @@
           throw new Error('Systemteil fehlt und kann nicht gespeichert werden.');
         return { ...base, system_part_id: current.system_part_id, [key]: value };
     }
+  }
+
+  function requiredVersion(version: number | undefined): number {
+    if (!version) throw new Error('Die aktuelle Version konnte nicht geladen werden.');
+    return version;
   }
 
   function detailFields(kind: FacilityDetailKind): FieldConfig[] {

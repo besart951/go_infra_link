@@ -170,6 +170,7 @@ export interface SpecificationInput {
  */
 export interface BulkUpdateFieldDeviceItem {
   id: string;
+  base_version: number;
   bmk?: string | null;
   description?: string | null;
   text_fix?: string | null;

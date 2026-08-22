@@ -7,7 +7,7 @@ import { spsControllerSystemTypeRepository } from '$lib/infrastructure/api/spsCo
 import { systemTypeRepository } from '$lib/infrastructure/api/systemTypeRepository.js';
 import type {
   CreateSPSControllerRequest,
-  CopyJob,
+  FacilityJob,
   SPSController,
   SPSControllerSystemType,
   UpdateSPSControllerRequest
@@ -38,21 +38,29 @@ export const spsControllerFormService = {
   },
 
   updateSystemType(
-    id: string,
-    data: Pick<SPSControllerSystemType, 'number' | 'document_name'>
+    entry: Pick<SPSControllerSystemType, 'id' | 'aggregate_version' | 'number' | 'document_name'>
   ): Promise<SPSControllerSystemType> {
-    return spsControllerSystemTypeRepository.update(id, data);
+    return spsControllerSystemTypeRepository.update(entry.id, {
+      base_version: entry.aggregate_version,
+      number: entry.number,
+      document_name: entry.document_name
+    });
   },
 
-  deleteSystemType(id: string): Promise<void> {
-    return spsControllerSystemTypeRepository.delete(id);
+  deleteSystemType(
+    entry: Pick<SPSControllerSystemType, 'id' | 'aggregate_version'>
+  ): Promise<void> {
+    return spsControllerSystemTypeRepository.delete({
+      id: entry.id,
+      base_version: entry.aggregate_version
+    });
   },
 
-  copySystemType(id: string, operationId: string): Promise<CopyJob> {
+  copySystemType(id: string, operationId: string): Promise<FacilityJob> {
     return spsControllerSystemTypeRepository.copy(id, operationId);
   },
 
-  copyProjectSystemType(projectId: string, id: string, operationId: string): Promise<CopyJob> {
+  copyProjectSystemType(projectId: string, id: string, operationId: string): Promise<FacilityJob> {
     return copyProjectSPSControllerSystemType(projectId, id, operationId);
   },
 

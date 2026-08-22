@@ -2,9 +2,11 @@ package facility
 
 import (
 	"context"
+	"errors"
 	"net/http"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
+	"github.com/besart951/go_infra_link/backend/internal/handlerutil"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -16,35 +18,42 @@ type crudSvc[T any] interface {
 	GetByID(context.Context, uuid.UUID) (*T, error)
 	List(context.Context, int, int, string) (*domain.PaginatedList[T], error)
 	Update(context.Context, *T) error
-	DeleteByID(context.Context, uuid.UUID) error
+	DeleteAtVersion(context.Context, uuid.UUID, uint64) error
+}
+
+type versionedUpdateRequest interface {
+	ExpectedVersion() uint64
 }
 
 // crudHandler holds the generic logic for Create, GetByID, List, Update, Delete.
 // Compose it into entity-specific handlers to eliminate repeated boilerplate.
-type crudHandler[T, CreateReq, UpdateReq any] struct {
-	svc         crudSvc[T]
-	fromCreate  func(CreateReq) *T
-	applyUpdate func(*T, UpdateReq)
-	toResp      func(T) any
-	toListResp  func(*domain.PaginatedList[T]) any
-	notFoundKey string
+type crudHandler[T, CreateReq any, UpdateReq versionedUpdateRequest] struct {
+	svc          crudSvc[T]
+	fromCreate   func(CreateReq) *T
+	applyUpdate  func(*T, UpdateReq)
+	toResp       func(T) any
+	toListResp   func(*domain.PaginatedList[T]) any
+	resourceKind string
+	notFoundKey  string
 }
 
-func newCRUD[T, CreateReq, UpdateReq any](
+func newCRUD[T, CreateReq any, UpdateReq versionedUpdateRequest](
 	svc crudSvc[T],
 	fromCreate func(CreateReq) *T,
 	applyUpdate func(*T, UpdateReq),
 	toResp func(T) any,
 	toListResp func(*domain.PaginatedList[T]) any,
+	resourceKind string,
 	notFoundKey string,
 ) crudHandler[T, CreateReq, UpdateReq] {
 	return crudHandler[T, CreateReq, UpdateReq]{
-		svc:         svc,
-		fromCreate:  fromCreate,
-		applyUpdate: applyUpdate,
-		toResp:      toResp,
-		toListResp:  toListResp,
-		notFoundKey: notFoundKey,
+		svc:          svc,
+		fromCreate:   fromCreate,
+		applyUpdate:  applyUpdate,
+		toResp:       toResp,
+		toListResp:   toListResp,
+		resourceKind: resourceKind,
+		notFoundKey:  notFoundKey,
 	}
 }
 
@@ -119,7 +128,17 @@ func (h *crudHandler[T, CreateReq, UpdateReq]) handleUpdate(c *gin.Context) {
 		return
 	}
 	h.applyUpdate(item, req)
-	if err := h.svc.Update(ctx, item); respondLocalizedValidationOrError(c, err, "facility.update_failed") {
+	base, ok := any(item).(interface{ GetBase() *domain.Base })
+	if !ok {
+		respondInvalidArgument(c, "aggregate version is unavailable")
+		return
+	}
+	base.GetBase().Version = req.ExpectedVersion()
+	if err := h.svc.Update(ctx, item); err != nil {
+		if h.respondCurrentConflict(c, id, req.ExpectedVersion(), err) {
+			return
+		}
+		respondLocalizedValidationOrError(c, err, "facility.update_failed")
 		return
 	}
 	c.JSON(http.StatusOK, h.toResp(*item))
@@ -130,8 +149,15 @@ func (h *crudHandler[T, CreateReq, UpdateReq]) handleDelete(c *gin.Context) {
 	if !ok {
 		return
 	}
+	var query requiredBaseVersionQuery
+	if !bindQuery(c, &query) {
+		return
+	}
 	ctx := c.Request.Context()
-	if err := h.svc.DeleteByID(ctx, id); err != nil {
+	if err := h.svc.DeleteAtVersion(ctx, id, query.BaseVersion); err != nil {
+		if h.respondCurrentConflict(c, id, query.BaseVersion, err) {
+			return
+		}
 		respondLocalizedDomainError(c, err, "deletion_failed", "facility.deletion_failed",
 			localizedNotFound(h.notFoundKey),
 			localizedReferenceInUse(),
@@ -140,4 +166,24 @@ func (h *crudHandler[T, CreateReq, UpdateReq]) handleDelete(c *gin.Context) {
 		return
 	}
 	c.Status(http.StatusNoContent)
+}
+
+func (h *crudHandler[T, CreateReq, UpdateReq]) respondCurrentConflict(c *gin.Context, id uuid.UUID, expected uint64, err error) bool {
+	if !errors.Is(err, domain.ErrConflict) {
+		return false
+	}
+	current, getErr := h.svc.GetByID(c.Request.Context(), id)
+	if getErr != nil {
+		return false
+	}
+	base, ok := any(current).(interface{ GetBase() *domain.Base })
+	if !ok {
+		return false
+	}
+	handlerutil.RespondWriteConflict(c, h.resourceKind, id.String(), expected, base.GetBase().Version, nil, h.toResp(*current))
+	return true
+}
+
+type requiredBaseVersionQuery struct {
+	BaseVersion uint64 `form:"base_version" binding:"required,min=1"`
 }

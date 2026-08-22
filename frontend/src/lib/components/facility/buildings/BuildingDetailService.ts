@@ -12,7 +12,7 @@ export const buildingDetailService = {
     return manageBuilding.update(id, data);
   },
 
-  delete(id: string) {
-    return manageBuilding.delete(id);
+  delete(command: Parameters<ManageBuildingUseCase['delete']>[0]) {
+    return manageBuilding.delete(command);
   }
 };

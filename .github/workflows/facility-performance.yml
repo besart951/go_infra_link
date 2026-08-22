@@ -1,0 +1,99 @@
+name: Facility performance
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "backend/internal/benchmark/**"
+      - "backend/internal/repository/facilitysql/field_device_*.go"
+      - "backend/internal/db/*cursor*.go"
+      - "docker-compose.benchmark.yml"
+  schedule:
+    - cron: "0 2 * * 0"
+
+jobs:
+  query-shape-smoke:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+      - run: docker compose -f docker-compose.benchmark.yml up -d --wait
+      - name: Seed 50k
+        working-directory: backend
+        run: go run ./cmd/facility-benchmark -dsn "$BENCHMARK_DSN" -field-devices 50000 -smoke seed
+        env: &benchmark-env
+          BENCHMARK_DSN: postgres://benchmark:benchmark@localhost:55433/go_infra_link_benchmark?sslmode=disable
+      - name: Apply Facility contract schema
+        working-directory: backend
+        run: go run ./cmd/db-maintenance --backup-verified --compatible-release-delivered --applications-stopped --legacy-idle-since 2000-01-01T00:00:00Z
+        env:
+          DATABASE_URL: postgres://benchmark:benchmark@localhost:55433/go_infra_link_benchmark?sslmode=disable
+          APP_ENV: development
+      - name: Verify relational swap planning
+        working-directory: backend
+        run: go test ./internal/db ./internal/repository/facilityjobsql -run "Postgres$"
+        env:
+          FACILITY_BENCHMARK_DSN: postgres://benchmark:benchmark@localhost:55433/go_infra_link_benchmark?sslmode=disable
+      - name: Analyze 50k
+        working-directory: backend
+        run: go run ./cmd/facility-benchmark -dsn "$BENCHMARK_DSN" -field-devices 50000 -smoke analyze
+        env: *benchmark-env
+      - name: Verify query shapes
+        working-directory: backend
+        run: go run ./cmd/facility-benchmark -dsn "$BENCHMARK_DSN" -field-devices 50000 -smoke -output ../benchmark-results measure
+        env: *benchmark-env
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: facility-50k-query-shape
+          path: benchmark-results
+      - if: always()
+        run: docker compose -f docker-compose.benchmark.yml down -v
+
+  five-million-field-devices:
+    if: github.event_name != 'pull_request'
+    runs-on: [self-hosted, linux, x64, facility-benchmark]
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+      - run: docker compose -f docker-compose.benchmark.yml up -d --wait
+      - name: Seed
+        working-directory: backend
+        run: go run ./cmd/facility-benchmark -dsn "$BENCHMARK_DSN" seed
+        env:
+          BENCHMARK_DSN: postgres://benchmark:benchmark@localhost:55433/go_infra_link_benchmark?sslmode=disable
+      - name: Apply Facility contract schema
+        working-directory: backend
+        run: go run ./cmd/db-maintenance --backup-verified --compatible-release-delivered --applications-stopped --legacy-idle-since 2000-01-01T00:00:00Z
+        env:
+          DATABASE_URL: postgres://benchmark:benchmark@localhost:55433/go_infra_link_benchmark?sslmode=disable
+          APP_ENV: development
+      - name: Verify relational swap planning
+        working-directory: backend
+        run: go test ./internal/db ./internal/repository/facilityjobsql -run "Postgres$"
+        env:
+          FACILITY_BENCHMARK_DSN: postgres://benchmark:benchmark@localhost:55433/go_infra_link_benchmark?sslmode=disable
+      - name: Analyze
+        working-directory: backend
+        run: go run ./cmd/facility-benchmark -dsn "$BENCHMARK_DSN" analyze
+        env:
+          BENCHMARK_DSN: postgres://benchmark:benchmark@localhost:55433/go_infra_link_benchmark?sslmode=disable
+      - name: Measure
+        working-directory: backend
+        run: go run ./cmd/facility-benchmark -dsn "$BENCHMARK_DSN" -output ../benchmark-results measure
+        env:
+          BENCHMARK_DSN: postgres://benchmark:benchmark@localhost:55433/go_infra_link_benchmark?sslmode=disable
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: facility-5m-benchmark
+          path: benchmark-results
+      - if: always()
+        run: docker compose -f docker-compose.benchmark.yml down

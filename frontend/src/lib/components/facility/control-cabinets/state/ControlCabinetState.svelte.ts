@@ -20,12 +20,13 @@ import type { ControlCabinetFilters, ControlCabinetStateProps } from './types.js
 import { toProjectCapabilitiesResolver, toProjectIdResolver } from './types.js';
 import { ControlCabinetFetchStrategyFactory } from './ControlCabinetFetchStrategyFactory.js';
 import { ContextualControlCabinetFetchStrategy } from './strategies/ContextualControlCabinetFetchStrategy.js';
-import { copyOperation } from '$lib/state/copyOperation.svelte.js';
+import { facilityJobState } from '$lib/state/facilityJobState.svelte.js';
+import { SvelteMap } from 'svelte/reactivity';
 
 export class ControlCabinetState extends BaseDataTableState<ControlCabinet, ControlCabinetFilters> {
   showForm = $state(false);
   editingItem: ControlCabinet | undefined = $state(undefined);
-  buildingMap = $state(new Map<string, string>());
+  buildingMap = $state(new SvelteMap<string, string>());
   buildingFilterOptions = $state<MultiFilterOption[]>([]);
 
   private readonly buildingRequests = new Set<string>();
@@ -71,7 +72,7 @@ export class ControlCabinetState extends BaseDataTableState<ControlCabinet, Cont
   }
 
   get copyInProgress(): boolean {
-    return copyOperation.isPending;
+    return facilityJobState.isPending;
   }
 
   get selectedBuildingFilterIds(): string[] {
@@ -256,25 +257,11 @@ export class ControlCabinetState extends BaseDataTableState<ControlCabinet, Cont
     if (!this.canDuplicateControlCabinet()) return;
 
     try {
-      const result = await copyOperation.run({
-        start: (operationId) =>
-          this.projectId
-            ? projectRepository.copyControlCabinet(this.projectId, controlCabinet.id, operationId)
-            : this.manageControlCabinetUseCase.copy(controlCabinet.id, operationId),
-        onCompleted: async () => {
-          await this.reload();
-          this.notifyChanged();
-          addToast(
-            this.projectId
-              ? translate('projects.control_cabinets.duplicated')
-              : translate('facility.control_cabinet_copied'),
-            'success'
-          );
-        },
-        onFailed: () => {
-          addToast(translate('facility.copy_failed'), 'error');
-        }
-      });
+      const result = await facilityJobState.submit((operationId) =>
+        this.projectId
+          ? projectRepository.copyControlCabinet(this.projectId, controlCabinet.id, operationId)
+          : this.manageControlCabinetUseCase.copy(controlCabinet.id, operationId)
+      );
       if (!result.started) return;
     } catch (error) {
       const message = error instanceof Error ? error.message : translate('facility.copy_failed');
@@ -306,7 +293,7 @@ export class ControlCabinetState extends BaseDataTableState<ControlCabinet, Cont
   private mergeBuildingLabels(labels: Map<string, string>): void {
     if (labels.size === 0) return;
 
-    const next = new Map(this.buildingMap);
+    const next = new SvelteMap(this.buildingMap);
     for (const [buildingId, label] of labels.entries()) {
       next.set(buildingId, label);
     }
@@ -371,7 +358,7 @@ export class ControlCabinetState extends BaseDataTableState<ControlCabinet, Cont
   }
 
   private updateBuildingMap(buildings: Building[]): void {
-    const next = new Map(this.buildingMap);
+    const next = new SvelteMap(this.buildingMap);
     for (const building of buildings) {
       next.set(building.id, `${building.iws_code}-${building.building_group}`);
     }
@@ -408,7 +395,10 @@ export class ControlCabinetState extends BaseDataTableState<ControlCabinet, Cont
         if (!secondConfirmation) return;
       }
 
-      await this.manageControlCabinetUseCase.delete(controlCabinet.id);
+      await this.manageControlCabinetUseCase.delete({
+        id: controlCabinet.id,
+        base_version: controlCabinet.version
+      });
       addToast(translate('facility.control_cabinet_deleted'), 'success');
       await this.reload();
       this.notifyChanged();
@@ -422,8 +412,8 @@ export class ControlCabinetState extends BaseDataTableState<ControlCabinet, Cont
   }
 
   private async removeProjectControlCabinet(controlCabinet: ControlCabinet): Promise<void> {
-    const linkId = this.fetchStrategy.getLinkId(controlCabinet.id);
-    if (!this.projectId || !linkId) return;
+    const link = this.fetchStrategy.getLink(controlCabinet.id);
+    if (!this.projectId || !link) return;
 
     const confirmed = await confirm({
       title: translate('projects.control_cabinets.remove_title'),
@@ -435,7 +425,11 @@ export class ControlCabinetState extends BaseDataTableState<ControlCabinet, Cont
     if (!confirmed) return;
 
     try {
-      await projectRepository.removeControlCabinet(this.projectId, linkId);
+      await projectRepository.removeControlCabinet({
+        project_id: this.projectId,
+        link_id: link.id,
+        base_version: link.version
+      });
       addToast(translate('projects.control_cabinets.removed'), 'success');
       await this.reload();
       this.notifyChanged();

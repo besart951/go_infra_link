@@ -45,6 +45,12 @@ const emptyMapForm = (): CreateAlarmTypeFieldRequest => ({
   default_unit_id: ''
 });
 
+function versionOf(items: Array<{ id: string; version: number }>, id: string): number {
+  const item = items.find((candidate) => candidate.id === id);
+  if (!item) throw new Error(`Missing version for ${id}`);
+  return item.version;
+}
+
 export class AlarmCatalogState {
   units = $state<Unit[]>([]);
   fields = $state<AlarmField[]>([]);
@@ -137,7 +143,10 @@ export class AlarmCatalogState {
   async createUnit(): Promise<void> {
     try {
       if (this.editingUnitID) {
-        await this.unitRepository.update(this.editingUnitID, this.unitForm);
+        await this.unitRepository.update(this.editingUnitID, {
+          ...this.unitForm,
+          base_version: versionOf(this.units, this.editingUnitID)
+        });
       } else {
         await this.unitRepository.create(this.unitForm);
       }
@@ -166,7 +175,7 @@ export class AlarmCatalogState {
 
   async deleteUnit(id: string): Promise<void> {
     try {
-      await this.unitRepository.delete(id);
+      await this.unitRepository.delete({ id, base_version: versionOf(this.units, id) });
       await this.loadAll();
       this.success('facility.alarm_catalog_page.toasts.unit_deleted');
     } catch (error) {
@@ -183,7 +192,10 @@ export class AlarmCatalogState {
         default_unit_code: this.fieldForm.default_unit_code || undefined
       };
       if (this.editingFieldID) {
-        await this.fieldRepository.update(this.editingFieldID, payload);
+        await this.fieldRepository.update(this.editingFieldID, {
+          ...payload,
+          base_version: versionOf(this.fields, this.editingFieldID)
+        });
       } else {
         await this.fieldRepository.create(payload);
       }
@@ -217,7 +229,7 @@ export class AlarmCatalogState {
 
   async deleteField(id: string): Promise<void> {
     try {
-      await this.fieldRepository.delete(id);
+      await this.fieldRepository.delete({ id, base_version: versionOf(this.fields, id) });
       await this.loadAll();
       this.success('facility.alarm_catalog_page.toasts.field_deleted');
     } catch (error) {
@@ -229,7 +241,10 @@ export class AlarmCatalogState {
     try {
       let selectedTypeID = this.editingTypeID;
       if (this.editingTypeID) {
-        await this.typeRepository.update(this.editingTypeID, { name: this.typeForm.name });
+        await this.typeRepository.update(this.editingTypeID, {
+          name: this.typeForm.name,
+          base_version: versionOf(this.types, this.editingTypeID)
+        });
       } else {
         const created = await this.typeRepository.create(this.typeForm);
         selectedTypeID = created.id;
@@ -269,7 +284,7 @@ export class AlarmCatalogState {
     }
 
     try {
-      await this.typeRepository.delete(id);
+      await this.typeRepository.delete({ id, base_version: versionOf(this.types, id) });
       if (this.selectedTypeId === id) {
         this.selectedTypeId = '';
       }
@@ -311,7 +326,10 @@ export class AlarmCatalogState {
       };
       if (this.editingMappingID) {
         const { alarm_field_id: _alarmFieldID, ...updatePayload } = payload;
-        await this.typeRepository.updateField(this.editingMappingID, updatePayload);
+        await this.typeRepository.updateField(this.editingMappingID, {
+          ...updatePayload,
+          base_version: versionOf(this.typeFields, this.editingMappingID)
+        });
       } else {
         await this.typeRepository.createField(this.selectedTypeId, payload);
       }
@@ -347,7 +365,10 @@ export class AlarmCatalogState {
 
   async deleteMapping(id: string): Promise<void> {
     try {
-      await this.typeRepository.deleteField(id);
+      await this.typeRepository.deleteField({
+        id,
+        base_version: versionOf(this.typeFields, id)
+      });
       await this.loadTypeFields(this.selectedTypeId);
       this.success('facility.alarm_catalog_page.toasts.mapping_deleted');
     } catch (error) {

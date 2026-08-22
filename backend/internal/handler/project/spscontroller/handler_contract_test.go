@@ -23,7 +23,7 @@ func TestUpdateProjectSPSControllerRelinksTheRequestedLink(t *testing.T) {
 	handler := NewHandler(contractAccessPolicy{}, service, nil)
 	recorder := httptest.NewRecorder()
 	ctx, _ := gin.CreateTestContext(recorder)
-	ctx.Request = httptest.NewRequest(http.MethodPut, "/projects/"+projectID.String()+"/sps-controllers/"+linkID.String(), strings.NewReader(`{"sps_controller_id":"`+controllerID.String()+`"}`))
+	ctx.Request = httptest.NewRequest(http.MethodPut, "/projects/"+projectID.String()+"/sps-controllers/"+linkID.String(), strings.NewReader(`{"sps_controller_id":"`+controllerID.String()+`","base_version":1}`))
 	ctx.Request.Header.Set("Content-Type", "application/json")
 	ctx.Params = gin.Params{{Key: "id", Value: projectID.String()}, {Key: "linkId", Value: linkID.String()}}
 	ctx.Set(middleware.ContextUserIDKey, uuid.New())
@@ -70,12 +70,12 @@ func (s *contractFacilityLinkService) CopySPSControllerSystemType(context.Contex
 	return nil, nil
 }
 
-func (s *contractFacilityLinkService) UpdateSPSController(_ context.Context, linkID, projectID, controllerID uuid.UUID) (*domainProject.ProjectSPSController, error) {
-	s.linkID, s.projectID, s.controllerID = linkID, projectID, controllerID
-	return &domainProject.ProjectSPSController{ProjectID: projectID, SPSControllerID: controllerID}, nil
+func (s *contractFacilityLinkService) UpdateSPSController(_ context.Context, command domainProject.FacilityLinkUpdate) (*domainProject.ProjectSPSController, error) {
+	s.linkID, s.projectID, s.controllerID = command.LinkID, command.ProjectID, command.TargetID
+	return &domainProject.ProjectSPSController{ProjectID: command.ProjectID, SPSControllerID: command.TargetID}, nil
 }
 
-func (s *contractFacilityLinkService) DeleteSPSController(context.Context, uuid.UUID, uuid.UUID) error {
+func (s *contractFacilityLinkService) DeleteSPSController(context.Context, domainProject.FacilityLinkDelete) error {
 	return nil
 }
 

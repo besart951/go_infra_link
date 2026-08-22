@@ -18,8 +18,6 @@ type FieldDeviceRecord struct {
 	SPSControllerSystemType   domainFacility.SPSControllerSystemType `gorm:"foreignKey:SPSControllerSystemTypeID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	SystemPartID              uuid.UUID                              `gorm:"type:uuid;not null;index"`
 	SystemPart                domainFacility.SystemPart              `gorm:"foreignKey:SystemPartID"`
-	SpecificationID           *uuid.UUID                             `gorm:"type:uuid;index"`
-	Specification             *domainFacility.Specification          `gorm:"foreignKey:SpecificationID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
 	ApparatID                 uuid.UUID                              `gorm:"type:uuid;not null;index"`
 	Apparat                   domainFacility.Apparat                 `gorm:"foreignKey:ApparatID"`
 	BacnetObjects             []domainFacility.BacnetObject          `gorm:"foreignKey:FieldDeviceID"`
@@ -42,7 +40,6 @@ func toFieldDeviceRecord(entity *domainFacility.FieldDevice) *FieldDeviceRecord 
 		TextIndividuell:           entity.TextIndividuell,
 		SPSControllerSystemTypeID: entity.SPSControllerSystemTypeID,
 		SystemPartID:              entity.SystemPartID,
-		SpecificationID:           entity.SpecificationID,
 		ApparatID:                 entity.ApparatID,
 	}
 }
@@ -62,8 +59,6 @@ func toFieldDeviceDomain(record *FieldDeviceRecord) *domainFacility.FieldDevice 
 		SPSControllerSystemType:   record.SPSControllerSystemType,
 		SystemPartID:              record.SystemPartID,
 		SystemPart:                record.SystemPart,
-		SpecificationID:           record.SpecificationID,
-		Specification:             record.Specification,
 		ApparatID:                 record.ApparatID,
 		Apparat:                   record.Apparat,
 		BacnetObjects:             record.BacnetObjects,
@@ -89,7 +84,7 @@ type fieldDeviceListRow struct {
 	TextIndividuell           *string    `gorm:"column:text_individuell"`
 	SPSControllerSystemTypeID uuid.UUID  `gorm:"column:sps_controller_system_type_id"`
 	SystemPartID              uuid.UUID  `gorm:"column:system_part_id"`
-	SpecificationID           *uuid.UUID `gorm:"column:specification_id"`
+	SpecificationID           *uuid.UUID `gorm:"column:canonical_specification_id"`
 	ApparatID                 uuid.UUID  `gorm:"column:apparat_id"`
 
 	SPSSystemTypeID         *uuid.UUID `gorm:"column:sps_system_type_id"`

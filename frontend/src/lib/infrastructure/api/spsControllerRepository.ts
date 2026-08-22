@@ -10,14 +10,15 @@ import type {
   SPSControllerSystemType,
   SPSControllerSystemTypeListParams,
   SPSControllerSystemTypeListResponse,
-  CopyJob
+  FacilityJob
 } from '$lib/domain/facility/index.js';
-import { toCopyJob } from '$lib/domain/facility/copy-job.js';
+import { toFacilityJob } from '$lib/domain/facility/facility-job.js';
 import { createCachedBulkFetchByIds } from '$lib/infrastructure/api/createCachedBulkFetch.js';
 import { spsControllerSystemTypeRepository } from '$lib/infrastructure/api/spsControllerSystemTypeRepository.js';
 import { api } from '$lib/api/client.js';
 import { apiClient } from '$lib/api/generated/client.js';
 import { buildListUrl, mapPaginatedResponse } from './listHelpers.js';
+import { versionedDeletePath } from './versionedMutation.js';
 
 const getBulkCached = createCachedBulkFetchByIds('facility-sps-controllers', (ids, signal) =>
   api<SPSControllerBulkResponse>('/facility/sps-controllers/bulk', {
@@ -45,18 +46,18 @@ export const spsControllerRepository: SPSControllerRepository = {
     return getBulkCached(ids, signal);
   },
 
-  async copy(id: string, operationId: string, signal?: AbortSignal): Promise<CopyJob> {
+  async copy(id: string, operationId: string, signal?: AbortSignal): Promise<FacilityJob> {
     const { data } = await apiClient.POST('/api/v1/facility/sps-controllers/{id}/copy', {
       params: {
         path: { id },
-        header: { 'X-Copy-Operation-ID': operationId }
+        header: { 'Idempotency-Key': operationId }
       },
       signal
     });
     if (!data) {
       throw new Error('Copy job response is empty');
     }
-    return toCopyJob(data);
+    return toFacilityJob(data);
   },
 
   async create(data: CreateSPSControllerRequest, signal?: AbortSignal): Promise<SPSController> {
@@ -79,8 +80,8 @@ export const spsControllerRepository: SPSControllerRepository = {
     });
   },
 
-  async delete(id: string, signal?: AbortSignal): Promise<void> {
-    return api<void>(`/facility/sps-controllers/${id}`, {
+  async delete(command, signal?: AbortSignal): Promise<void> {
+    return api<void>(versionedDeletePath('/facility/sps-controllers', command), {
       method: 'DELETE',
       signal
     });

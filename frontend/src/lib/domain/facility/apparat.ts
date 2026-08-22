@@ -3,6 +3,7 @@ import type { SystemPart } from './system.js';
 
 export interface Apparat {
   id: string;
+  version: number;
   short_name: string;
   name: string;
   description?: string;
@@ -19,6 +20,7 @@ export interface CreateApparatRequest {
 }
 
 export interface UpdateApparatRequest {
+  base_version: number;
   short_name?: string;
   name?: string;
   description?: string;

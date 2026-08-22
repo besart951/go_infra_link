@@ -8,6 +8,7 @@ import type {
 } from '$lib/domain/facility/index.js';
 import { api } from '$lib/api/client.js';
 import { buildListUrl, mapPaginatedResponse } from './listHelpers.js';
+import { versionedDeletePath } from './versionedMutation.js';
 
 export const notificationClassRepository: NotificationClassRepository = {
   async list(
@@ -49,8 +50,8 @@ export const notificationClassRepository: NotificationClassRepository = {
     });
   },
 
-  async delete(id: string, signal?: AbortSignal): Promise<void> {
-    return api<void>(`/facility/notification-classes/${id}`, {
+  async delete(command, signal?: AbortSignal): Promise<void> {
+    return api<void>(versionedDeletePath('/facility/notification-classes', command), {
       method: 'DELETE',
       signal
     });

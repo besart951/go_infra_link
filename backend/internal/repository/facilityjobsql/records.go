@@ -30,6 +30,13 @@ func itemRecordFromStep(step facilityjobs.Step, now time.Time) itemRecord {
 	}
 }
 
+func preparedItemRecord(step facilityjobs.Step, now time.Time) itemRecord {
+	record := itemRecordFromStep(step, now)
+	record.Status = string(facilityjobs.ItemStatusQueued)
+	record.Attempts = 0
+	return record
+}
+
 func (r itemRecord) toDomain() facilityjobs.Item {
 	return facilityjobs.Item{
 		Key:    facilityjobs.ItemKey{OwnerID: r.OwnerID, JobID: r.JobID, Ordinal: r.Ordinal},

@@ -74,6 +74,7 @@
     await formState.handleSubmit(async () => {
       if (initialData) {
         return await manageAlarmDefinition.update(initialData.id, {
+          base_version: initialData.version,
           name,
           alarm_note: alarm_note || undefined,
           alarm_type_id: alarm_type_id || undefined
@@ -142,7 +143,7 @@
         {$t('facility.forms.alarm_definition.fields_preview_title')}
       </p>
       <div class="rounded-md border p-3 text-sm">
-        {#each typeFields as field}
+        {#each typeFields as field (field.id)}
           <div class="flex items-center gap-2 py-1">
             <span class="font-mono text-xs text-muted-foreground">{field.alarm_field?.key}</span>
             <span>{field.alarm_field?.label}</span>

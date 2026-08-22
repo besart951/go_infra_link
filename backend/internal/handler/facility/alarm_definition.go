@@ -17,6 +17,7 @@ func NewAlarmDefinitionHandler(svc AlarmDefinitionService) *AlarmDefinitionHandl
 		applyAlarmDefinitionUpdate,
 		respFn(toAlarmDefinitionResponse),
 		listRespFn(toAlarmDefinitionListResponse),
+		"alarm_definition",
 		"facility.alarm_definition_not_found",
 	)}
 }
@@ -77,6 +78,7 @@ func (h *AlarmDefinitionHandler) UpdateAlarmDefinition(c *gin.Context) { h.crud.
 // @Tags facility-alarm-definitions
 // @Produce json
 // @Param id path string true "Alarm Definition ID"
+// @Param base_version query integer true "Expected aggregate version" minimum(1)
 // @Success 204
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse

@@ -42,6 +42,13 @@ func (s *AlarmDefinitionService) DeleteByID(ctx context.Context, id uuid.UUID) e
 	return s.baseService.DeleteByID(ctx, id)
 }
 
+func (s *AlarmDefinitionService) DeleteAtVersion(ctx context.Context, id uuid.UUID, version uint64) error {
+	if err := s.deleteGuard.ensureDeleteAllowed(ctx, id); err != nil {
+		return err
+	}
+	return s.baseService.DeleteAtVersion(ctx, id, version)
+}
+
 func validateAlarmDefinition(ad *domainFacility.AlarmDefinition) error {
 	ve := domain.NewValidationError()
 	if ad == nil {

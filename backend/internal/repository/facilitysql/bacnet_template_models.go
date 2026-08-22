@@ -63,6 +63,24 @@ func templateRecordToDomain(record BacnetObjectTemplateRecord) domainObjectData.
 	}
 }
 
+func templateAlarmRecordToDomain(record BacnetObjectTemplateAlarmValueRecord) domainObjectData.BacnetObjectTemplateAlarmValue {
+	return domainObjectData.BacnetObjectTemplateAlarmValue{
+		ID: record.ID, CreatedAt: record.CreatedAt, UpdatedAt: record.UpdatedAt, Version: record.Version,
+		TemplateID: record.TemplateID, AlarmTypeFieldID: record.AlarmTypeFieldID,
+		ValueNumber: record.ValueNumber, ValueInteger: record.ValueInteger, ValueBoolean: record.ValueBoolean,
+		ValueString: record.ValueString, ValueJSON: record.ValueJSON, UnitID: record.UnitID, Source: record.Source,
+	}
+}
+
+func templateAlarmRecordFromDomain(value domainObjectData.BacnetObjectTemplateAlarmValue) BacnetObjectTemplateAlarmValueRecord {
+	return BacnetObjectTemplateAlarmValueRecord{
+		ID: value.ID, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt, Version: value.Version,
+		TemplateID: value.TemplateID, AlarmTypeFieldID: value.AlarmTypeFieldID,
+		ValueNumber: value.ValueNumber, ValueInteger: value.ValueInteger, ValueBoolean: value.ValueBoolean,
+		ValueString: value.ValueString, ValueJSON: value.ValueJSON, UnitID: value.UnitID, Source: value.Source,
+	}
+}
+
 func templateRecordFromDomain(template domainObjectData.BacnetObjectTemplate) BacnetObjectTemplateRecord {
 	return BacnetObjectTemplateRecord{
 		ID: template.ID, CreatedAt: template.CreatedAt, UpdatedAt: template.UpdatedAt, Version: template.Version,

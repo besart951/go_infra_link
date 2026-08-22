@@ -111,7 +111,7 @@ func TestBulkDeleteFieldDevicesRequiresDurableJobsAboveSynchronousLimit(t *testi
 	for i := range ids {
 		ids[i] = uuid.New()
 	}
-	body, err := json.Marshal(dto.BulkDeleteFieldDeviceRequest{IDs: ids})
+	body, err := json.Marshal(versionedDeleteRequest(ids))
 	if err != nil {
 		t.Fatalf("marshal bulk delete request: %v", err)
 	}
@@ -160,7 +160,7 @@ func TestDeleteFieldDevicePassesRequestedBaseVersion(t *testing.T) {
 	if context.Writer.Status() != http.StatusNoContent || len(service.commands) != 1 {
 		t.Fatalf("status=%d commands=%+v body=%s", context.Writer.Status(), service.commands, recorder.Body.String())
 	}
-	if service.commands[0].BaseVersion == nil || *service.commands[0].BaseVersion != 7 {
+	if service.commands[0].BaseVersion != 7 {
 		t.Fatalf("base version was not passed: %+v", service.commands[0])
 	}
 	if recorder.Header().Get("Deprecation") != "" {
@@ -168,10 +168,10 @@ func TestDeleteFieldDevicePassesRequestedBaseVersion(t *testing.T) {
 	}
 }
 
-func TestBulkDeleteLegacyIDsEmitDeprecationHeader(t *testing.T) {
+func TestBulkDeleteRejectsLegacyIDs(t *testing.T) {
 	service := &versionedDeleteHandlerService{fakeFieldDeviceHandlerService: &fakeFieldDeviceHandlerService{}}
 	handler := NewFieldDeviceHandler(service)
-	body, _ := json.Marshal(dto.BulkDeleteFieldDeviceRequest{IDs: []uuid.UUID{uuid.New()}})
+	body, _ := json.Marshal(map[string]any{"ids": []uuid.UUID{uuid.New()}})
 	recorder := httptest.NewRecorder()
 	context, _ := gin.CreateTestContext(recorder)
 	context.Request = httptest.NewRequest(http.MethodDelete, "/field-devices/bulk-delete", strings.NewReader(string(body)))
@@ -179,7 +179,7 @@ func TestBulkDeleteLegacyIDsEmitDeprecationHeader(t *testing.T) {
 
 	handler.BulkDeleteFieldDevices(context)
 
-	if recorder.Code != http.StatusOK || recorder.Header().Get("Deprecation") != "true" {
+	if recorder.Code != http.StatusBadRequest || recorder.Header().Get("Deprecation") != "" {
 		t.Fatalf("status=%d headers=%v body=%s", recorder.Code, recorder.Header(), recorder.Body.String())
 	}
 }
@@ -189,15 +189,15 @@ func TestBulkDeleteFieldDevicesQueuesDurableJobAboveSynchronousLimit(t *testing.
 	if err != nil {
 		t.Fatalf("open job database: %v", err)
 	}
-	if err := facilityservice.MigrateCopyJobs(db); err != nil {
+	if err := facilityservice.MigrateFacilityJobs(db); err != nil {
 		t.Fatalf("migrate jobs: %v", err)
 	}
-	jobs := facilityservice.NewCopyJobManagerWithDB(nil, db)
+	jobs := facilityservice.NewFacilityJobManagerWithDB(nil, db)
 	t.Cleanup(jobs.Close)
 
 	service := &fakeFieldDeviceHandlerService{}
-	handler := NewFieldDeviceHandlerWithCopyJobs(service, nil, jobs)
-	request := dto.BulkDeleteFieldDeviceRequest{IDs: newFieldDeviceIDs(501)}
+	handler := NewFieldDeviceHandlerWithFacilityJobs(service, nil, jobs)
+	request := versionedDeleteRequest(newFieldDeviceIDs(501))
 	body, err := json.Marshal(request)
 	if err != nil {
 		t.Fatalf("marshal request: %v", err)
@@ -216,6 +216,14 @@ func TestBulkDeleteFieldDevicesQueuesDurableJobAboveSynchronousLimit(t *testing.
 	if service.bulkDeleteCalls != 0 {
 		t.Fatalf("expected no synchronous service call, got %d", service.bulkDeleteCalls)
 	}
+}
+
+func versionedDeleteRequest(ids []uuid.UUID) dto.BulkDeleteFieldDeviceRequest {
+	items := make([]dto.BulkDeleteFieldDeviceItem, len(ids))
+	for index, id := range ids {
+		items[index] = dto.BulkDeleteFieldDeviceItem{ID: id, BaseVersion: 1}
+	}
+	return dto.BulkDeleteFieldDeviceRequest{Items: items}
 }
 
 func newFieldDeviceIDs(count int) []uuid.UUID {
@@ -438,6 +446,10 @@ func (s *fakeFieldDeviceHandlerService) DeleteByID(context.Context, uuid.UUID) e
 	return nil
 }
 
+func (s *fakeFieldDeviceHandlerService) Delete(context.Context, domainFacility.FieldDeviceDeleteCommand) error {
+	return nil
+}
+
 func (s *fakeFieldDeviceHandlerService) ListBacnetObjects(context.Context, uuid.UUID) ([]domainFacility.BacnetObject, error) {
 	return nil, nil
 }
@@ -458,11 +470,20 @@ func (s *fakeFieldDeviceHandlerService) DeleteSpecification(context.Context, uui
 	return nil
 }
 
+func (s *fakeFieldDeviceHandlerService) DeleteSpecificationAtVersion(context.Context, uuid.UUID, uint64) error {
+	return nil
+}
+
 func (s *fakeFieldDeviceHandlerService) BulkUpdate(context.Context, []domainFacility.BulkFieldDeviceUpdate) *domainFacility.BulkOperationResult {
 	return &domainFacility.BulkOperationResult{}
 }
 
 func (s *fakeFieldDeviceHandlerService) BulkDelete(context.Context, []uuid.UUID) *domainFacility.BulkOperationResult {
+	s.bulkDeleteCalls++
+	return &domainFacility.BulkOperationResult{}
+}
+
+func (s *fakeFieldDeviceHandlerService) BulkDeleteCommands(context.Context, []domainFacility.FieldDeviceDeleteCommand) *domainFacility.BulkOperationResult {
 	s.bulkDeleteCalls++
 	return &domainFacility.BulkOperationResult{}
 }

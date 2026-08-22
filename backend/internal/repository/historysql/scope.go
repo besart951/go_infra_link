@@ -281,10 +281,10 @@ func (s *Store) addScopesForBacnetObject(ctx context.Context, scopes scopeSet, b
 			FROM bacnet_objects bo
 			WHERE bo.id = ?
 			UNION
-			SELECT NULL::uuid AS field_device_id, odb.object_data_id, od.project_id
-			FROM object_data_bacnet_objects odb
-			JOIN object_data od ON od.id = odb.object_data_id
-			WHERE odb.bacnet_object_id = ?
+			SELECT NULL::uuid AS field_device_id, template.object_data_id, od.project_id
+			FROM bacnet_object_templates template
+			JOIN object_data od ON od.id = template.object_data_id
+			WHERE template.id = ?
 		`, bacnetObjectID, bacnetObjectID).
 		Scan(&rows).Error; err != nil {
 		return err
@@ -312,10 +312,10 @@ func (s *Store) addObjectDataScopesForBacnetObject(ctx context.Context, scopes s
 		ProjectID    *uuid.UUID `gorm:"column:project_id"`
 	}
 	if err := s.db.WithContext(ctx).
-		Table("object_data_bacnet_objects AS odb").
-		Select("odb.object_data_id, od.project_id").
-		Joins("JOIN object_data od ON od.id = odb.object_data_id").
-		Where("odb.bacnet_object_id = ?", bacnetObjectID).
+		Table("bacnet_object_templates AS template").
+		Select("template.object_data_id, od.project_id").
+		Joins("JOIN object_data od ON od.id = template.object_data_id").
+		Where("template.id = ?", bacnetObjectID).
 		Scan(&rows).Error; err != nil {
 		return err
 	}

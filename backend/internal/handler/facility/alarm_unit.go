@@ -17,6 +17,7 @@ func NewUnitHandler(svc UnitService) *UnitHandler {
 		applyUnitUpdate,
 		respFn(toUnitResponse),
 		listRespFn(toUnitListResponse),
+		"alarm_unit",
 		"facility.not_found",
 	)}
 }
@@ -66,6 +67,7 @@ func (h *UnitHandler) UpdateUnit(c *gin.Context) { h.crud.handleUpdate(c) }
 // @Summary Delete an alarm unit
 // @Tags facility-alarm-units
 // @Param id path string true "Unit ID"
+// @Param base_version query integer true "Expected aggregate version" minimum(1)
 // @Success 204
 // @Router /api/v1/facility/alarm-units/{id} [delete]
 func (h *UnitHandler) DeleteUnit(c *gin.Context) { h.crud.handleDelete(c) }

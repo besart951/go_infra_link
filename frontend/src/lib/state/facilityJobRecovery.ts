@@ -1,11 +1,11 @@
 import {
   facilityReferenceDataCache,
-  type FacilityCopyJobProgressEvent
+  type FacilityJobProgressEvent
 } from '$lib/services/facilityReferenceDataCache.js';
 
 export interface FacilityJobRecoveryActions {
   hasActiveJobs: () => boolean;
-  onProgress: (event: FacilityCopyJobProgressEvent) => void;
+  onProgress: (event: FacilityJobProgressEvent) => void;
   reconcile: () => Promise<void>;
   refresh: () => Promise<void>;
   setInterrupted: (interrupted: boolean) => void;
@@ -19,7 +19,7 @@ export class FacilityJobRecovery {
 
   start(): void {
     this.unsubscribers = [
-      facilityReferenceDataCache.subscribeCopyJobProgress(this.actions.onProgress),
+      facilityReferenceDataCache.subscribeJobProgress(this.actions.onProgress),
       facilityReferenceDataCache.subscribeRealtimeOpen(() => void this.actions.reconcile())
     ];
     if (typeof window === 'undefined') return;

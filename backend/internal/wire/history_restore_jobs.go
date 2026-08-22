@@ -17,7 +17,7 @@ import (
 )
 
 type historyRestoreExecution struct {
-	job     facilityservice.CopyJob
+	job     facilityservice.FacilityJob
 	payload domainHistory.RestoreControlCabinetJobPayload
 	report  func(facilityservice.FacilityJobProgress)
 	asOf    time.Time
@@ -37,7 +37,7 @@ type historyRestoreTaskRegistrar struct {
 	}
 }
 
-func registerHistoryRestoreTasks(jobs *facilityservice.CopyJobManager, runtime *RuntimeAdapters, history HistoryRepository) {
+func registerHistoryRestoreTasks(jobs *facilityservice.FacilityJobManager, runtime *RuntimeAdapters, history HistoryRepository) {
 	if jobs == nil || history == nil {
 		return
 	}
@@ -48,8 +48,9 @@ func registerHistoryRestoreTasks(jobs *facilityservice.CopyJobManager, runtime *
 	jobs.RegisterTask(domainHistory.TaskRestoreControlCabinet, registrar.handler())
 }
 
-func (r historyRestoreTaskRegistrar) handler() facilityservice.FacilityJobTask {
-	return func(ctx context.Context, job facilityservice.CopyJob, report func(facilityservice.FacilityJobProgress)) (facilityservice.FacilityJobTaskResult, error) {
+func (r historyRestoreTaskRegistrar) handler() facilityservice.FacilityJobHandler {
+	return facilityservice.FacilityJobHandlerFunc(func(ctx context.Context, task facilityservice.FacilityJobExecution) (facilityservice.FacilityJobTaskResult, error) {
+		job, report := task.Job, task.Reporter.Report
 		payload, err := decodeHistoryRestorePayload(job.Payload)
 		if err != nil {
 			return facilityservice.FacilityJobTaskResult{}, err
@@ -60,7 +61,7 @@ func (r historyRestoreTaskRegistrar) handler() facilityservice.FacilityJobTask {
 		}
 		result, err := r.execute(ctx, historyRestoreExecution{job: job, payload: payload, report: report, asOf: asOf})
 		return facilityservice.FacilityJobTaskResult{Result: result}, err
-	}
+	})
 }
 
 func (r historyRestoreTaskRegistrar) execute(ctx context.Context, execution historyRestoreExecution) (json.RawMessage, error) {
@@ -102,6 +103,7 @@ func (r historyRestoreTaskRegistrar) executeChunk(ctx context.Context, chunk his
 		Key:        facilityjobs.ItemKey{OwnerID: chunk.execution.job.OwnerID, JobID: chunk.execution.job.ID, Ordinal: chunk.position.Ordinal},
 		EntityType: "control_cabinet.restore." + string(chunk.phase) + "." + chunk.table,
 		SourceID:   chunk.payloadID(), Input: chunk.execution.job.Payload,
+		PersistIDMapping: true,
 	}
 	result, _, err := r.steps.Execute(ctx, step, func(stepCtx context.Context, unit apptransaction.UnitOfWork) (facilityjobs.StepResult, error) {
 		db, dbErr := infratransaction.GormDB(unit)
@@ -139,7 +141,8 @@ func (r historyRestoreTaskRegistrar) finalize(ctx context.Context, execution his
 	step := facilityjobs.Step{
 		Key:        facilityjobs.ItemKey{OwnerID: execution.job.OwnerID, JobID: execution.job.ID, Ordinal: ordinal},
 		EntityType: "control_cabinet.restore.finalize", SourceID: execution.payload.ControlCabinetID,
-		Input: execution.job.Payload,
+		Input:            execution.job.Payload,
+		PersistIDMapping: true,
 	}
 	_, _, err := r.steps.Execute(ctx, step, func(stepCtx context.Context, unit apptransaction.UnitOfWork) (facilityjobs.StepResult, error) {
 		db, dbErr := infratransaction.GormDB(unit)

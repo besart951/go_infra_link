@@ -71,6 +71,33 @@ func TestStepStoreRollsBackDomainMutationAndPersistsFailure(t *testing.T) {
 	}
 }
 
+func TestStepStorePreparedPlanResumesWithoutIDMapping(t *testing.T) {
+	db := openStepStoreTestDB(t)
+	store := NewStepStore(db)
+	step := testStep()
+	step.PersistIDMapping = false
+	step.Input = json.RawMessage(`{"group":[1,2]}`)
+	if err := store.Prepare(t.Context(), []facilityjobs.Step{step}); err != nil {
+		t.Fatalf("Prepare() error = %v", err)
+	}
+
+	calls := 0
+	mutation := func(context.Context, apptransaction.UnitOfWork) (facilityjobs.StepResult, error) {
+		calls++
+		return facilityjobs.StepResult{Result: json.RawMessage(`{"updated":2}`)}, nil
+	}
+	if _, resumed, err := store.Execute(t.Context(), step, mutation); err != nil || resumed {
+		t.Fatalf("first Execute() resumed=%v error=%v", resumed, err)
+	}
+	result, resumed, err := store.Execute(t.Context(), step, mutation)
+	if err != nil || !resumed || calls != 1 || string(result.Result) != `{"updated":2}` {
+		t.Fatalf("resumed result=%s resumed=%v calls=%d error=%v", result.Result, resumed, calls, err)
+	}
+	if _, err := store.GetMapping(t.Context(), step); !errors.Is(err, gorm.ErrRecordNotFound) {
+		t.Fatalf("unexpected ID mapping error = %v", err)
+	}
+}
+
 func openStepStoreTestDB(t *testing.T) *gorm.DB {
 	t.Helper()
 	db, err := gorm.Open(sqlite.Open("file:"+uuid.NewString()+"?mode=memory&cache=shared"), &gorm.Config{})
@@ -87,5 +114,6 @@ func testStep() facilityjobs.Step {
 	return facilityjobs.Step{
 		Key:        facilityjobs.ItemKey{OwnerID: uuid.New(), JobID: uuid.New(), Ordinal: 0},
 		EntityType: "field_device", SourceID: uuid.New(), Input: json.RawMessage(`{"source":"test"}`),
+		PersistIDMapping: true,
 	}
 }

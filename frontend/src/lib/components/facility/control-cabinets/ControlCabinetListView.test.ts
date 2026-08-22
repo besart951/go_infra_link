@@ -11,6 +11,7 @@ const mockGetBuildings = vi.fn();
 
 type TestControlCabinet = {
   id: string;
+  version: number;
   control_cabinet_nr: string;
   building_id: string;
   created_at: string;
@@ -96,6 +97,7 @@ describe('ControlCabinetListView', () => {
   it('refreshes visible cabinet ids without full project list reload', async () => {
     const cabinet = {
       id: 'cabinet-1',
+      version: 1,
       control_cabinet_nr: 'CC-1',
       building_id: 'building-1',
       created_at: '2026-01-01T00:00:00Z',
@@ -127,6 +129,7 @@ describe('ControlCabinetListView', () => {
   it('applies cabinet delta without follow-up fetch', async () => {
     const cabinet = {
       id: 'cabinet-1',
+      version: 1,
       control_cabinet_nr: 'CC-1',
       building_id: 'building-1',
       created_at: '2026-01-01T00:00:00Z',

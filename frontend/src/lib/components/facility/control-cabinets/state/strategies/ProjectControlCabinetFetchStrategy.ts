@@ -10,13 +10,14 @@ import {
 } from '$lib/components/facility/shared/projectFacilityListFilters.js';
 import { fetchAllPages } from '$lib/components/facility/shared/paginatedListFetcher.js';
 import type { ControlCabinetFilters } from '../types.js';
+import type { ProjectControlCabinetLink } from '$lib/domain/project/index.js';
 
 export class ProjectControlCabinetFetchStrategy implements DataTableFetchStrategy<
   ControlCabinet,
   ControlCabinetFilters
 > {
   private readonly buildingLabels = new Map<string, string>();
-  private readonly linkIdsByCabinetId = new Map<string, string>();
+  private readonly linksByCabinetId = new Map<string, ProjectControlCabinetLink>();
   private buildingFilterOptions: MultiFilterOption[] = [];
   private readonly projectId: string;
 
@@ -36,8 +37,8 @@ export class ProjectControlCabinetFetchStrategy implements DataTableFetchStrateg
     return [...this.buildingFilterOptions];
   }
 
-  getLinkId(controlCabinetId: string): string | undefined {
-    return this.linkIdsByCabinetId.get(controlCabinetId);
+  getLink(controlCabinetId: string): ProjectControlCabinetLink | undefined {
+    return this.linksByCabinetId.get(controlCabinetId);
   }
 
   async fetch(query: DataTableQuery<ControlCabinetFilters>, signal?: AbortSignal) {
@@ -51,9 +52,9 @@ export class ProjectControlCabinetFetchStrategy implements DataTableFetchStrateg
       signal
     );
 
-    this.linkIdsByCabinetId.clear();
+    this.linksByCabinetId.clear();
     for (const link of links) {
-      this.linkIdsByCabinetId.set(link.control_cabinet_id, link.id);
+      this.linksByCabinetId.set(link.control_cabinet_id, link);
     }
 
     const controlCabinetIds = links.map((item) => item.control_cabinet_id);

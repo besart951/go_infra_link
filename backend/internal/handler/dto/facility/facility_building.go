@@ -14,9 +14,9 @@ type CreateBuildingRequest struct {
 }
 
 type UpdateBuildingRequest struct {
-	BaseVersion   *uint64 `json:"base_version" binding:"omitempty,min=1"`
-	IWSCode       string  `json:"iws_code" binding:"omitempty,len=4"`
-	BuildingGroup int     `json:"building_group" binding:"omitempty"`
+	BaseVersion   uint64 `json:"base_version" binding:"required,min=1"`
+	IWSCode       string `json:"iws_code" binding:"omitempty,len=4"`
+	BuildingGroup int    `json:"building_group" binding:"omitempty"`
 }
 
 type BuildingResponse struct {

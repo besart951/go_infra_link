@@ -20,8 +20,8 @@ import (
 type FacilityLinkService interface {
 	CreateControlCabinet(ctx context.Context, projectID, controlCabinetID uuid.UUID) (*domainProject.ProjectControlCabinet, error)
 	CopyControlCabinet(ctx context.Context, projectID, controlCabinetID uuid.UUID) (*domainFacility.ControlCabinet, error)
-	UpdateControlCabinet(ctx context.Context, linkID, projectID, controlCabinetID uuid.UUID) (*domainProject.ProjectControlCabinet, error)
-	DeleteControlCabinet(ctx context.Context, linkID, projectID uuid.UUID) error
+	UpdateControlCabinet(ctx context.Context, command domainProject.FacilityLinkUpdate) (*domainProject.ProjectControlCabinet, error)
+	DeleteControlCabinet(ctx context.Context, command domainProject.FacilityLinkDelete) error
 	ListControlCabinets(ctx context.Context, projectID uuid.UUID, page, limit int) (*domain.PaginatedList[domainProject.ProjectControlCabinet], error)
 }
 
@@ -33,9 +33,9 @@ type Handler struct {
 
 type ProjectControlCabinetDeltaNotifier func(*gin.Context, uuid.UUID, domainFacility.ControlCabinet)
 
-// copyJobResponseContract keeps Swag's imported DTO reference available while
+// facilityJobResponseContract keeps Swag's imported DTO reference available while
 // the shared project-link module writes the asynchronous response.
-type copyJobResponseContract = facilitydto.CopyJobResponse
+type facilityJobResponseContract = facilitydto.FacilityJobResponse
 
 func NewHandler(access projectshared.AccessPolicyService, facilityLink FacilityLinkService, notify projectshared.ProjectChangeNotifier, notifyDelta ...ProjectControlCabinetDeltaNotifier) *Handler {
 	var delta ProjectControlCabinetDeltaNotifier
@@ -45,8 +45,8 @@ func NewHandler(access projectshared.AccessPolicyService, facilityLink FacilityL
 	return &Handler{base: projectshared.NewFacilityLinkHandler(access, notify), facilityLink: facilityLink, notifyDelta: delta}
 }
 
-func (h *Handler) ConfigureCopyJobs(copyJobs *facilityservice.CopyJobManager) {
-	h.base.ConfigureCopyJobs(copyJobs)
+func (h *Handler) ConfigureFacilityJobs(facilityJobs *facilityservice.FacilityJobManager) {
+	h.base.ConfigureFacilityJobs(facilityJobs)
 }
 
 // CreateProjectControlCabinet godoc
@@ -132,8 +132,8 @@ func (h *Handler) ListProjectControlCabinets(c *gin.Context) {
 // @Produce json
 // @Param id path string true "Project ID"
 // @Param controlCabinetId path string true "Control Cabinet ID"
-// @Param X-Copy-Operation-ID header string false "Client-generated copy operation UUID"
-// @Success 202 {object} facilitydto.CopyJobResponse
+// @Param Idempotency-Key header string false "Client-generated operation UUID"
+// @Success 202 {object} facilitydto.FacilityJobResponse
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 401 {object} dto.ErrorResponse
 // @Failure 403 {object} dto.ErrorResponse
@@ -153,7 +153,7 @@ func (h *Handler) CopyProjectControlCabinet(c *gin.Context) {
 	h.base.StartCopy(c, projectshared.ProjectCopyCommand{
 		ProjectID: projectID,
 		SourceID:  controlCabinetID,
-		Kind:      facilityservice.CopyJobKindControlCabinet,
+		Kind:      facilityservice.FacilityJobKindControlCabinet,
 		Task:      domainProject.TaskCopyProjectControlCabinet,
 	})
 }
@@ -187,19 +187,10 @@ func (h *Handler) UpdateProjectControlCabinet(c *gin.Context) {
 		return
 	}
 
-	var updated *domainProject.ProjectControlCabinet
-	var err error
-	if req.BaseVersion != nil {
-		if versioned, ok := h.facilityLink.(interface {
-			UpdateControlCabinetAtVersion(context.Context, uuid.UUID, uuid.UUID, uuid.UUID, uint64) (*domainProject.ProjectControlCabinet, error)
-		}); ok {
-			updated, err = versioned.UpdateControlCabinetAtVersion(c.Request.Context(), linkID, projectID, req.ControlCabinetID, *req.BaseVersion)
-		} else {
-			updated, err = h.facilityLink.UpdateControlCabinet(c.Request.Context(), linkID, projectID, req.ControlCabinetID)
-		}
-	} else {
-		updated, err = h.facilityLink.UpdateControlCabinet(c.Request.Context(), linkID, projectID, req.ControlCabinetID)
-	}
+	updated, err := h.facilityLink.UpdateControlCabinet(c.Request.Context(), domainProject.FacilityLinkUpdate{
+		LinkID: linkID, ProjectID: projectID, TargetID: req.ControlCabinetID,
+		BaseVersion: domain.AggregateVersion(req.BaseVersion),
+	})
 	if err != nil {
 		handlerutil.RespondDomainError(c, err,
 			handlerutil.LocalizedError(http.StatusInternalServerError, "update_failed", "project.update_failed"),
@@ -220,6 +211,7 @@ func (h *Handler) UpdateProjectControlCabinet(c *gin.Context) {
 // @Produce json
 // @Param id path string true "Project ID"
 // @Param linkId path string true "Link ID"
+// @Param base_version query integer true "Expected link version" minimum(1)
 // @Success 204
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 404 {object} dto.ErrorResponse
@@ -235,11 +227,18 @@ func (h *Handler) DeleteProjectControlCabinet(c *gin.Context) {
 	if !ok {
 		return
 	}
+	version, ok := projectshared.RequiredBaseVersion(c)
+	if !ok {
+		return
+	}
 
-	if err := h.facilityLink.DeleteControlCabinet(c.Request.Context(), linkID, projectID); err != nil {
+	if err := h.facilityLink.DeleteControlCabinet(c.Request.Context(), domainProject.FacilityLinkDelete{
+		LinkID: linkID, ProjectID: projectID, BaseVersion: version,
+	}); err != nil {
 		handlerutil.RespondDomainError(c, err,
 			handlerutil.LocalizedError(http.StatusInternalServerError, "deletion_failed", "project.deletion_failed"),
 			handlerutil.MapError(domain.ErrNotFound, handlerutil.LocalizedError(http.StatusNotFound, "not_found", "project.link_not_found")),
+			handlerutil.MapError(domain.ErrConflict, handlerutil.LocalizedError(http.StatusConflict, "write_conflict", "errors.write_conflict")),
 		)
 		return
 	}

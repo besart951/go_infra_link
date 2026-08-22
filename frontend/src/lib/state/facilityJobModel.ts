@@ -1,4 +1,4 @@
-import type { CopyJob, FacilityJob } from '$lib/domain/facility/copy-job.js';
+import type { FacilityJob } from '$lib/domain/facility/facility-job.js';
 
 export type FacilityJobInput = Pick<
   FacilityJob,
@@ -6,12 +6,12 @@ export type FacilityJobInput = Pick<
 > &
   Partial<Omit<FacilityJob, 'jobId' | 'kind' | 'status' | 'progress' | 'stage'>>;
 
-export function reconcileFacilityJob(jobs: CopyJob[], input: FacilityJobInput): CopyJob[] {
+export function reconcileFacilityJob(jobs: FacilityJob[], input: FacilityJobInput): FacilityJob[] {
   const normalized = normalizeFacilityJob(input);
   return [normalized, ...jobs.filter((job) => job.jobId !== normalized.jobId)];
 }
 
-export function normalizeFacilityJob(job: FacilityJobInput): CopyJob {
+export function normalizeFacilityJob(job: FacilityJobInput): FacilityJob {
   return {
     ...job,
     type: job.type ?? 'copy',
@@ -24,7 +24,7 @@ export function normalizeFacilityJob(job: FacilityJobInput): CopyJob {
   };
 }
 
-export function sameFacilityJobProgress(current: CopyJob, next: CopyJob): boolean {
+export function sameFacilityJobProgress(current: FacilityJob, next: FacilityJob): boolean {
   return progressFields.every((field) => current[field] === next[field]);
 }
 
@@ -41,4 +41,4 @@ const progressFields = [
   'successCount',
   'failureCount',
   'error'
-] as const satisfies readonly (keyof CopyJob)[];
+] as const satisfies readonly (keyof FacilityJob)[];

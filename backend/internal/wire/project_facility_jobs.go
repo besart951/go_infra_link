@@ -39,25 +39,25 @@ type projectCopyCheckpoint struct {
 }
 
 type projectCopyExecution struct {
-	job       facilityservice.CopyJob
+	job       facilityservice.FacilityJob
 	operation projectCopyOperation
 	report    func(facilityservice.FacilityJobProgress)
 }
 
 type projectCopyState struct {
 	execution  projectCopyExecution
-	payload    domainproject.FacilityCopyJobPayload
+	payload    domainproject.ProjectFacilityCopyCommand
 	checkpoint projectCopyCheckpoint
 }
 
 type projectCopyTaskRegistrar struct {
-	jobs          *facilityservice.CopyJobManager
+	jobs          *facilityservice.FacilityJobManager
 	project       *projectservice.Services
 	collaboration *infrarealtime.ProjectCollaborationHub
 	steps         facilityjobs.StepStore
 }
 
-func registerProjectCopyTasks(jobs *facilityservice.CopyJobManager, services *Services, runtime *RuntimeAdapters) {
+func registerProjectCopyTasks(jobs *facilityservice.FacilityJobManager, services *Services, runtime *RuntimeAdapters) {
 	if jobs == nil || services == nil || services.Project == nil {
 		return
 	}
@@ -80,10 +80,10 @@ func (r projectCopyTaskRegistrar) registerOperations() {
 	}
 }
 
-func (r projectCopyTaskRegistrar) taskHandler(operation projectCopyOperation) facilityservice.FacilityJobTask {
-	return func(ctx context.Context, job facilityservice.CopyJob, report func(facilityservice.FacilityJobProgress)) (facilityservice.FacilityJobTaskResult, error) {
-		return r.executeProjectCopy(ctx, projectCopyExecution{job: job, operation: operation, report: report})
-	}
+func (r projectCopyTaskRegistrar) taskHandler(operation projectCopyOperation) facilityservice.FacilityJobHandler {
+	return facilityservice.FacilityJobHandlerFunc(func(ctx context.Context, execution facilityservice.FacilityJobExecution) (facilityservice.FacilityJobTaskResult, error) {
+		return r.executeProjectCopy(ctx, projectCopyExecution{job: execution.Job, operation: operation, report: execution.Reporter.Report})
+	})
 }
 
 func (r projectCopyTaskRegistrar) executeProjectCopy(ctx context.Context, execution projectCopyExecution) (facilityservice.FacilityJobTaskResult, error) {
@@ -112,7 +112,7 @@ func (r projectCopyTaskRegistrar) executeProjectCopy(ctx context.Context, execut
 func (r projectCopyTaskRegistrar) executePersistedProjectStep(
 	ctx context.Context,
 	execution projectCopyExecution,
-	payload domainproject.FacilityCopyJobPayload,
+	payload domainproject.ProjectFacilityCopyCommand,
 ) (facilityservice.FacilityJobTaskResult, error) {
 	if checkpoint, resumed, err := projectCopyCheckpointFromData(execution.job.Checkpoint); err != nil || resumed {
 		return completedProjectCopyResult(checkpoint.ResultID, err)
@@ -141,7 +141,7 @@ func (r projectCopyTaskRegistrar) executePersistedProjectStep(
 type projectMutationRequest struct {
 	services  *projectservice.Services
 	execution projectCopyExecution
-	payload   domainproject.FacilityCopyJobPayload
+	payload   domainproject.ProjectFacilityCopyCommand
 	changes   *[]domainproject.Change
 }
 
@@ -163,10 +163,11 @@ func executeProjectMutation(ctx context.Context, request projectMutationRequest)
 	return facilityjobs.StepResult{TargetID: resultID, Result: result}, err
 }
 
-func projectCopyStep(execution projectCopyExecution, payload domainproject.FacilityCopyJobPayload) facilityjobs.Step {
+func projectCopyStep(execution projectCopyExecution, payload domainproject.ProjectFacilityCopyCommand) facilityjobs.Step {
 	return facilityjobs.Step{
 		Key:        facilityjobs.ItemKey{OwnerID: execution.job.OwnerID, JobID: execution.job.ID},
 		EntityType: execution.operation.entityType, SourceID: payload.SourceID, Input: execution.job.Payload,
+		PersistIDMapping: true,
 	}
 }
 
@@ -187,7 +188,7 @@ func completedProjectCopyResult(resultID uuid.UUID, cause error) (facilityservic
 	return facilityservice.FacilityJobTaskResult{Result: result}, err
 }
 
-func (r projectCopyTaskRegistrar) resumeOrCopy(ctx context.Context, execution projectCopyExecution, payload domainproject.FacilityCopyJobPayload) (projectCopyCheckpoint, error) {
+func (r projectCopyTaskRegistrar) resumeOrCopy(ctx context.Context, execution projectCopyExecution, payload domainproject.ProjectFacilityCopyCommand) (projectCopyCheckpoint, error) {
 	checkpoint, resumed, err := projectCopyCheckpointFromData(execution.job.Checkpoint)
 	if err != nil || resumed {
 		return checkpoint, err
@@ -214,7 +215,7 @@ func (r projectCopyTaskRegistrar) ensureProjectChange(ctx context.Context, state
 	return state.checkpoint, err
 }
 
-func (r projectCopyTaskRegistrar) copyAndCheckpoint(ctx context.Context, execution projectCopyExecution, payload domainproject.FacilityCopyJobPayload) (projectCopyCheckpoint, error) {
+func (r projectCopyTaskRegistrar) copyAndCheckpoint(ctx context.Context, execution projectCopyExecution, payload domainproject.ProjectFacilityCopyCommand) (projectCopyCheckpoint, error) {
 	execution.report(facilityservice.FacilityJobProgress{Progress: 10, Stage: "copying_root"})
 	command := projectCopyCommand{ProjectID: payload.ProjectID, SourceID: payload.SourceID}
 	resultID, err := execution.operation.copy(ctx, r.project, command)
@@ -249,8 +250,8 @@ func checkpointProgress(progress int, checkpoint projectCopyCheckpoint) (facilit
 	return facilityservice.FacilityJobProgress{Progress: progress, Stage: "finalizing", Checkpoint: encoded}, err
 }
 
-func decodeProjectCopyPayload(data json.RawMessage) (domainproject.FacilityCopyJobPayload, error) {
-	var payload domainproject.FacilityCopyJobPayload
+func decodeProjectCopyPayload(data json.RawMessage) (domainproject.ProjectFacilityCopyCommand, error) {
+	var payload domainproject.ProjectFacilityCopyCommand
 	if err := json.Unmarshal(data, &payload); err != nil {
 		return payload, fmt.Errorf("decode project copy task payload: %w", err)
 	}

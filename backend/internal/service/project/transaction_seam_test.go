@@ -472,7 +472,7 @@ func TestProjectTransaction_UpdateSPSControllerFailureDoesNotRestorePreviousLink
 	txFieldDeviceRepo := newProjectFieldDeviceStore()
 
 	txSPSLinks.items[linkID] = &domainProject.ProjectSPSController{
-		Base:            domain.Base{ID: linkID},
+		Base:            domain.Base{ID: linkID, Version: 1},
 		ProjectID:       projectID,
 		SPSControllerID: previousSPSID,
 	}
@@ -512,7 +512,9 @@ func TestProjectTransaction_UpdateSPSControllerFailureDoesNotRestorePreviousLink
 	runnerCalls := 0
 	services := newProjectTxServices(Dependencies{}, txDeps, &runnerCalls)
 
-	_, err := services.FacilityLink.UpdateSPSController(ctx, linkID, projectID, newSPSID)
+	_, err := services.FacilityLink.UpdateSPSController(ctx, domainProject.FacilityLinkUpdate{
+		LinkID: linkID, ProjectID: projectID, TargetID: newSPSID, BaseVersion: 1,
+	})
 	if !errors.Is(err, linkErr) {
 		t.Fatalf("expected link error, got %v", err)
 	}

@@ -17,7 +17,6 @@ const (
 	facilityReferenceDataEventChanged = "facility_reference_data.changed"
 	facilityChangedEvent              = "facility.changed"
 	facilityJobProgressEvent          = "facility.job.progress"
-	facilityCopyJobProgressEvent      = "facility.copy_job.progress"
 	facilityReferenceDataWriteWait    = 10 * time.Second
 	facilityReferenceDataPongWait     = 60 * time.Second
 	facilityReferenceDataPingPeriod   = 25 * time.Second
@@ -53,7 +52,7 @@ type FacilityChangeEvent struct {
 	At       time.Time   `json:"at"`
 }
 
-type facilityCopyJobEvent struct {
+type facilityJobEvent struct {
 	Type      string    `json:"type"`
 	JobID     uuid.UUID `json:"job_id"`
 	Kind      string    `json:"kind"`
@@ -173,30 +172,27 @@ func (h *FacilityReferenceDataHub) BroadcastFacilityChange(_ context.Context, re
 	h.publishEvent(event)
 }
 
-// BroadcastCopyJobProgress delivers a progress update only to browser
+// BroadcastFacilityJobProgress delivers a progress update only to browser
 // connections authenticated as the owner. The same event is sent through the
 // realtime bus so reconnects routed to another node receive later updates.
-func (h *FacilityReferenceDataHub) BroadcastCopyJobProgress(_ context.Context, progress apprealtime.CopyJobProgressEvent) {
+func (h *FacilityReferenceDataHub) BroadcastFacilityJobProgress(_ context.Context, progress apprealtime.FacilityJobProgressEvent) {
 	if progress.JobID == uuid.Nil || progress.OwnerID == uuid.Nil {
 		return
 	}
 	h.deliverJobProgress(progress, facilityJobProgressEvent)
-	if progress.JobType == "" || progress.JobType == "copy" {
-		h.deliverJobProgress(progress, facilityCopyJobProgressEvent)
-	}
 }
 
-func (h *FacilityReferenceDataHub) deliverJobProgress(progress apprealtime.CopyJobProgressEvent, eventType string) {
+func (h *FacilityReferenceDataHub) deliverJobProgress(progress apprealtime.FacilityJobProgressEvent, eventType string) {
 	payload, err := json.Marshal(newFacilityJobEvent(progress, eventType))
 	if err != nil {
 		return
 	}
-	h.broadcastCopyJobBytes(progress.OwnerID, payload)
-	h.publishCopyJobPayload(progress.OwnerID, payload)
+	h.broadcastFacilityJobBytes(progress.OwnerID, payload)
+	h.publishFacilityJobPayload(progress.OwnerID, payload)
 }
 
-func newFacilityJobEvent(progress apprealtime.CopyJobProgressEvent, eventType string) facilityCopyJobEvent {
-	return facilityCopyJobEvent{
+func newFacilityJobEvent(progress apprealtime.FacilityJobProgressEvent, eventType string) facilityJobEvent {
+	return facilityJobEvent{
 		Type: eventType, JobID: progress.JobID, Kind: progress.Kind,
 		JobType: progress.JobType, Class: progress.Class, Status: progress.Status, Progress: progress.Progress, Stage: progress.Stage,
 		Error: progress.Error, Processed: progress.Processed, Total: progress.Total, Succeeded: progress.Succeeded, Failed: progress.Failed, UpdatedAt: progress.UpdatedAt.UTC(),
@@ -262,15 +258,15 @@ func (h *FacilityReferenceDataHub) handleBusEvent(event apprealtime.Event) {
 			return
 		}
 		h.broadcastFacilityChangeEvent(payload)
-	case facilityJobProgressEvent, facilityCopyJobProgressEvent:
-		var payload facilityCopyJobEvent
+	case facilityJobProgressEvent:
+		var payload facilityJobEvent
 		if err := json.Unmarshal(busEvent.Payload, &payload); err != nil || payload.JobID == uuid.Nil || busEvent.OwnerID == uuid.Nil {
-			slog.Warn("ignored invalid facility copy job event")
+			slog.Warn("ignored invalid facility job event")
 			return
 		}
 		// Owner identity is transport metadata and is deliberately not embedded
 		// in the browser payload.
-		h.broadcastCopyJobBytes(busEvent.OwnerID, busEvent.Payload)
+		h.broadcastFacilityJobBytes(busEvent.OwnerID, busEvent.Payload)
 	default:
 		slog.Warn("ignored unsupported facility realtime event", "type", envelope.Type)
 	}
@@ -345,7 +341,7 @@ func (h *FacilityReferenceDataHub) forEachClient(fn func(*facilityReferenceDataC
 	}
 }
 
-func (h *FacilityReferenceDataHub) broadcastCopyJobBytes(ownerID uuid.UUID, payload []byte) {
+func (h *FacilityReferenceDataHub) broadcastFacilityJobBytes(ownerID uuid.UUID, payload []byte) {
 	h.mu.RLock()
 	clients := make([]*facilityReferenceDataClient, 0, len(h.clients))
 	for client := range h.clients {
@@ -447,7 +443,7 @@ func isFacilityRealtimeAction(action string) bool {
 	}
 }
 
-func (h *FacilityReferenceDataHub) publishCopyJobPayload(ownerID uuid.UUID, payload []byte) {
+func (h *FacilityReferenceDataHub) publishFacilityJobPayload(ownerID uuid.UUID, payload []byte) {
 	if h.bus == nil {
 		return
 	}

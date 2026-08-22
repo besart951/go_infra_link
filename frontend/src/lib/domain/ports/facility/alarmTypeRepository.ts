@@ -6,6 +6,7 @@ import type {
   UpdateAlarmTypeFieldRequest,
   UpdateAlarmTypeRequest
 } from '$lib/domain/facility/index.js';
+import type { VersionedDeleteCommand } from '$lib/domain/ports/crudRepository.js';
 
 export interface AlarmTypeRepository {
   list(
@@ -16,7 +17,7 @@ export interface AlarmTypeRepository {
   getWithFields(id: string, signal?: AbortSignal): Promise<AlarmType>;
   create(data: CreateAlarmTypeRequest, signal?: AbortSignal): Promise<AlarmType>;
   update(id: string, data: UpdateAlarmTypeRequest, signal?: AbortSignal): Promise<AlarmType>;
-  delete(id: string, signal?: AbortSignal): Promise<void>;
+  delete(command: VersionedDeleteCommand, signal?: AbortSignal): Promise<void>;
   createField(
     alarmTypeId: string,
     data: CreateAlarmTypeFieldRequest,
@@ -27,5 +28,5 @@ export interface AlarmTypeRepository {
     data: UpdateAlarmTypeFieldRequest,
     signal?: AbortSignal
   ): Promise<AlarmTypeField>;
-  deleteField(id: string, signal?: AbortSignal): Promise<void>;
+  deleteField(command: VersionedDeleteCommand, signal?: AbortSignal): Promise<void>;
 }

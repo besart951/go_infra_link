@@ -29,6 +29,7 @@ type CreateStateTextRequest struct {
 }
 
 type UpdateStateTextRequest struct {
+	BaseVersion uint64  `json:"base_version" binding:"required,min=1"`
 	RefNumber   *int    `json:"ref_number"`
 	StateText1  *string `json:"state_text1"`
 	StateText2  *string `json:"state_text2"`
@@ -48,8 +49,11 @@ type UpdateStateTextRequest struct {
 	StateText16 *string `json:"state_text16"`
 }
 
+func (r UpdateStateTextRequest) ExpectedVersion() uint64 { return r.BaseVersion }
+
 type StateTextResponse struct {
 	ID         uuid.UUID `json:"id"`
+	Version    uint64    `json:"version"`
 	RefNumber  int       `json:"ref_number"`
 	StateText1 *string   `json:"state_text1"`
 	// Include only first few for lightness or all? User just wants search.
@@ -97,6 +101,7 @@ type CreateNotificationClassRequest struct {
 }
 
 type UpdateNotificationClassRequest struct {
+	BaseVersion          uint64  `json:"base_version" binding:"required,min=1"`
 	EventCategory        *string `json:"event_category"`
 	Nc                   *int    `json:"nc"`
 	ObjectDescription    *string `json:"object_description"`
@@ -110,8 +115,11 @@ type UpdateNotificationClassRequest struct {
 	NormNormal           *int    `json:"norm_normal"`
 }
 
+func (r UpdateNotificationClassRequest) ExpectedVersion() uint64 { return r.BaseVersion }
+
 type NotificationClassResponse struct {
 	ID                   uuid.UUID `json:"id"`
+	Version              uint64    `json:"version"`
 	EventCategory        string    `json:"event_category"`
 	Nc                   int       `json:"nc"`
 	ObjectDescription    string    `json:"object_description"`
@@ -143,13 +151,17 @@ type CreateAlarmDefinitionRequest struct {
 }
 
 type UpdateAlarmDefinitionRequest struct {
+	BaseVersion uint64     `json:"base_version" binding:"required,min=1"`
 	Name        *string    `json:"name"`
 	AlarmNote   *string    `json:"alarm_note"`
 	AlarmTypeID *uuid.UUID `json:"alarm_type_id"`
 }
 
+func (r UpdateAlarmDefinitionRequest) ExpectedVersion() uint64 { return r.BaseVersion }
+
 type AlarmDefinitionResponse struct {
 	ID          uuid.UUID  `json:"id"`
+	Version     uint64     `json:"version"`
 	Name        string     `json:"name"`
 	AlarmNote   *string    `json:"alarm_note"`
 	AlarmTypeID *uuid.UUID `json:"alarm_type_id,omitempty"`
@@ -196,7 +208,7 @@ type CreateSPSControllerSystemTypeRequest struct {
 }
 
 type UpdateSPSControllerSystemTypeRequest struct {
-	BaseVersion  *uint64 `json:"base_version" binding:"omitempty,min=1"`
+	BaseVersion  uint64  `json:"base_version" binding:"required,min=1"`
 	Number       *int    `json:"number" binding:"omitempty,min=1"`
 	DocumentName *string `json:"document_name" binding:"omitempty,max=250"`
 }

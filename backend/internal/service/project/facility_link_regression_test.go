@@ -144,7 +144,7 @@ func TestProjectService_DeleteSPSController_CharacterizesLinkAndHierarchyDeletio
 	bacnetRepo := newProjectBacnetObjectRepo()
 
 	spsLinks.items[linkID] = &domainProject.ProjectSPSController{
-		Base:            domain.Base{ID: linkID},
+		Base:            domain.Base{ID: linkID, Version: 1},
 		ProjectID:       projectID,
 		SPSControllerID: spsID,
 	}
@@ -174,7 +174,7 @@ func TestProjectService_DeleteSPSController_CharacterizesLinkAndHierarchyDeletio
 		nil,
 	).FacilityLink
 
-	if err := svc.DeleteSPSController(ctx, linkID, projectID); err != nil {
+	if err := svc.DeleteSPSController(ctx, domainProject.FacilityLinkDelete{LinkID: linkID, ProjectID: projectID, BaseVersion: 1}); err != nil {
 		t.Fatalf("expected delete to succeed, got %v", err)
 	}
 

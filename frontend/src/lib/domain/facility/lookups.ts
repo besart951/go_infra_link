@@ -3,6 +3,7 @@ import type { Pagination } from '../utils/index.js';
 // StateText
 export interface StateText {
   id: string;
+  version: number;
   ref_number: number;
   state_text1?: string;
   state_text2?: string;
@@ -45,6 +46,7 @@ export interface CreateStateTextRequest {
 }
 
 export interface UpdateStateTextRequest {
+  base_version: number;
   ref_number?: number;
   state_text1?: string;
   state_text2?: string;
@@ -77,6 +79,7 @@ export interface StateTextListResponse extends Pagination<StateText> {
 // NotificationClass
 export interface NotificationClass {
   id: string;
+  version: number;
   event_category: string;
   nc: number;
   object_description: string;
@@ -107,6 +110,7 @@ export interface CreateNotificationClassRequest {
 }
 
 export interface UpdateNotificationClassRequest {
+  base_version: number;
   event_category?: string;
   nc?: number;
   object_description?: string;
@@ -133,6 +137,7 @@ export interface NotificationClassListResponse extends Pagination<NotificationCl
 // AlarmDefinition
 export interface AlarmDefinition {
   id: string;
+  version: number;
   name: string;
   alarm_note?: string;
   alarm_type_id?: string;
@@ -148,6 +153,7 @@ export interface CreateAlarmDefinitionRequest {
 }
 
 export interface UpdateAlarmDefinitionRequest {
+  base_version: number;
   name?: string;
   alarm_note?: string;
   alarm_type_id?: string;

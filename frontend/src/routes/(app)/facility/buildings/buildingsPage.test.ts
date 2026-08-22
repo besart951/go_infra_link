@@ -109,6 +109,7 @@ function grant(...permissions: string[]) {
 function building(overrides: Partial<Building> = {}): Building {
   return {
     id: 'building-1',
+    version: 1,
     iws_code: 'IWS-100',
     building_group: 7,
     created_at: '2026-01-01T00:00:00Z',
@@ -162,7 +163,10 @@ describe('buildings facility page', () => {
           message: 'facility.delete_building_confirm'
         })
       );
-      expect(mockRuntime.deleteBuilding).toHaveBeenCalledWith('building-1', undefined);
+      expect(mockRuntime.deleteBuilding).toHaveBeenCalledWith(
+        { id: 'building-1', base_version: 1 },
+        undefined
+      );
       expect(mockRuntime.addToast).toHaveBeenCalledWith('facility.building_deleted', 'success');
       expect(mockListStore.reload).toHaveBeenCalledTimes(1);
     });

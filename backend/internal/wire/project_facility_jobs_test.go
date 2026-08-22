@@ -17,13 +17,13 @@ func TestProjectCopyTaskResumesFromCompletedCheckpoint(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	payload, err := json.Marshal(domainproject.FacilityCopyJobPayload{ProjectID: uuid.New(), SourceID: uuid.New()})
+	payload, err := json.Marshal(domainproject.ProjectFacilityCopyCommand{ProjectID: uuid.New(), SourceID: uuid.New()})
 	if err != nil {
 		t.Fatal(err)
 	}
 	copyCalls := 0
 	execution := projectCopyExecution{
-		job: facilityservice.CopyJob{Checkpoint: checkpoint, Payload: payload},
+		job: facilityservice.FacilityJob{Checkpoint: checkpoint, Payload: payload},
 		operation: projectCopyOperation{copy: func(context.Context, *projectservice.Services, projectCopyCommand) (uuid.UUID, error) {
 			copyCalls++
 			return uuid.New(), nil

@@ -24,6 +24,7 @@ type CreateSpecificationRequest struct {
 }
 
 type UpdateSpecificationRequest struct {
+	BaseVersion                               uint64   `json:"base_version" binding:"required,min=1"`
 	SpecificationSupplier                     *string  `json:"specification_supplier" binding:"omitempty,max=250"`
 	SpecificationBrand                        *string  `json:"specification_brand" binding:"omitempty,max=250"`
 	SpecificationType                         *string  `json:"specification_type" binding:"omitempty,max=250"`
@@ -39,10 +40,14 @@ type UpdateSpecificationRequest struct {
 
 // FieldDevice-specific endpoints take the FieldDevice ID from the URL path.
 type CreateFieldDeviceSpecificationRequest = UpdateSpecificationRequest
-type UpdateFieldDeviceSpecificationRequest = SpecificationInput
+type UpdateFieldDeviceSpecificationRequest struct {
+	BaseVersion uint64 `json:"base_version" binding:"required,min=1"`
+	SpecificationInput
+}
 
 type SpecificationResponse struct {
 	ID                                        uuid.UUID  `json:"id"`
+	Version                                   uint64     `json:"version"`
 	FieldDeviceID                             *uuid.UUID `json:"field_device_id"`
 	SpecificationSupplier                     *string    `json:"specification_supplier"`
 	SpecificationBrand                        *string    `json:"specification_brand"`

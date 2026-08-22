@@ -17,6 +17,7 @@ func NewNotificationClassHandler(svc NotificationClassService) *NotificationClas
 		applyNotificationClassUpdate,
 		respFn(toNotificationClassResponse),
 		listRespFn(toNotificationClassListResponse),
+		"notification_class",
 		"facility.notification_class_not_found",
 	)}
 }
@@ -77,6 +78,7 @@ func (h *NotificationClassHandler) UpdateNotificationClass(c *gin.Context) { h.c
 // @Tags facility-notification-classes
 // @Produce json
 // @Param id path string true "Notification Class ID"
+// @Param base_version query integer true "Expected aggregate version" minimum(1)
 // @Success 204
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse

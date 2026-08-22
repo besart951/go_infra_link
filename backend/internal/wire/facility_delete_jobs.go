@@ -27,7 +27,7 @@ type facilityDeleteCheckpoint struct {
 }
 
 type facilityDeleteExecution struct {
-	job       facilityservice.CopyJob
+	job       facilityservice.FacilityJob
 	payload   facilityservice.FacilityDeleteTaskPayload
 	operation facilityDeleteOperation
 	report    func(facilityservice.FacilityJobProgress)
@@ -50,7 +50,7 @@ type facilityDeleteTaskRegistrar struct {
 	runtime *RuntimeAdapters
 }
 
-func registerFacilityDeleteTasks(jobs *facilityservice.CopyJobManager, runtime *RuntimeAdapters) {
+func registerFacilityDeleteTasks(jobs *facilityservice.FacilityJobManager, runtime *RuntimeAdapters) {
 	registrar := facilityDeleteTaskRegistrar{runtime: runtime}
 	if runtime != nil {
 		registrar.steps = runtime.FacilityJobSteps
@@ -68,8 +68,9 @@ func facilityDeleteOperations() []facilityDeleteOperation {
 	}
 }
 
-func (r facilityDeleteTaskRegistrar) handler(operation facilityDeleteOperation) facilityservice.FacilityJobTask {
-	return func(ctx context.Context, job facilityservice.CopyJob, report func(facilityservice.FacilityJobProgress)) (facilityservice.FacilityJobTaskResult, error) {
+func (r facilityDeleteTaskRegistrar) handler(operation facilityDeleteOperation) facilityservice.FacilityJobHandler {
+	return facilityservice.FacilityJobHandlerFunc(func(ctx context.Context, task facilityservice.FacilityJobExecution) (facilityservice.FacilityJobTaskResult, error) {
+		job, report := task.Job, task.Reporter.Report
 		payload, err := decodeFacilityDeletePayload(job.Payload)
 		if err != nil {
 			return facilityservice.FacilityJobTaskResult{}, err
@@ -81,7 +82,7 @@ func (r facilityDeleteTaskRegistrar) handler(operation facilityDeleteOperation) 
 		}
 		r.publish(ctx, facilityDeleteNotification{ownerID: job.OwnerID, resource: operation.resource, sourceID: payload.SourceID})
 		return facilityservice.FacilityJobTaskResult{Result: result}, nil
-	}
+	})
 }
 
 func (r facilityDeleteTaskRegistrar) execute(ctx context.Context, execution facilityDeleteExecution) (json.RawMessage, error) {

@@ -209,6 +209,8 @@ definitions:
         type: string
       updated_at:
         type: string
+      version:
+        type: integer
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmFieldListResponse:
     properties:
@@ -235,6 +237,8 @@ definitions:
         type: string
       label:
         type: string
+      version:
+        type: integer
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmTypeFieldResponse:
     properties:
@@ -266,6 +270,8 @@ definitions:
         type: string
       validation_json:
         type: string
+      version:
+        type: integer
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmTypeResponse:
     properties:
@@ -283,6 +289,8 @@ definitions:
         type: string
       updated_at:
         type: string
+      version:
+        type: integer
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmValueInput:
     properties:
@@ -338,6 +346,8 @@ definitions:
         items:
           $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmValueResponse'
         type: array
+      version:
+        type: integer
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ApparatBulkRequest:
     properties:
@@ -387,6 +397,8 @@ definitions:
         type: array
       updated_at:
         type: string
+      version:
+        type: integer
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AvailableApparatNumbersResponse:
     properties:
@@ -604,14 +616,13 @@ definitions:
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BulkDeleteFieldDeviceRequest:
     properties:
-      ids:
-        items:
-          type: string
-        type: array
       items:
         items:
           $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BulkDeleteFieldDeviceItem'
+        minItems: 1
         type: array
+    required:
+    - items
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BulkDeleteFieldDeviceResponse:
     properties:
@@ -628,6 +639,8 @@ definitions:
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BulkOperationResultItem:
     properties:
+      dependency_group_id:
+        type: string
       error:
         type: string
       field_device:
@@ -683,6 +696,7 @@ definitions:
       text_fix:
         $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.OptionalString'
     required:
+    - base_version
     - id
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BulkUpdateFieldDeviceRequest:
@@ -778,67 +792,6 @@ definitions:
         type: string
       version:
         type: integer
-    type: object
-  github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CopyJobResponse:
-    properties:
-      attempts:
-        type: integer
-      class:
-        enum:
-        - mutation
-        - export
-        type: string
-      completed_at:
-        type: string
-      created_at:
-        type: string
-      error:
-        type: string
-      failure_count:
-        type: integer
-      job_id:
-        type: string
-      kind:
-        enum:
-        - control_cabinet
-        - sps_controller
-        - sps_controller_system_type
-        - field_device
-        - object_data
-        type: string
-      processed:
-        type: integer
-      progress:
-        maximum: 100
-        minimum: 0
-        type: integer
-      result:
-        type: object
-      retryable:
-        type: boolean
-      stage:
-        type: string
-      status:
-        enum:
-        - queued
-        - running
-        - completed
-        - failed
-        type: string
-      success_count:
-        type: integer
-      total:
-        type: integer
-      type:
-        enum:
-        - copy
-        - export
-        - bulk
-        - delete
-        - restore
-        type: string
-      updated_at:
-        type: string
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateAlarmDefinitionRequest:
     properties:
@@ -1034,6 +987,9 @@ definitions:
       additional_information_installation_location:
         maxLength: 250
         type: string
+      base_version:
+        minimum: 1
+        type: integer
       electrical_connection_acdc:
         type: string
       electrical_connection_amperage:
@@ -1053,6 +1009,8 @@ definitions:
       specification_type:
         maxLength: 250
         type: string
+    required:
+    - base_version
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateNotificationClassRequest:
     properties:
@@ -1584,6 +1542,8 @@ definitions:
         type: string
       updated_at:
         type: string
+      version:
+        type: integer
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ObjectDataResponse:
     properties:
@@ -1605,6 +1565,8 @@ definitions:
         type: boolean
       project_id:
         type: string
+      revision:
+        type: integer
       updated_at:
         type: string
       version:
@@ -1634,11 +1596,15 @@ definitions:
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.PutAlarmValuesRequest:
     properties:
+      base_version:
+        minimum: 1
+        type: integer
       values:
         items:
           $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmValueInput'
         type: array
     required:
+    - base_version
     - values
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SPSControllerBulkRequest:
@@ -1824,6 +1790,8 @@ definitions:
         type: string
       updated_at:
         type: string
+      version:
+        type: integer
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.StateTextListResponse:
     properties:
@@ -1883,6 +1851,8 @@ definitions:
         type: string
       updated_at:
         type: string
+      version:
+        type: integer
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SystemPartListResponse:
     properties:
@@ -1911,6 +1881,8 @@ definitions:
         type: string
       updated_at:
         type: string
+      version:
+        type: integer
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SystemTypeListResponse:
     properties:
@@ -1939,6 +1911,8 @@ definitions:
         type: integer
       updated_at:
         type: string
+      version:
+        type: integer
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UnitListResponse:
     properties:
@@ -1963,6 +1937,8 @@ definitions:
         type: string
       symbol:
         type: string
+      version:
+        type: integer
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateAlarmDefinitionRequest:
     properties:
@@ -1970,11 +1946,19 @@ definitions:
         type: string
       alarm_type_id:
         type: string
+      base_version:
+        minimum: 1
+        type: integer
       name:
         type: string
+    required:
+    - base_version
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateAlarmFieldRequest:
     properties:
+      base_version:
+        minimum: 1
+        type: integer
       data_type:
         maxLength: 30
         type: string
@@ -1987,9 +1971,14 @@ definitions:
       label:
         maxLength: 150
         type: string
+    required:
+    - base_version
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateAlarmTypeFieldRequest:
     properties:
+      base_version:
+        minimum: 1
+        type: integer
       default_unit_id:
         type: string
       default_value_json:
@@ -2006,15 +1995,25 @@ definitions:
         type: string
       validation_json:
         type: string
+    required:
+    - base_version
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateAlarmTypeRequest:
     properties:
+      base_version:
+        minimum: 1
+        type: integer
       name:
         maxLength: 120
         type: string
+    required:
+    - base_version
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateApparatRequest:
     properties:
+      base_version:
+        minimum: 1
+        type: integer
       description:
         maxLength: 250
         type: string
@@ -2029,6 +2028,8 @@ definitions:
         items:
           type: string
         type: array
+    required:
+    - base_version
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateBacnetObjectRequest:
     properties:
@@ -2073,6 +2074,8 @@ definitions:
       text_individual:
         maxLength: 250
         type: string
+    required:
+    - base_version
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateBuildingRequest:
     properties:
@@ -2083,6 +2086,8 @@ definitions:
         type: integer
       iws_code:
         type: string
+    required:
+    - base_version
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateControlCabinetRequest:
     properties:
@@ -2094,6 +2099,8 @@ definitions:
       control_cabinet_nr:
         maxLength: 11
         type: string
+    required:
+    - base_version
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateFieldDeviceRequest:
     properties:
@@ -2126,6 +2133,7 @@ definitions:
         maxLength: 250
         type: string
     required:
+    - base_version
     - system_part_id
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateFieldDeviceSpecificationRequest:
@@ -2136,6 +2144,9 @@ definitions:
         $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.OptionalInt'
       additional_information_installation_location:
         $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.OptionalString'
+      base_version:
+        minimum: 1
+        type: integer
       electrical_connection_acdc:
         $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.OptionalString'
       electrical_connection_amperage:
@@ -2152,6 +2163,8 @@ definitions:
         $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.OptionalString'
       specification_type:
         $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.OptionalString'
+    required:
+    - base_version
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateNotificationClassRequest:
     properties:
@@ -2161,6 +2174,9 @@ definitions:
         type: boolean
       ack_required_not_normal:
         type: boolean
+      base_version:
+        minimum: 1
+        type: integer
       event_category:
         type: string
       internal_description:
@@ -2177,6 +2193,8 @@ definitions:
         type: integer
       object_description:
         type: string
+    required:
+    - base_version
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateObjectDataRequest:
     properties:
@@ -2188,6 +2206,9 @@ definitions:
         items:
           $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BacnetObjectInput'
         type: array
+      base_version:
+        minimum: 1
+        type: integer
       description:
         type: string
       is_active:
@@ -2196,6 +2217,8 @@ definitions:
         type: string
       version:
         type: string
+    required:
+    - base_version
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateSPSControllerRequest:
     properties:
@@ -2231,6 +2254,8 @@ definitions:
       vlan:
         maxLength: 50
         type: string
+    required:
+    - base_version
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateSPSControllerSystemTypeRequest:
     properties:
@@ -2243,9 +2268,14 @@ definitions:
       number:
         minimum: 1
         type: integer
+    required:
+    - base_version
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateStateTextRequest:
     properties:
+      base_version:
+        minimum: 1
+        type: integer
       ref_number:
         type: integer
       state_text1:
@@ -2280,9 +2310,14 @@ definitions:
         type: string
       state_text16:
         type: string
+    required:
+    - base_version
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateSystemPartRequest:
     properties:
+      base_version:
+        minimum: 1
+        type: integer
       description:
         maxLength: 250
         type: string
@@ -2293,9 +2328,14 @@ definitions:
         maxLength: 3
         minLength: 3
         type: string
+    required:
+    - base_version
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateSystemTypeRequest:
     properties:
+      base_version:
+        minimum: 1
+        type: integer
       name:
         maxLength: 150
         type: string
@@ -2303,9 +2343,14 @@ definitions:
         type: integer
       number_min:
         type: integer
+    required:
+    - base_version
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateUnitRequest:
     properties:
+      base_version:
+        minimum: 1
+        type: integer
       code:
         maxLength: 30
         type: string
@@ -2315,6 +2360,8 @@ definitions:
       symbol:
         maxLength: 20
         type: string
+    required:
+    - base_version
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ValidateBuildingRequest:
     properties:
@@ -2806,6 +2853,8 @@ definitions:
         type: boolean
       project_id:
         type: string
+      revision:
+        type: integer
       updated_at:
         type: string
       version:
@@ -3037,6 +3086,7 @@ definitions:
       control_cabinet_id:
         type: string
     required:
+    - base_version
     - control_cabinet_id
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_project.UpdateProjectFieldDeviceRequest:
@@ -3047,6 +3097,7 @@ definitions:
       field_device_id:
         type: string
     required:
+    - base_version
     - field_device_id
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_project.UpdateProjectRequest:
@@ -3072,6 +3123,8 @@ definitions:
         - planned
         - ongoing
         - completed
+    required:
+    - base_version
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_project.UpdateProjectSPSControllerRequest:
     properties:
@@ -3081,6 +3134,7 @@ definitions:
       sps_controller_id:
         type: string
     required:
+    - base_version
     - sps_controller_id
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_team.AddTeamMemberRequest:
@@ -3671,6 +3725,8 @@ definitions:
         type: boolean
       project_id:
         type: string
+      revision:
+        type: integer
       updated_at:
         type: string
       version:
@@ -4408,6 +4464,12 @@ paths:
         name: id
         required: true
         type: string
+      - description: Expected aggregate version
+        in: query
+        minimum: 1
+        name: base_version
+        required: true
+        type: integer
       produces:
       - application/json
       responses:
@@ -4545,6 +4607,12 @@ paths:
         name: id
         required: true
         type: string
+      - description: Expected aggregate version
+        in: query
+        minimum: 1
+        name: base_version
+        required: true
+        type: integer
       responses:
         "204":
           description: No Content
@@ -4601,6 +4669,12 @@ paths:
         name: id
         required: true
         type: string
+      - description: Expected aggregate version
+        in: query
+        minimum: 1
+        name: base_version
+        required: true
+        type: integer
       responses:
         "204":
           description: No Content
@@ -4683,6 +4757,12 @@ paths:
         name: id
         required: true
         type: string
+      - description: Expected aggregate version
+        in: query
+        minimum: 1
+        name: base_version
+        required: true
+        type: integer
       responses:
         "204":
           description: No Content
@@ -4829,6 +4909,12 @@ paths:
         name: id
         required: true
         type: string
+      - description: Expected aggregate version
+        in: query
+        minimum: 1
+        name: base_version
+        required: true
+        type: integer
       responses:
         "204":
           description: No Content
@@ -4956,6 +5042,12 @@ paths:
         name: id
         required: true
         type: string
+      - description: Expected aggregate version
+        in: query
+        minimum: 1
+        name: base_version
+        required: true
+        type: integer
       produces:
       - application/json
       responses:
@@ -5109,6 +5201,37 @@ paths:
       tags:
       - facility-bacnet-objects
   /api/v1/facility/bacnet-objects/{id}:
+    delete:
+      parameters:
+      - description: BACnet object ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Expected owner version
+        in: query
+        minimum: 1
+        name: base_version
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse'
+      summary: Delete one BACnet instance or template
+      tags:
+      - facility-bacnet-objects
     get:
       parameters:
       - description: BACnet Object ID
@@ -5337,6 +5460,12 @@ paths:
         name: id
         required: true
         type: string
+      - description: Expected aggregate version
+        in: query
+        minimum: 1
+        name: base_version
+        required: true
+        type: integer
       produces:
       - application/json
       responses:
@@ -5623,6 +5752,12 @@ paths:
         name: id
         required: true
         type: string
+      - description: Expected aggregate version
+        in: query
+        minimum: 1
+        name: base_version
+        required: true
+        type: integer
       produces:
       - application/json
       responses:
@@ -5752,9 +5887,9 @@ paths:
         name: id
         required: true
         type: string
-      - description: Client-generated copy operation UUID
+      - description: Client-generated operation UUID
         in: header
-        name: X-Copy-Operation-ID
+        name: Idempotency-Key
         type: string
       produces:
       - application/json
@@ -5762,7 +5897,7 @@ paths:
         "202":
           description: Accepted
           schema:
-            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CopyJobResponse'
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FacilityJobResponse'
         "400":
           description: Bad Request
           schema:
@@ -5908,36 +6043,6 @@ paths:
       summary: Validate control cabinet fields
       tags:
       - facility-validation
-  /api/v1/facility/copy-jobs/{id}:
-    get:
-      parameters:
-      - description: Copy Job ID
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CopyJobResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse'
-      summary: Get a facility copy job
-      tags:
-      - facility-copy-jobs
   /api/v1/facility/delete-impacts:
     get:
       parameters:
@@ -6055,10 +6160,11 @@ paths:
         name: id
         required: true
         type: string
-      - description: Expected aggregate version; required after the compatibility
-          release
+      - description: Expected aggregate version
         in: query
+        minimum: 1
         name: base_version
+        required: true
         type: integer
       produces:
       - application/json
@@ -6275,6 +6381,12 @@ paths:
         name: id
         required: true
         type: string
+      - description: Expected specification version
+        in: query
+        minimum: 1
+        name: base_version
+        required: true
+        type: integer
       responses:
         "204":
           description: No Content
@@ -6571,6 +6683,36 @@ paths:
       summary: List the current user's facility jobs
       tags:
       - facility-jobs
+  /api/v1/facility/jobs/{id}:
+    get:
+      parameters:
+      - description: Copy Job ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FacilityJobResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse'
+      summary: Get a facility job
+      tags:
+      - facility-jobs
   /api/v1/facility/notification-classes:
     get:
       parameters:
@@ -6642,6 +6784,12 @@ paths:
         name: id
         required: true
         type: string
+      - description: Expected aggregate version
+        in: query
+        minimum: 1
+        name: base_version
+        required: true
+        type: integer
       produces:
       - application/json
       responses:
@@ -6803,6 +6951,12 @@ paths:
         name: id
         required: true
         type: string
+      - description: Expected aggregate revision
+        in: query
+        minimum: 1
+        name: base_version
+        required: true
+        type: integer
       produces:
       - application/json
       responses:
@@ -6953,8 +7107,7 @@ paths:
         `facility_reference_data.changed` tells authorized clients to refresh cached
         apparats and system parts. `facility.changed` carries authorized facility
         resource changes with an action, IDs, actor and timestamp. User-scoped `facility.job.progress`
-        events contain job type, status, stage and 0-100 progress; copy jobs temporarily
-        also emit the legacy `facility.copy_job.progress` alias. Events are delivered
+        events contain job type, status, stage and 0-100 progress. Events are delivered
         only to the user that started the job.
       responses:
         "101":
@@ -7054,6 +7207,12 @@ paths:
         name: id
         required: true
         type: string
+      - description: Expected aggregate version
+        in: query
+        minimum: 1
+        name: base_version
+        required: true
+        type: integer
       produces:
       - application/json
       responses:
@@ -7195,9 +7354,9 @@ paths:
         name: id
         required: true
         type: string
-      - description: Client-generated copy operation UUID
+      - description: Client-generated operation UUID
         in: header
-        name: X-Copy-Operation-ID
+        name: Idempotency-Key
         type: string
       produces:
       - application/json
@@ -7205,7 +7364,7 @@ paths:
         "202":
           description: Accepted
           schema:
-            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CopyJobResponse'
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FacilityJobResponse'
         "400":
           description: Bad Request
           schema:
@@ -7336,6 +7495,12 @@ paths:
         name: id
         required: true
         type: string
+      - description: Expected aggregate version
+        in: query
+        minimum: 1
+        name: base_version
+        required: true
+        type: integer
       produces:
       - application/json
       responses:
@@ -7469,9 +7634,9 @@ paths:
         name: id
         required: true
         type: string
-      - description: Client-generated copy operation UUID
+      - description: Client-generated operation UUID
         in: header
-        name: X-Copy-Operation-ID
+        name: Idempotency-Key
         type: string
       produces:
       - application/json
@@ -7479,7 +7644,7 @@ paths:
         "202":
           description: Accepted
           schema:
-            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CopyJobResponse'
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FacilityJobResponse'
         "400":
           description: Bad Request
           schema:
@@ -7704,6 +7869,12 @@ paths:
         name: id
         required: true
         type: string
+      - description: Expected aggregate version
+        in: query
+        minimum: 1
+        name: base_version
+        required: true
+        type: integer
       produces:
       - application/json
       responses:
@@ -7865,6 +8036,12 @@ paths:
         name: id
         required: true
         type: string
+      - description: Expected aggregate version
+        in: query
+        minimum: 1
+        name: base_version
+        required: true
+        type: integer
       produces:
       - application/json
       responses:
@@ -8028,6 +8205,12 @@ paths:
         name: id
         required: true
         type: string
+      - description: Expected aggregate version
+        in: query
+        minimum: 1
+        name: base_version
+        required: true
+        type: integer
       produces:
       - application/json
       responses:
@@ -8654,6 +8837,12 @@ paths:
         name: id
         required: true
         type: string
+      - description: Expected aggregate version
+        in: query
+        minimum: 1
+        name: base_version
+        required: true
+        type: integer
       produces:
       - application/json
       responses:
@@ -8982,9 +9171,9 @@ paths:
         name: controlCabinetId
         required: true
         type: string
-      - description: Client-generated copy operation UUID
+      - description: Client-generated operation UUID
         in: header
-        name: X-Copy-Operation-ID
+        name: Idempotency-Key
         type: string
       produces:
       - application/json
@@ -8992,7 +9181,7 @@ paths:
         "202":
           description: Accepted
           schema:
-            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CopyJobResponse'
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FacilityJobResponse'
         "400":
           description: Bad Request
           schema:
@@ -9029,6 +9218,12 @@ paths:
         name: linkId
         required: true
         type: string
+      - description: Expected link version
+        in: query
+        minimum: 1
+        name: base_version
+        required: true
+        type: integer
       produces:
       - application/json
       responses:
@@ -9547,6 +9742,12 @@ paths:
         name: linkId
         required: true
         type: string
+      - description: Expected link version
+        in: query
+        minimum: 1
+        name: base_version
+        required: true
+        type: integer
       produces:
       - application/json
       responses:
@@ -9924,9 +10125,9 @@ paths:
         name: systemTypeId
         required: true
         type: string
-      - description: Client-generated copy operation UUID
+      - description: Client-generated operation UUID
         in: header
-        name: X-Copy-Operation-ID
+        name: Idempotency-Key
         type: string
       produces:
       - application/json
@@ -9934,7 +10135,7 @@ paths:
         "202":
           description: Accepted
           schema:
-            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CopyJobResponse'
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FacilityJobResponse'
         "400":
           description: Bad Request
           schema:
@@ -10048,6 +10249,12 @@ paths:
         name: linkId
         required: true
         type: string
+      - description: Expected link version
+        in: query
+        minimum: 1
+        name: base_version
+        required: true
+        type: integer
       produces:
       - application/json
       responses:
@@ -10123,9 +10330,9 @@ paths:
         name: spsControllerId
         required: true
         type: string
-      - description: Client-generated copy operation UUID
+      - description: Client-generated operation UUID
         in: header
-        name: X-Copy-Operation-ID
+        name: Idempotency-Key
         type: string
       produces:
       - application/json
@@ -10133,7 +10340,7 @@ paths:
         "202":
           description: Accepted
           schema:
-            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CopyJobResponse'
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FacilityJobResponse'
         "400":
           description: Bad Request
           schema:

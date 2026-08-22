@@ -8,6 +8,7 @@ import type {
 } from '$lib/domain/facility/index.js';
 import { api } from '$lib/api/client.js';
 import { buildListUrl, mapPaginatedResponse } from './listHelpers.js';
+import { versionedDeletePath } from './versionedMutation.js';
 
 export const alarmDefinitionRepository: AlarmDefinitionRepository = {
   async list(
@@ -46,8 +47,8 @@ export const alarmDefinitionRepository: AlarmDefinitionRepository = {
     });
   },
 
-  async delete(id: string, signal?: AbortSignal): Promise<void> {
-    return api<void>(`/facility/alarm-definitions/${id}`, {
+  async delete(command, signal?: AbortSignal): Promise<void> {
+    return api<void>(versionedDeletePath('/facility/alarm-definitions', command), {
       method: 'DELETE',
       signal
     });

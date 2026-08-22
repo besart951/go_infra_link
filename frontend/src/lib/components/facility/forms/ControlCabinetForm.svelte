@@ -75,6 +75,7 @@
     try {
       if (initialData) {
         const res = await manageControlCabinet.update(initialData.id, {
+          base_version: initialData.version,
           control_cabinet_nr,
           building_id
         });

@@ -11,34 +11,31 @@ import (
 
 type ObjectDataService struct {
 	baseService[domainFacility.ObjectData]
-	extRepo               domainObjectData.ObjectDataStore
-	bacnetObjectRepo      domainObjectData.BacnetObjectStore
-	objectDataBacnetStore domainObjectData.ObjectDataBacnetObjectStore
-	apparatRepo           domainFacility.ApparatRepository
-	alarmDefinitionRepo   domainFacility.AlarmDefinitionRepository
-	alarmTypeRepo         domainFacility.AlarmTypeRepository
-	deleteGuard           bacnetReferenceDeleteGuard
-	tx                    txCoordinator
+	extRepo             domainObjectData.ObjectDataStore
+	templateStore       domainObjectData.BacnetObjectTemplateStore
+	apparatRepo         domainFacility.ApparatRepository
+	alarmDefinitionRepo domainFacility.AlarmDefinitionRepository
+	alarmTypeRepo       domainFacility.AlarmTypeRepository
+	deleteGuard         bacnetReferenceDeleteGuard
+	tx                  txCoordinator
 }
 
 func NewObjectDataService(
 	repo domainObjectData.ObjectDataStore,
-	bacnetObjectRepo domainObjectData.BacnetObjectStore,
-	objectDataBacnetStore domainObjectData.ObjectDataBacnetObjectStore,
+	templateStore domainObjectData.BacnetObjectTemplateStore,
 	apparatRepo domainFacility.ApparatRepository,
 	alarmDefinitionRepo domainFacility.AlarmDefinitionRepository,
 	alarmTypeRepo domainFacility.AlarmTypeRepository,
 	usageRepos ...domainFacility.BacnetReferenceUsageRepository,
 ) *ObjectDataService {
 	return &ObjectDataService{
-		baseService:           newBase(repo, 10),
-		extRepo:               repo,
-		bacnetObjectRepo:      bacnetObjectRepo,
-		objectDataBacnetStore: objectDataBacnetStore,
-		apparatRepo:           apparatRepo,
-		alarmDefinitionRepo:   alarmDefinitionRepo,
-		alarmTypeRepo:         alarmTypeRepo,
-		deleteGuard:           newBacnetReferenceDeleteGuard(domainFacility.BacnetReferenceResourceObjectData, usageRepos...),
+		baseService:         newBase(repo, 10),
+		extRepo:             repo,
+		templateStore:       templateStore,
+		apparatRepo:         apparatRepo,
+		alarmDefinitionRepo: alarmDefinitionRepo,
+		alarmTypeRepo:       alarmTypeRepo,
+		deleteGuard:         newBacnetReferenceDeleteGuard(domainFacility.BacnetReferenceResourceObjectData, usageRepos...),
 	}
 }
 
@@ -54,12 +51,11 @@ func (s *ObjectDataService) transaction() facilityTx[*ObjectDataService] {
 
 func (s *ObjectDataService) template() objectDataTemplate {
 	return objectDataTemplate{
-		objectDataRepo:        s.extRepo,
-		bacnetObjectRepo:      s.bacnetObjectRepo,
-		objectDataBacnetStore: s.objectDataBacnetStore,
-		apparatRepo:           s.apparatRepo,
-		alarmDefinitionRepo:   s.alarmDefinitionRepo,
-		alarmTypeRepo:         s.alarmTypeRepo,
+		objectDataRepo:      s.extRepo,
+		templateStore:       s.templateStore,
+		apparatRepo:         s.apparatRepo,
+		alarmDefinitionRepo: s.alarmDefinitionRepo,
+		alarmTypeRepo:       s.alarmTypeRepo,
 	}
 }
 
@@ -82,6 +78,13 @@ func (s *ObjectDataService) DeleteByID(ctx context.Context, id uuid.UUID) error 
 		return err
 	}
 	return s.baseService.DeleteByID(ctx, id)
+}
+
+func (s *ObjectDataService) DeleteAtVersion(ctx context.Context, id uuid.UUID, version uint64) error {
+	if err := s.deleteGuard.ensureDeleteAllowed(ctx, id); err != nil {
+		return err
+	}
+	return s.baseService.DeleteAtVersion(ctx, id, version)
 }
 
 func (s *ObjectDataService) CreateTemplate(ctx context.Context, input domainFacility.ObjectDataTemplateCreate) (*domainFacility.ObjectData, error) {

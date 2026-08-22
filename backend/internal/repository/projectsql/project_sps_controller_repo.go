@@ -6,6 +6,7 @@ import (
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	"github.com/besart951/go_infra_link/backend/internal/domain/project"
+	"github.com/besart951/go_infra_link/backend/internal/repository/gormbase"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -13,6 +14,12 @@ import (
 
 type projectSPSControllerRepo struct {
 	db *gorm.DB
+}
+
+func (r *projectSPSControllerRepo) LockAtVersion(ctx context.Context, id uuid.UUID, version uint64) error {
+	return gormbase.LockVersion(ctx, r.db, gormbase.VersionLock{
+		Model: &ProjectSPSControllerRecord{}, ID: id, Version: version,
+	})
 }
 
 func NewProjectSPSControllerRepository(db *gorm.DB) project.ProjectSPSControllerRepository {

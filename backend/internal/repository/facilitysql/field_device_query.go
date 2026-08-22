@@ -6,8 +6,6 @@ import (
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
-	"github.com/besart951/go_infra_link/backend/internal/repository/gormbase"
-	"github.com/besart951/go_infra_link/backend/internal/repository/searchspec"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -26,7 +24,7 @@ const (
 		field_devices.text_individuell,
 		field_devices.sps_controller_system_type_id,
 		field_devices.system_part_id,
-		specs_list.id AS specification_id,
+		specs_list.id AS canonical_specification_id,
 		field_devices.apparat_id,
 		scts_list.id AS sps_system_type_id,
 		scts_list.created_at AS sps_system_type_created_at,
@@ -196,12 +194,15 @@ func applyFieldDeviceFilters(query *gorm.DB, filters domainFacility.FieldDeviceF
 	}
 
 	if filters.ProjectID != nil {
-		query = query.Joins("JOIN project_field_devices pfd ON pfd.field_device_id = field_devices.id").
-			Where("pfd.project_id = ?", *filters.ProjectID)
+		query = query.Where(`EXISTS (
+			SELECT 1 FROM project_field_devices pfd
+			WHERE pfd.field_device_id=field_devices.id AND pfd.project_id=?
+		)`, *filters.ProjectID)
 	} else if len(filters.ProjectIDs) > 0 {
-		query = query.Joins("JOIN project_field_devices pfd ON pfd.field_device_id = field_devices.id").
-			Where("pfd.project_id IN ?", filters.ProjectIDs)
-		hasPotentialDuplicateRows = true
+		query = query.Where(`EXISTS (
+			SELECT 1 FROM project_field_devices pfd
+			WHERE pfd.field_device_id=field_devices.id AND pfd.project_id IN ?
+		)`, filters.ProjectIDs)
 	}
 
 	return query, hasPotentialDuplicateRows
@@ -322,5 +323,6 @@ func applyFieldDeviceSearch(query *gorm.DB, search string) *gorm.DB {
 			term+"%",
 		)
 	}
-	return gormbase.ApplyTrigramSearch(query, term, searchspec.FieldDevices.SearchColumns("field_devices.")...)
+	pattern := "%" + strings.ToLower(term) + "%"
+	return query.Where("LOWER(COALESCE(field_devices.bmk,'') || CHR(1) || COALESCE(field_devices.description,'')) LIKE ?", pattern)
 }

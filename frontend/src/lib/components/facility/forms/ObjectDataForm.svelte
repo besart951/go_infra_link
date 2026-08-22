@@ -230,6 +230,7 @@
 
       if (initialData) {
         const res = await manageObjectData.update(initialData.id, {
+          base_version: initialData.revision,
           description,
           version,
           is_active,

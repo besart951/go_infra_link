@@ -22,9 +22,7 @@ func ToProjectModel(req dto.CreateProjectRequest) *project.Project {
 
 // ApplyProjectUpdate applies UpdateProjectRequest fields to an existing Project
 func ApplyProjectUpdate(target *project.Project, req dto.UpdateProjectRequest) {
-	if req.BaseVersion != nil {
-		target.Version = *req.BaseVersion
-	}
+	target.Version = req.BaseVersion
 	if req.Name != nil {
 		target.Name = *req.Name
 	}

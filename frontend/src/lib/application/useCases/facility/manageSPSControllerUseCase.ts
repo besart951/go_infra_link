@@ -3,7 +3,7 @@ import type {
   CreateSPSControllerRequest,
   UpdateSPSControllerRequest,
   NextGADeviceResponse,
-  CopyJob
+  FacilityJob
 } from '$lib/domain/facility/index.js';
 import type { SPSControllerRepository } from '$lib/domain/ports/facility/spsControllerRepository.js';
 import { ManageEntityUseCase } from '$lib/application/useCases/manageEntityUseCase.js';
@@ -17,7 +17,7 @@ export class ManageSPSControllerUseCase extends ManageEntityUseCase<
     super(repo);
   }
 
-  async copy(id: string, operationId: string, signal?: AbortSignal): Promise<CopyJob> {
+  async copy(id: string, operationId: string, signal?: AbortSignal): Promise<FacilityJob> {
     return this.repo.copy(id, operationId, signal);
   }
 

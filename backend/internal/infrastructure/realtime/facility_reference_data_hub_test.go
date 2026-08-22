@@ -52,7 +52,7 @@ func TestFacilityReferenceDataDoesNotDuplicateOwnBusEventToLocalClient(t *testin
 	assertNoSocketMessageOfType(t, client.socket, facilityReferenceDataEventChanged)
 }
 
-func TestFacilityCopyJobProgressIsOnlyDeliveredToTheOwningUser(t *testing.T) {
+func TestFacilityJobProgressIsOnlyDeliveredToTheOwningUser(t *testing.T) {
 	bus := NewInMemoryBus()
 	defer bus.Close()
 
@@ -68,21 +68,16 @@ func TestFacilityCopyJobProgressIsOnlyDeliveredToTheOwningUser(t *testing.T) {
 	hubB.register(otherClient)
 
 	jobID := uuid.New()
-	hubA.BroadcastCopyJobProgress(context.Background(), apprealtime.CopyJobProgressEvent{
+	hubA.BroadcastFacilityJobProgress(context.Background(), apprealtime.FacilityJobProgressEvent{
 		JobID: jobID, OwnerID: ownerID, Kind: "control_cabinet", Status: "running",
 		Progress: 50, Stage: "copying_controllers",
 	})
 
 	message := receiveSocketMessageOfType(t, ownerClient.socket, facilityJobProgressEvent)
 	if message["job_id"] != jobID.String() || message["progress"] != float64(50) {
-		t.Fatalf("copy job message = %#v, want job ID %s and progress 50", message, jobID)
-	}
-	legacy := receiveSocketMessageOfType(t, ownerClient.socket, facilityCopyJobProgressEvent)
-	if legacy["job_id"] != jobID.String() {
-		t.Fatalf("legacy copy job message = %#v, want job ID %s", legacy, jobID)
+		t.Fatalf("job message = %#v, want job ID %s and progress 50", message, jobID)
 	}
 	assertNoSocketMessageOfType(t, otherClient.socket, facilityJobProgressEvent)
-	assertNoSocketMessageOfType(t, otherClient.socket, facilityCopyJobProgressEvent)
 }
 
 func TestFacilityChangeIsFilteredByReadableResource(t *testing.T) {

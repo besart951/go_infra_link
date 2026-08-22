@@ -209,6 +209,7 @@ function applySpecificationEdits(
     ...device,
     specification: {
       id: '',
+      version: 1,
       created_at: nowIso,
       updated_at: nowIso,
       field_device_id: device.id,

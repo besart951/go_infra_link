@@ -6,6 +6,7 @@ import {
   mapPaginatedResponse,
   type ApiPaginatedListResponse
 } from './listHelpers.js';
+import { versionedDeletePath } from './versionedMutation.js';
 
 export const alarmUnitRepository: AlarmUnitRepository = {
   async list(params, signal) {
@@ -34,7 +35,10 @@ export const alarmUnitRepository: AlarmUnitRepository = {
       signal
     });
   },
-  async delete(id: string, signal?: AbortSignal) {
-    return api<void>(`/facility/alarm-units/${id}`, { method: 'DELETE', signal });
+  async delete(command, signal?: AbortSignal) {
+    return api<void>(versionedDeletePath('/facility/alarm-units', command), {
+      method: 'DELETE',
+      signal
+    });
   }
 };

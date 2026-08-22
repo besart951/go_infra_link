@@ -221,6 +221,7 @@
     await formState.handleSubmit(async () => {
       if (initialData) {
         return await manageSystemType.update(initialData.id, {
+          base_version: initialData.version,
           name,
           number_min: minValue,
           number_max: maxValue

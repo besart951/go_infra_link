@@ -62,7 +62,7 @@ func (h *BacnetAlarmHandler) GetAlarmValues(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, toAlarmValuesResponse(values))
+	c.JSON(http.StatusOK, toAlarmValuesResponse(*values))
 }
 
 // PutAlarmValues godoc
@@ -88,7 +88,8 @@ func (h *BacnetAlarmHandler) PutAlarmValues(c *gin.Context) {
 	ctx := c.Request.Context()
 	values := toAlarmValueModels(id, req.Values)
 
-	if err := h.service.PutValues(ctx, id, values); respondLocalizedValidationOrError(c, err, "facility.update_failed") {
+	version, err := h.service.PutValues(ctx, id, req.BaseVersion, values)
+	if respondLocalizedValidationOrError(c, err, "facility.update_failed") {
 		return
 	}
 
@@ -98,7 +99,8 @@ func (h *BacnetAlarmHandler) PutAlarmValues(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, toAlarmValuesResponse(updated))
+	updated.Version = version
+	c.JSON(http.StatusOK, toAlarmValuesResponse(*updated))
 }
 
 // toAlarmValueModels converts DTO alarm value inputs to domain models,

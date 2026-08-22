@@ -21,6 +21,7 @@ function buildTeam(overrides: Partial<Team> = {}): Team {
 function buildProject(overrides: Partial<Project> = {}): Project {
   return {
     id: 'project-1',
+    version: 1,
     name: 'Alpha',
     description: '',
     status: 'planned',

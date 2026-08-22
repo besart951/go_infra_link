@@ -104,7 +104,7 @@ type FieldDeviceMultiCreateResult struct {
 // BulkFieldDeviceUpdate represents a single field device update in a bulk operation
 type BulkFieldDeviceUpdate struct {
 	ID                 uuid.UUID
-	BaseVersion        *uint64
+	BaseVersion        domain.AggregateVersion
 	BMK                *string
 	HasBMK             bool
 	Description        *string
@@ -131,6 +131,7 @@ func (u BulkFieldDeviceUpdate) HasTextIndividuellUpdate() bool {
 }
 
 type SpecificationPatch struct {
+	BaseVersion                                  uint64
 	SpecificationSupplier                        *string
 	HasSpecificationSupplier                     bool
 	SpecificationBrand                           *string
@@ -192,6 +193,7 @@ func (p *SpecificationPatch) HasNonNilValues() bool {
 // BulkOperationResultItem represents the result of a single item in a bulk operation
 type BulkOperationResultItem struct {
 	ID                uuid.UUID
+	DependencyGroupID uuid.UUID
 	Success           bool
 	Version           uint64
 	Merged            bool
@@ -211,8 +213,8 @@ type BulkOperationResult struct {
 }
 
 // FieldDeviceDeleteCommand identifies the exact aggregate revision a caller
-// intends to delete. A nil BaseVersion exists only for the compatibility API.
+// intends to delete.
 type FieldDeviceDeleteCommand struct {
-	ID          uuid.UUID `json:"id"`
-	BaseVersion *uint64   `json:"base_version,omitempty"`
+	ID          uuid.UUID               `json:"id"`
+	BaseVersion domain.AggregateVersion `json:"base_version"`
 }

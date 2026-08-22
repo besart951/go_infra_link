@@ -2,6 +2,7 @@ import type { Pagination } from '../utils/index.js';
 
 export interface Specification {
   id: string;
+  version: number;
   field_device_id?: string;
   specification_supplier?: string;
   specification_brand?: string;
@@ -34,6 +35,7 @@ export interface CreateSpecificationRequest {
 }
 
 export interface UpdateSpecificationRequest {
+  base_version: number;
   specification_supplier?: string;
   specification_brand?: string;
   specification_type?: string;

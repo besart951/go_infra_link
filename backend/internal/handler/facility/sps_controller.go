@@ -15,13 +15,13 @@ import (
 type SPSControllerHandler struct {
 	service       SPSControllerService
 	collaboration ProjectRefreshBroadcaster
-	copyJobs      *facilityservice.CopyJobManager
+	facilityJobs  *facilityservice.FacilityJobManager
 }
 
-func NewSPSControllerHandler(service SPSControllerService, collaboration ProjectRefreshBroadcaster, copyJobs ...*facilityservice.CopyJobManager) *SPSControllerHandler {
+func NewSPSControllerHandler(service SPSControllerService, collaboration ProjectRefreshBroadcaster, facilityJobs ...*facilityservice.FacilityJobManager) *SPSControllerHandler {
 	handler := &SPSControllerHandler{service: service, collaboration: collaboration}
-	if len(copyJobs) > 0 {
-		handler.copyJobs = copyJobs[0]
+	if len(facilityJobs) > 0 {
+		handler.facilityJobs = facilityJobs[0]
 	}
 	return handler
 }
@@ -133,8 +133,8 @@ func (h *SPSControllerHandler) GetSPSControllersByIDs(c *gin.Context) {
 // @Tags facility-sps-controllers
 // @Produce json
 // @Param id path string true "SPS Controller ID"
-// @Param X-Copy-Operation-ID header string false "Client-generated copy operation UUID"
-// @Success 202 {object} dto.CopyJobResponse
+// @Param Idempotency-Key header string false "Client-generated operation UUID"
+// @Success 202 {object} dto.FacilityJobResponse
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 404 {object} dto.ErrorResponse
 // @Failure 409 {object} dto.ErrorResponse
@@ -146,7 +146,7 @@ func (h *SPSControllerHandler) CopySPSController(c *gin.Context) {
 	if !ok {
 		return
 	}
-	startPersistedFacilityCopyJob(c, h.copyJobs, facilityservice.CopyJobKindSPSController, id)
+	enqueueFacilityCopy(c, h.facilityJobs, facilityservice.FacilityJobKindSPSController, id)
 }
 
 // ListSPSControllers godoc
@@ -262,10 +262,7 @@ func (h *SPSControllerHandler) UpdateSPSController(c *gin.Context) {
 		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
 	}
-	baseVersion := spsController.Version
-	if req.BaseVersion != nil {
-		baseVersion = *req.BaseVersion
-	}
+	baseVersion := req.BaseVersion
 
 	applySPSControllerUpdate(spsController, req)
 
@@ -295,6 +292,7 @@ func (h *SPSControllerHandler) UpdateSPSController(c *gin.Context) {
 // @Tags facility-sps-controllers
 // @Produce json
 // @Param id path string true "SPS Controller ID"
+// @Param base_version query integer true "Expected aggregate version" minimum(1)
 // @Success 202 {object} dto.FacilityJobResponse
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 409 {object} dto.ErrorResponse
@@ -305,6 +303,10 @@ func (h *SPSControllerHandler) DeleteSPSController(c *gin.Context) {
 	if !ok {
 		return
 	}
+	version, ok := parseRequiredBaseVersion(c)
+	if !ok {
+		return
+	}
 
-	startPersistedFacilityDeleteJob(c, h.copyJobs, facilityservice.CopyJobKindSPSController, id)
+	startPersistedFacilityDeleteJob(c, h.facilityJobs, facilityservice.FacilityJobKindSPSController, id, version.Uint64())
 }

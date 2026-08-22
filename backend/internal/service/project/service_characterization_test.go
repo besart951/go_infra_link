@@ -27,6 +27,7 @@ func TestProjectService_Create_CharacterizesTemplateCopyAndCreatorMembership(t *
 	projectRepo := newProjectRepo()
 	objectDataRepo := newProjectObjectDataRepo()
 	bacnetRepo := newProjectBacnetObjectRepo()
+	templateRepo := newProjectBacnetTemplateRepo()
 	objectDataRepo.templates = []*domainFacility.ObjectData{
 		{
 			Base:        domain.Base{ID: templateID},
@@ -51,20 +52,10 @@ func TestProjectService_Create_CharacterizesTemplateCopyAndCreatorMembership(t *
 		},
 	}
 
-	svc := newProjectCharacterizationServices(
-		projectRepo,
-		newProjectControlCabinetRepo(),
-		newProjectSPSControllerRepo(),
-		newProjectFieldDeviceRepo(),
-		objectDataRepo,
-		bacnetRepo,
-		nil,
-		nil,
-		nil,
-		nil,
-		nil,
-		nil,
-	).Lifecycle
+	svc := NewServices(Dependencies{
+		Projects: projectRepo, ObjectData: objectDataRepo, BacnetObjects: bacnetRepo,
+		BacnetTemplates: templateRepo,
+	}).Lifecycle
 
 	project := &domainProject.Project{
 		Base:      domain.Base{ID: projectID},
@@ -96,12 +87,12 @@ func TestProjectService_Create_CharacterizesTemplateCopyAndCreatorMembership(t *
 	if copiedObjectData.Description != description {
 		t.Fatalf("expected copied object-data description %q, got %q", description, copiedObjectData.Description)
 	}
-	if len(bacnetRepo.items) != 2 {
-		t.Fatalf("expected two copied bacnet objects, got %d", len(bacnetRepo.items))
+	if len(templateRepo.items) != 2 {
+		t.Fatalf("expected two copied bacnet templates, got %d", len(templateRepo.items))
 	}
 
 	var referencedCopyID uuid.UUID
-	for _, item := range bacnetRepo.items {
+	for _, item := range templateRepo.items {
 		if item.TextFix == "BO-2" && item.SoftwareReferenceID != nil {
 			referencedCopyID = *item.SoftwareReferenceID
 		}
@@ -112,12 +103,12 @@ func TestProjectService_Create_CharacterizesTemplateCopyAndCreatorMembership(t *
 	if referencedCopyID == uuid.Nil {
 		t.Fatal("expected copied BO-2 to retain an internal software reference")
 	}
-	referencedCopy, ok := bacnetRepo.items[referencedCopyID]
+	referencedCopy, ok := templateRepo.items[referencedCopyID]
 	if !ok || referencedCopy.TextFix != "BO-1" {
 		t.Fatalf("expected copied BO-2 to reference copied BO-1, got %+v", referencedCopy)
 	}
-	if len(objectDataRepo.updated) != 1 || len(objectDataRepo.updated[0].BacnetObjects) != 2 {
-		t.Fatalf("expected copied object-data to be updated with two copied bacnet objects, got %+v", objectDataRepo.updated)
+	if len(objectDataRepo.updated) != 0 {
+		t.Fatalf("canonical templates must not update the ObjectData row, got %+v", objectDataRepo.updated)
 	}
 }
 
@@ -243,7 +234,7 @@ func TestProjectService_DeleteControlCabinet_CharacterizesLinkAndHierarchyDeleti
 	bacnetRepo := newProjectBacnetObjectRepo()
 
 	controlCabinetLinks.items[linkID] = &domainProject.ProjectControlCabinet{
-		Base:             domain.Base{ID: linkID},
+		Base:             domain.Base{ID: linkID, Version: 1},
 		ProjectID:        projectID,
 		ControlCabinetID: controlCabinetID,
 	}
@@ -269,7 +260,7 @@ func TestProjectService_DeleteControlCabinet_CharacterizesLinkAndHierarchyDeleti
 		nil,
 	).FacilityLink
 
-	if err := svc.DeleteControlCabinet(ctx, linkID, projectID); err != nil {
+	if err := svc.DeleteControlCabinet(ctx, domainProject.FacilityLinkDelete{LinkID: linkID, ProjectID: projectID, BaseVersion: 1}); err != nil {
 		t.Fatalf("expected delete to succeed, got %v", err)
 	}
 
@@ -852,6 +843,14 @@ func (r *projectControlCabinetRepoFake) DeleteByIds(_ context.Context, ids []uui
 	return nil
 }
 
+func (r *projectControlCabinetRepoFake) LockAtVersion(_ context.Context, id uuid.UUID, version uint64) error {
+	item, ok := r.items[id]
+	if !ok || item.Version != version {
+		return domain.ErrConflict
+	}
+	return nil
+}
+
 func (r *projectControlCabinetRepoFake) GetPaginatedList(context.Context, domain.PaginationParams) (*domain.PaginatedList[domainProject.ProjectControlCabinet], error) {
 	r.getPaginatedListCalls++
 	return paginatedFromMap(r.items), nil
@@ -929,6 +928,14 @@ func (r *projectSPSControllerRepoFake) Update(_ context.Context, entity *domainP
 
 func (r *projectSPSControllerRepoFake) DeleteByIds(_ context.Context, ids []uuid.UUID) error {
 	deleteIDs(ids, r.items)
+	return nil
+}
+
+func (r *projectSPSControllerRepoFake) LockAtVersion(_ context.Context, id uuid.UUID, version uint64) error {
+	item, ok := r.items[id]
+	if !ok || item.Version != version {
+		return domain.ErrConflict
+	}
 	return nil
 }
 
@@ -1013,6 +1020,14 @@ func (r *projectFieldDeviceRepoFake) Update(_ context.Context, entity *domainPro
 
 func (r *projectFieldDeviceRepoFake) DeleteByIds(_ context.Context, ids []uuid.UUID) error {
 	deleteIDs(ids, r.items)
+	return nil
+}
+
+func (r *projectFieldDeviceRepoFake) LockAtVersion(_ context.Context, id uuid.UUID, version uint64) error {
+	item, ok := r.items[id]
+	if !ok || item.Version != version {
+		return domain.ErrConflict
+	}
 	return nil
 }
 
@@ -1223,6 +1238,74 @@ func (r *projectBacnetObjectRepoFake) DeleteByFieldDeviceIDs(_ context.Context, 
 			if _, ok := idSet[*item.FieldDeviceID]; ok {
 				delete(r.items, id)
 			}
+		}
+	}
+	return nil
+}
+
+type projectBacnetTemplateRepoFake struct {
+	items map[uuid.UUID]domainObjectData.BacnetObjectTemplate
+}
+
+func newProjectBacnetTemplateRepo() *projectBacnetTemplateRepoFake {
+	return &projectBacnetTemplateRepoFake{items: make(map[uuid.UUID]domainObjectData.BacnetObjectTemplate)}
+}
+
+func (r *projectBacnetTemplateRepoFake) GetByID(_ context.Context, id uuid.UUID) (*domainObjectData.BacnetObjectTemplate, error) {
+	item, ok := r.items[id]
+	if !ok {
+		return nil, domain.ErrNotFound
+	}
+	return &item, nil
+}
+
+func (r *projectBacnetTemplateRepoFake) GetByIDs(_ context.Context, ids []uuid.UUID) ([]domainObjectData.BacnetObjectTemplate, error) {
+	items := make([]domainObjectData.BacnetObjectTemplate, 0, len(ids))
+	for _, id := range ids {
+		if item, ok := r.items[id]; ok {
+			items = append(items, item)
+		}
+	}
+	return items, nil
+}
+
+func (r *projectBacnetTemplateRepoFake) ListByObjectDataID(_ context.Context, ownerID uuid.UUID) ([]domainObjectData.BacnetObjectTemplate, error) {
+	items := make([]domainObjectData.BacnetObjectTemplate, 0)
+	for _, item := range r.items {
+		if item.ObjectDataID == ownerID {
+			items = append(items, item)
+		}
+	}
+	return items, nil
+}
+
+func (r *projectBacnetTemplateRepoFake) Create(_ context.Context, item *domainObjectData.BacnetObjectTemplate) error {
+	if item.ID == uuid.Nil {
+		item.ID = uuid.New()
+	}
+	r.items[item.ID] = *item
+	return nil
+}
+
+func (r *projectBacnetTemplateRepoFake) Update(ctx context.Context, item *domainObjectData.BacnetObjectTemplate) error {
+	return r.Create(ctx, item)
+}
+
+func (r *projectBacnetTemplateRepoFake) DeleteAtVersion(_ context.Context, id uuid.UUID, _ uint64) error {
+	delete(r.items, id)
+	return nil
+}
+
+func (r *projectBacnetTemplateRepoFake) Replace(ctx context.Context, ownerID uuid.UUID, items []domainObjectData.BacnetObjectTemplate) error {
+	for id, item := range r.items {
+		if item.ObjectDataID == ownerID {
+			delete(r.items, id)
+		}
+	}
+	for i := range items {
+		items[i].ObjectDataID = ownerID
+		if err := r.Create(ctx, &items[i]); err != nil {
+			return err
 		}
 	}
 	return nil

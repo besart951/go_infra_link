@@ -9,10 +9,11 @@ import (
 // Unit DTOs
 
 type UnitResponse struct {
-	ID     uuid.UUID `json:"id"`
-	Code   string    `json:"code"`
-	Symbol string    `json:"symbol"`
-	Name   string    `json:"name"`
+	ID      uuid.UUID `json:"id"`
+	Version uint64    `json:"version"`
+	Code    string    `json:"code"`
+	Symbol  string    `json:"symbol"`
+	Name    string    `json:"name"`
 }
 
 type CreateUnitRequest struct {
@@ -22,10 +23,13 @@ type CreateUnitRequest struct {
 }
 
 type UpdateUnitRequest struct {
-	Code   *string `json:"code" binding:"omitempty,max=30"`
-	Symbol *string `json:"symbol" binding:"omitempty,max=20"`
-	Name   *string `json:"name" binding:"omitempty,max=100"`
+	BaseVersion uint64  `json:"base_version" binding:"required,min=1"`
+	Code        *string `json:"code" binding:"omitempty,max=30"`
+	Symbol      *string `json:"symbol" binding:"omitempty,max=20"`
+	Name        *string `json:"name" binding:"omitempty,max=100"`
 }
+
+func (r UpdateUnitRequest) ExpectedVersion() uint64 { return r.BaseVersion }
 
 type UnitListResponse struct {
 	Items      []UnitResponse `json:"items"`
@@ -38,6 +42,7 @@ type UnitListResponse struct {
 
 type AlarmFieldResponse struct {
 	ID              uuid.UUID `json:"id"`
+	Version         uint64    `json:"version"`
 	Key             string    `json:"key"`
 	Label           string    `json:"label"`
 	DataType        string    `json:"data_type"`
@@ -52,11 +57,14 @@ type CreateAlarmFieldRequest struct {
 }
 
 type UpdateAlarmFieldRequest struct {
+	BaseVersion     uint64  `json:"base_version" binding:"required,min=1"`
 	Key             *string `json:"key" binding:"omitempty,max=100"`
 	Label           *string `json:"label" binding:"omitempty,max=150"`
 	DataType        *string `json:"data_type" binding:"omitempty,max=30"`
 	DefaultUnitCode *string `json:"default_unit_code" binding:"omitempty,max=30"`
 }
+
+func (r UpdateAlarmFieldRequest) ExpectedVersion() uint64 { return r.BaseVersion }
 
 type AlarmFieldListResponse struct {
 	Items      []AlarmFieldResponse `json:"items"`
@@ -69,6 +77,7 @@ type AlarmFieldListResponse struct {
 
 type AlarmTypeFieldResponse struct {
 	ID               uuid.UUID           `json:"id"`
+	Version          uint64              `json:"version"`
 	AlarmTypeID      uuid.UUID           `json:"alarm_type_id"`
 	AlarmFieldID     uuid.UUID           `json:"alarm_field_id"`
 	AlarmField       *AlarmFieldResponse `json:"alarm_field,omitempty"`
@@ -96,6 +105,7 @@ type CreateAlarmTypeFieldRequest struct {
 }
 
 type UpdateAlarmTypeFieldRequest struct {
+	BaseVersion      uint64     `json:"base_version" binding:"required,min=1"`
 	DisplayOrder     *int       `json:"display_order" binding:"omitempty,min=0"`
 	IsRequired       *bool      `json:"is_required"`
 	IsUserEditable   *bool      `json:"is_user_editable"`
@@ -113,11 +123,15 @@ type CreateAlarmTypeRequest struct {
 }
 
 type UpdateAlarmTypeRequest struct {
-	Name *string `json:"name" binding:"omitempty,max=120"`
+	BaseVersion uint64  `json:"base_version" binding:"required,min=1"`
+	Name        *string `json:"name" binding:"omitempty,max=120"`
 }
+
+func (r UpdateAlarmTypeRequest) ExpectedVersion() uint64 { return r.BaseVersion }
 
 type AlarmTypeResponse struct {
 	ID        uuid.UUID                `json:"id"`
+	Version   uint64                   `json:"version"`
 	Code      string                   `json:"code"`
 	Name      string                   `json:"name"`
 	Fields    []AlarmTypeFieldResponse `json:"fields,omitempty"`

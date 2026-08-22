@@ -494,11 +494,8 @@ func (h *FacilityDetailHandler) UpdateControlCabinet(c *gin.Context) {
 	if !handlerutil.BindJSON(c, &req) {
 		return
 	}
-	baseVersion := cabinet.Version
-	if req.BaseVersion != nil {
-		baseVersion = *req.BaseVersion
-		cabinet.Version = *req.BaseVersion
-	}
+	baseVersion := req.BaseVersion
+	cabinet.Version = req.BaseVersion
 	if req.ControlCabinetNr != nil {
 		cabinet.ControlCabinetNr = req.ControlCabinetNr
 	}
@@ -545,11 +542,8 @@ func (h *FacilityDetailHandler) UpdateSPSController(c *gin.Context) {
 	if !handlerutil.BindJSON(c, &req) {
 		return
 	}
-	baseVersion := controller.Version
-	if req.BaseVersion != nil {
-		baseVersion = *req.BaseVersion
-		controller.Version = *req.BaseVersion
-	}
+	baseVersion := req.BaseVersion
+	controller.Version = req.BaseVersion
 	if req.ControlCabinetID != uuid.Nil {
 		cabinets, err := h.projectCabinets(c, projectID)
 		if err != nil || !projectContainsCabinet(cabinets, req.ControlCabinetID) {
@@ -617,11 +611,8 @@ func (h *FacilityDetailHandler) UpdateSPSControllerSystemType(c *gin.Context) {
 	if !handlerutil.BindJSON(c, &req) {
 		return
 	}
-	baseVersion := item.Version
-	if req.BaseVersion != nil {
-		baseVersion = *req.BaseVersion
-		item.Version = *req.BaseVersion
-	}
+	baseVersion := req.BaseVersion
+	item.Version = req.BaseVersion
 	if req.Number != nil {
 		item.Number = req.Number
 	}
@@ -667,11 +658,8 @@ func (h *FacilityDetailHandler) UpdateFieldDevice(c *gin.Context) {
 		handlerutil.RespondLocalizedError(c, http.StatusBadRequest, "validation_error", "errors.validation_error")
 		return
 	}
-	baseVersion := device.Version
-	if req.BaseVersion != nil {
-		baseVersion = *req.BaseVersion
-		device.Version = *req.BaseVersion
-	}
+	baseVersion := req.BaseVersion
+	device.Version = req.BaseVersion
 	if req.BMK != nil {
 		device.BMK = req.BMK
 	}

@@ -33,3 +33,10 @@ func (s *NotificationClassService) DeleteByID(ctx context.Context, id uuid.UUID)
 	}
 	return s.baseService.DeleteByID(ctx, id)
 }
+
+func (s *NotificationClassService) DeleteAtVersion(ctx context.Context, id uuid.UUID, version uint64) error {
+	if err := s.deleteGuard.ensureDeleteAllowed(ctx, id); err != nil {
+		return err
+	}
+	return s.baseService.DeleteAtVersion(ctx, id, version)
+}

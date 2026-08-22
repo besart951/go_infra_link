@@ -8,6 +8,26 @@ import (
 
 const lifecycleTable = "facility_aggregate_lifecycle"
 
+const activeFieldDevicePredicate = `
+	NOT EXISTS (
+		SELECT 1 FROM facility_aggregate_lifecycle
+		WHERE kind IN ('field_device','sps_controller_system_type','sps_controller','control_cabinet')
+	)
+	OR (
+	NOT EXISTS (SELECT 1 FROM facility_aggregate_lifecycle WHERE kind='field_device' AND resource_id=field_devices.id)
+	AND NOT EXISTS (SELECT 1 FROM facility_aggregate_lifecycle WHERE kind='sps_controller_system_type' AND resource_id=field_devices.sps_controller_system_type_id)
+	AND NOT EXISTS (
+		SELECT 1 FROM facility_aggregate_lifecycle lifecycle
+		JOIN sps_controller_system_types system_type ON system_type.id=field_devices.sps_controller_system_type_id
+		WHERE lifecycle.kind='sps_controller' AND lifecycle.resource_id=system_type.sps_controller_id
+	)
+	AND NOT EXISTS (
+		SELECT 1 FROM facility_aggregate_lifecycle lifecycle
+		JOIN sps_controller_system_types system_type ON system_type.id=field_devices.sps_controller_system_type_id
+		JOIN sps_controllers controller ON controller.id=system_type.sps_controller_id
+		WHERE lifecycle.kind='control_cabinet' AND lifecycle.resource_id=controller.control_cabinet_id
+	))`
+
 var lifecycleAvailability sync.Map
 
 func activeControlCabinets(query *gorm.DB) *gorm.DB {
@@ -46,15 +66,7 @@ func activeFieldDevices(query *gorm.DB) *gorm.DB {
 	if !hasLifecycleTable(query) {
 		return query
 	}
-	return query.Where(`NOT EXISTS (
-		SELECT 1 FROM facility_aggregate_lifecycle lifecycle
-		JOIN sps_controller_system_types lifecycle_system_type ON lifecycle_system_type.id = field_devices.sps_controller_system_type_id
-		JOIN sps_controllers lifecycle_controller ON lifecycle_controller.id = lifecycle_system_type.sps_controller_id
-		WHERE (lifecycle.kind = 'field_device' AND lifecycle.resource_id = field_devices.id)
-		   OR (lifecycle.kind = 'sps_controller_system_type' AND lifecycle.resource_id = lifecycle_system_type.id)
-		   OR (lifecycle.kind = 'sps_controller' AND lifecycle.resource_id = lifecycle_controller.id)
-		   OR (lifecycle.kind = 'control_cabinet' AND lifecycle.resource_id = lifecycle_controller.control_cabinet_id)
-	)`)
+	return query.Where(activeFieldDevicePredicate)
 }
 
 func activeRoots(query *gorm.DB, kind, idColumn string) *gorm.DB {
@@ -71,10 +83,11 @@ func hasLifecycleTable(db *gorm.DB) bool {
 	if db == nil {
 		return false
 	}
-	if available, ok := lifecycleAvailability.Load(db.Config); ok {
+	cacheKey := db.ConnPool
+	if available, ok := lifecycleAvailability.Load(cacheKey); ok {
 		return available.(bool)
 	}
 	available := db.Migrator().HasTable(lifecycleTable)
-	lifecycleAvailability.Store(db.Config, available)
+	lifecycleAvailability.Store(cacheKey, available)
 	return available
 }

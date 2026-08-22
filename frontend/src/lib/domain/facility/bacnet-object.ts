@@ -5,6 +5,7 @@
 
 export interface BacnetObject {
   id: string;
+  aggregate_version: number;
   text_fix: string;
   description?: string;
   gms_visible: boolean;
@@ -41,6 +42,7 @@ export interface CreateBacnetObjectRequest {
 }
 
 export interface UpdateBacnetObjectRequest {
+  base_version: number;
   text_fix?: string;
   description?: string;
   gms_visible?: boolean;

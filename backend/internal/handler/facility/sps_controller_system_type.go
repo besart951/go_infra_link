@@ -70,11 +70,8 @@ func (h *SPSControllerSystemTypeHandler) UpdateSPSControllerSystemType(c *gin.Co
 		respondLocalizedDomainError(c, err, "fetch_failed", "facility.fetch_failed", localizedNotFound("facility.sps_controller_system_type_not_found"))
 		return
 	}
-	baseVersion := item.Version
-	if req.BaseVersion != nil {
-		baseVersion = *req.BaseVersion
-		item.Version = *req.BaseVersion
-	}
+	baseVersion := req.BaseVersion
+	item.Version = req.BaseVersion
 	if req.Number != nil {
 		item.Number = req.Number
 	}
@@ -97,7 +94,7 @@ func (h *SPSControllerSystemTypeHandler) UpdateSPSControllerSystemType(c *gin.Co
 type SPSControllerSystemTypeHandler struct {
 	service       SPSControllerSystemTypeService
 	collaboration ProjectRefreshBroadcaster
-	copyJobs      *facilityservice.CopyJobManager
+	facilityJobs  *facilityservice.FacilityJobManager
 }
 
 func NewSPSControllerSystemTypeHandler(service SPSControllerSystemTypeService, collaboration ...ProjectRefreshBroadcaster) *SPSControllerSystemTypeHandler {
@@ -108,9 +105,9 @@ func NewSPSControllerSystemTypeHandler(service SPSControllerSystemTypeService, c
 	return h
 }
 
-func NewSPSControllerSystemTypeHandlerWithCopyJobs(service SPSControllerSystemTypeService, collaboration ProjectRefreshBroadcaster, copyJobs *facilityservice.CopyJobManager) *SPSControllerSystemTypeHandler {
+func NewSPSControllerSystemTypeHandlerWithFacilityJobs(service SPSControllerSystemTypeService, collaboration ProjectRefreshBroadcaster, facilityJobs *facilityservice.FacilityJobManager) *SPSControllerSystemTypeHandler {
 	handler := NewSPSControllerSystemTypeHandler(service, collaboration)
-	handler.copyJobs = copyJobs
+	handler.facilityJobs = facilityJobs
 	return handler
 }
 
@@ -197,8 +194,8 @@ func (h *SPSControllerSystemTypeHandler) GetSPSControllerSystemType(c *gin.Conte
 // @Tags facility-sps-controller-system-types
 // @Produce json
 // @Param id path string true "SPS Controller System Type ID"
-// @Param X-Copy-Operation-ID header string false "Client-generated copy operation UUID"
-// @Success 202 {object} dto.CopyJobResponse
+// @Param Idempotency-Key header string false "Client-generated operation UUID"
+// @Success 202 {object} dto.FacilityJobResponse
 // @Failure 400 {object} ErrorResponse
 // @Failure 404 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
@@ -209,7 +206,7 @@ func (h *SPSControllerSystemTypeHandler) CopySPSControllerSystemType(c *gin.Cont
 	if !ok {
 		return
 	}
-	startPersistedFacilityCopyJob(c, h.copyJobs, facilityservice.CopyJobKindSPSControllerSystemType, id)
+	enqueueFacilityCopy(c, h.facilityJobs, facilityservice.FacilityJobKindSPSControllerSystemType, id)
 }
 
 // DeleteSPSControllerSystemType godoc
@@ -217,6 +214,7 @@ func (h *SPSControllerSystemTypeHandler) CopySPSControllerSystemType(c *gin.Cont
 // @Tags facility-sps-controller-system-types
 // @Produce json
 // @Param id path string true "SPS Controller System Type ID"
+// @Param base_version query integer true "Expected aggregate version" minimum(1)
 // @Success 202 {object} dto.FacilityJobResponse
 // @Failure 400 {object} ErrorResponse
 // @Failure 404 {object} ErrorResponse
@@ -227,6 +225,10 @@ func (h *SPSControllerSystemTypeHandler) DeleteSPSControllerSystemType(c *gin.Co
 	if !ok {
 		return
 	}
+	version, ok := parseRequiredBaseVersion(c)
+	if !ok {
+		return
+	}
 
-	startPersistedFacilityDeleteJob(c, h.copyJobs, facilityservice.CopyJobKindSPSControllerSystemType, id)
+	startPersistedFacilityDeleteJob(c, h.facilityJobs, facilityservice.FacilityJobKindSPSControllerSystemType, id, version.Uint64())
 }

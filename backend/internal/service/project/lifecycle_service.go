@@ -18,7 +18,7 @@ type ProjectLifecycleService struct {
 	userRepo           domainUser.UserRepository
 	rolePermissionRepo domainUser.RolePermissionRepository
 	objectDataRepo     domainObjectData.ObjectDataStore
-	bacnetObjectRepo   domainObjectData.BacnetObjectStore
+	bacnetTemplateRepo domainObjectData.BacnetObjectTemplateStore
 	tx                 txCoordinator
 }
 
@@ -68,7 +68,7 @@ func (s *ProjectLifecycleService) createProject(ctx context.Context, project *do
 		}
 	}
 
-	return facilityservice.CopyObjectDataTemplatesForProject(ctx, s.objectDataRepo, s.bacnetObjectRepo, project.ID)
+	return facilityservice.CopyObjectDataTemplatesForProject(ctx, s.objectDataRepo, s.bacnetTemplateRepo, project.ID)
 }
 
 func (s *ProjectLifecycleService) autoAssignedProjectUserIDs(ctx context.Context, creatorID uuid.UUID) ([]uuid.UUID, error) {
@@ -130,8 +130,13 @@ func (s *ProjectLifecycleService) ensurePhaseExists(ctx context.Context, phaseID
 	return nil
 }
 
-func (s *ProjectLifecycleService) DeleteByID(ctx context.Context, id uuid.UUID) error {
-	return s.repo.DeleteByIds(ctx, []uuid.UUID{id})
+func (s *ProjectLifecycleService) DeleteAtVersion(ctx context.Context, id uuid.UUID, baseVersion uint64) error {
+	return s.transaction().run(ctx, func(txCtx context.Context, service *ProjectLifecycleService) error {
+		if err := lockAggregateVersion(txCtx, service.repo, id, baseVersion); err != nil {
+			return err
+		}
+		return service.repo.DeleteByIds(txCtx, []uuid.UUID{id})
+	})
 }
 
 func (s *ProjectLifecycleService) List(ctx context.Context, requesterID uuid.UUID, page, limit int, search string, status *domainProject.ProjectStatus, phaseID *uuid.UUID) (*domain.PaginatedList[domainProject.Project], error) {

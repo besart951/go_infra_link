@@ -64,6 +64,18 @@ func (s *SystemPartService) DeleteByID(ctx context.Context, id uuid.UUID) error 
 	return s.baseService.DeleteByID(ctx, id)
 }
 
+func (s *SystemPartService) DeleteAtVersion(ctx context.Context, id uuid.UUID, version uint64) error {
+	if s.deleteImpact != nil {
+		if err := s.deleteImpact.EnsureDeleteAllowed(ctx, domainFacility.DeleteImpactResourceSystemPart, id); err != nil {
+			return err
+		}
+	}
+	if err := s.deleteGuard.ensureDeleteAllowed(ctx, id); err != nil {
+		return err
+	}
+	return s.baseService.DeleteAtVersion(ctx, id, version)
+}
+
 func (s *SystemPartService) Validate(ctx context.Context, systemPart *domainFacility.SystemPart, excludeID *uuid.UUID) error {
 	if err := s.validateRequiredFields(systemPart); err != nil {
 		return err

@@ -24,7 +24,7 @@ type SystemTypeService interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*domainFacility.SystemType, error)
 	List(ctx context.Context, page, limit int, search string) (*domain.PaginatedList[domainFacility.SystemType], error)
 	Update(ctx context.Context, systemType *domainFacility.SystemType) error
-	DeleteByID(ctx context.Context, id uuid.UUID) error
+	DeleteAtVersion(ctx context.Context, id uuid.UUID, version uint64) error
 }
 
 type SystemPartService interface {
@@ -76,14 +76,14 @@ type FieldDeviceService interface {
 	GetFieldDeviceOptions(ctx context.Context) (*domainFacility.FieldDeviceOptions, error)
 	Update(ctx context.Context, fieldDevice *domainFacility.FieldDevice) error
 	UpdateWithBacnetObjects(ctx context.Context, fieldDevice *domainFacility.FieldDevice, objectDataID *uuid.UUID, bacnetObjects *[]domainFacility.BacnetObject) error
-	DeleteByID(ctx context.Context, id uuid.UUID) error
+	Delete(ctx context.Context, command domainFacility.FieldDeviceDeleteCommand) error
 	ListBacnetObjects(ctx context.Context, fieldDeviceID uuid.UUID) ([]domainFacility.BacnetObject, error)
 	CreateSpecification(ctx context.Context, fieldDeviceID uuid.UUID, specification *domainFacility.Specification) error
 	GetSpecification(ctx context.Context, fieldDeviceID uuid.UUID) (*domainFacility.Specification, error)
 	UpdateSpecificationPatch(ctx context.Context, fieldDeviceID uuid.UUID, patch *domainFacility.SpecificationPatch) (*domainFacility.Specification, error)
-	DeleteSpecification(ctx context.Context, fieldDeviceID uuid.UUID) error
+	DeleteSpecificationAtVersion(ctx context.Context, fieldDeviceID uuid.UUID, version uint64) error
 	BulkUpdate(ctx context.Context, updates []domainFacility.BulkFieldDeviceUpdate) *domainFacility.BulkOperationResult
-	BulkDelete(ctx context.Context, ids []uuid.UUID) *domainFacility.BulkOperationResult
+	BulkDeleteCommands(ctx context.Context, commands []domainFacility.FieldDeviceDeleteCommand) *domainFacility.BulkOperationResult
 }
 
 type ControlCabinetService interface {
@@ -119,7 +119,7 @@ type StateTextService interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*domainFacility.StateText, error)
 	List(ctx context.Context, page, limit int, search string) (*domain.PaginatedList[domainFacility.StateText], error)
 	Update(ctx context.Context, stateText *domainFacility.StateText) error
-	DeleteByID(ctx context.Context, id uuid.UUID) error
+	DeleteAtVersion(ctx context.Context, id uuid.UUID, version uint64) error
 }
 
 type NotificationClassService interface {
@@ -127,7 +127,7 @@ type NotificationClassService interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*domainFacility.NotificationClass, error)
 	List(ctx context.Context, page, limit int, search string) (*domain.PaginatedList[domainFacility.NotificationClass], error)
 	Update(ctx context.Context, notificationClass *domainFacility.NotificationClass) error
-	DeleteByID(ctx context.Context, id uuid.UUID) error
+	DeleteAtVersion(ctx context.Context, id uuid.UUID, version uint64) error
 }
 
 type AlarmDefinitionService interface {
@@ -135,7 +135,7 @@ type AlarmDefinitionService interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*domainFacility.AlarmDefinition, error)
 	List(ctx context.Context, page, limit int, search string) (*domain.PaginatedList[domainFacility.AlarmDefinition], error)
 	Update(ctx context.Context, alarmDefinition *domainFacility.AlarmDefinition) error
-	DeleteByID(ctx context.Context, id uuid.UUID) error
+	DeleteAtVersion(ctx context.Context, id uuid.UUID, version uint64) error
 }
 
 type ObjectDataService interface {
@@ -178,7 +178,7 @@ type AlarmTypeService interface {
 	GetWithFields(ctx context.Context, id uuid.UUID) (*domainFacility.AlarmType, error)
 	List(ctx context.Context, page, limit int, search string) (*domain.PaginatedList[domainFacility.AlarmType], error)
 	Update(ctx context.Context, alarmType *domainFacility.AlarmType) error
-	DeleteByID(ctx context.Context, id uuid.UUID) error
+	DeleteAtVersion(ctx context.Context, id uuid.UUID, version uint64) error
 }
 
 type UnitService interface {
@@ -186,7 +186,7 @@ type UnitService interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*domainFacility.Unit, error)
 	List(ctx context.Context, page, limit int, search string) (*domain.PaginatedList[domainFacility.Unit], error)
 	Update(ctx context.Context, unit *domainFacility.Unit) error
-	DeleteByID(ctx context.Context, id uuid.UUID) error
+	DeleteAtVersion(ctx context.Context, id uuid.UUID, version uint64) error
 }
 
 type AlarmFieldService interface {
@@ -194,7 +194,7 @@ type AlarmFieldService interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*domainFacility.AlarmField, error)
 	List(ctx context.Context, page, limit int, search string) (*domain.PaginatedList[domainFacility.AlarmField], error)
 	Update(ctx context.Context, field *domainFacility.AlarmField) error
-	DeleteByID(ctx context.Context, id uuid.UUID) error
+	DeleteAtVersion(ctx context.Context, id uuid.UUID, version uint64) error
 }
 
 type AlarmTypeFieldService interface {
@@ -206,8 +206,8 @@ type AlarmTypeFieldService interface {
 
 type BacnetAlarmValueService interface {
 	GetSchema(ctx context.Context, bacnetObjectID uuid.UUID) (*domainFacility.AlarmType, error)
-	GetValues(ctx context.Context, bacnetObjectID uuid.UUID) ([]domainFacility.BacnetObjectAlarmValue, error)
-	PutValues(ctx context.Context, bacnetObjectID uuid.UUID, values []domainFacility.BacnetObjectAlarmValue) error
+	GetValues(ctx context.Context, bacnetObjectID uuid.UUID) (*domainFacility.BacnetAlarmValues, error)
+	PutValues(ctx context.Context, bacnetObjectID uuid.UUID, version uint64, values []domainFacility.BacnetObjectAlarmValue) (uint64, error)
 }
 
 type BacnetReferenceUsageService interface {

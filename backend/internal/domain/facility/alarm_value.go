@@ -36,6 +36,12 @@ type BacnetObjectAlarmValue struct {
 	Source           string     `gorm:"not null;default:'user';size:20"`
 }
 
+// BacnetAlarmValues carries the optimistic-concurrency revision of its owner.
+type BacnetAlarmValues struct {
+	Version uint64
+	Items   []BacnetObjectAlarmValue
+}
+
 // AlarmValueSource constants
 const (
 	AlarmValueSourceDefault = "default"

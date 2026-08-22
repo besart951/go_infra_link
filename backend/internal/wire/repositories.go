@@ -68,8 +68,8 @@ type Repositories struct {
 	FacilitySPSControllers           domainFacility.SPSControllerRepository
 	FacilitySPSControllerSystemTypes domainHierarchy.SPSControllerSystemTypeStore
 	FacilityBacnetObjects            domainObjectData.BacnetObjectStore
+	FacilityBacnetTemplates          domainObjectData.BacnetObjectTemplateStore
 	FacilityObjectData               domainObjectData.ObjectDataStore
-	FacilityObjectDataBacnetObjects  domainObjectData.ObjectDataBacnetObjectStore
 
 	FacilityStateTexts          domainFacility.StateTextRepository
 	FacilityNotificationClasses domainFacility.NotificationClassRepository
@@ -125,8 +125,8 @@ type (
 		FacilitySPSControllers           domainFacility.SPSControllerRepository
 		FacilitySPSControllerSystemTypes domainHierarchy.SPSControllerSystemTypeStore
 		FacilityBacnetObjects            domainObjectData.BacnetObjectStore
+		FacilityBacnetTemplates          domainObjectData.BacnetObjectTemplateStore
 		FacilityObjectData               domainObjectData.ObjectDataStore
-		FacilityObjectDataBacnetObjects  domainObjectData.ObjectDataBacnetObjectStore
 		FacilityStateTexts               domainFacility.StateTextRepository
 		FacilityNotificationClasses      domainFacility.NotificationClassRepository
 		FacilityAlarmDefinitions         domainFacility.AlarmDefinitionRepository
@@ -226,8 +226,8 @@ func newFacilityRepositories(gormDB *gorm.DB, history *historyrepo.Store) facili
 		FacilitySPSControllers:           historycapture.WrapSPSController(facilityrepo.NewSPSControllerRepository(gormDB), history),
 		FacilitySPSControllerSystemTypes: historycapture.WrapSPSControllerSystemType(facilityrepo.NewSPSControllerSystemTypeRepository(gormDB), history),
 		FacilityBacnetObjects:            historycapture.WrapBacnetObject(facilityrepo.NewBacnetObjectRepository(gormDB), history),
+		FacilityBacnetTemplates:          facilityrepo.NewBacnetObjectTemplateRepository(gormDB),
 		FacilityObjectData:               historycapture.WrapObjectData(facilityrepo.NewObjectDataRepository(gormDB), history),
-		FacilityObjectDataBacnetObjects:  facilityrepo.NewObjectDataBacnetObjectRepository(gormDB),
 		FacilityStateTexts:               historycapture.WrapRepository("state_texts", facilityrepo.NewStateTextRepository(gormDB), history),
 		FacilityNotificationClasses:      historycapture.WrapRepository("notification_classes", facilityrepo.NewNotificationClassRepository(gormDB), history),
 		FacilityAlarmDefinitions:         historycapture.WrapAlarmDefinition(facilityrepo.NewAlarmDefinitionRepository(gormDB), history),
@@ -299,8 +299,8 @@ func composeRepositories(
 		FacilitySPSControllers:           facilities.FacilitySPSControllers,
 		FacilitySPSControllerSystemTypes: facilities.FacilitySPSControllerSystemTypes,
 		FacilityBacnetObjects:            facilities.FacilityBacnetObjects,
+		FacilityBacnetTemplates:          facilities.FacilityBacnetTemplates,
 		FacilityObjectData:               facilities.FacilityObjectData,
-		FacilityObjectDataBacnetObjects:  facilities.FacilityObjectDataBacnetObjects,
 		FacilityStateTexts:               facilities.FacilityStateTexts,
 		FacilityNotificationClasses:      facilities.FacilityNotificationClasses,
 		FacilityAlarmDefinitions:         facilities.FacilityAlarmDefinitions,

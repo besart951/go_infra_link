@@ -18,7 +18,7 @@ type CreateBacnetObjectRequest struct {
 // UpdateBacnetObjectRequest is a partial update payload.
 // If object_data_id is provided, the object will also be attached to that object data template.
 type UpdateBacnetObjectRequest struct {
-	BaseVersion   *uint64    `json:"base_version" binding:"omitempty,min=1"`
+	BaseVersion   uint64     `json:"base_version" binding:"required,min=1"`
 	FieldDeviceID *uuid.UUID `json:"field_device_id"`
 	ObjectDataID  *uuid.UUID `json:"object_data_id"`
 

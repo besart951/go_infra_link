@@ -50,12 +50,12 @@ func (r *projectRepo) Create(ctx context.Context, entity *domainProject.Project)
 
 func (r *projectRepo) Update(ctx context.Context, entity *domainProject.Project) error {
 	expectedVersion := entity.Version
+	if expectedVersion == 0 {
+		return domain.ErrInvalidArgument
+	}
 	entity.Base.TouchForUpdate(time.Now().UTC())
 	query := r.db.WithContext(ctx).Model(&ProjectRecord{}).
-		Where("id = ?", entity.ID)
-	if expectedVersion > 0 {
-		query = query.Where("version = ?", expectedVersion)
-	}
+		Where("id = ? AND version = ?", entity.ID, expectedVersion)
 	result := query.
 		Updates(map[string]any{
 			"updated_at":  entity.UpdatedAt,
@@ -71,7 +71,7 @@ func (r *projectRepo) Update(ctx context.Context, entity *domainProject.Project)
 		entity.Version = expectedVersion
 		return result.Error
 	}
-	if expectedVersion > 0 && result.RowsAffected == 0 {
+	if result.RowsAffected == 0 {
 		entity.Version = expectedVersion
 		return domain.ErrConflict
 	}
@@ -84,6 +84,12 @@ func (r *projectRepo) DeleteByIds(ctx context.Context, ids []uuid.UUID) error {
 	}
 
 	return r.db.WithContext(ctx).Where("id IN ?", ids).Delete(&ProjectRecord{}).Error
+}
+
+func (r *projectRepo) LockAtVersion(ctx context.Context, id uuid.UUID, version uint64) error {
+	return gormbase.LockVersion(ctx, r.db, gormbase.VersionLock{
+		Model: &ProjectRecord{}, ID: id, Version: version,
+	})
 }
 
 func (r *projectRepo) GetPaginatedList(ctx context.Context, params domain.PaginationParams) (*domain.PaginatedList[domainProject.Project], error) {

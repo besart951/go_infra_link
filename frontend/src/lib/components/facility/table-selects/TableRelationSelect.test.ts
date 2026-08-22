@@ -17,6 +17,7 @@ describe('facility table relation selects', () => {
       items: [
         {
           id: 'apparat-1',
+          version: 1,
           short_name: 'Ven',
           name: 'Ventilator',
           created_at: '2026-01-01T00:00:00Z',
@@ -34,6 +35,7 @@ describe('facility table relation selects', () => {
       items: [
         {
           id: 'system-part-1',
+          version: 1,
           short_name: 'Ele',
           name: 'Elektro',
           created_at: '2026-01-01T00:00:00Z',
@@ -52,6 +54,7 @@ describe('facility table relation selects', () => {
       items: [
         {
           id: 'apparat-1',
+          version: 1,
           short_name: 'Ven',
           name: 'Ventilator',
           created_at: '2026-01-01T00:00:00Z',

@@ -36,7 +36,7 @@ func (h *ExportHandler) CreateFieldDeviceExport(c *gin.Context) {
 		respondLocalizedError(c, http.StatusUnauthorized, "unauthorized", "errors.unauthorized")
 		return
 	}
-	operationID, err := handlerutil.ParseCopyOperationID(c)
+	operationID, err := handlerutil.ParseIdempotencyKey(c)
 	if err != nil {
 		respondLocalizedInvalidArgument(c, "facility.invalid_id")
 		return

@@ -79,12 +79,12 @@ func NewServices(gormDB *gorm.DB, repos *Repositories, cfg ServiceConfig) (*Serv
 	userSvc := newUserServices(repos, passwordService, security.userMutationPolicy, cfg)
 	facilityServices := newFacilityServices(gormDB, repos)
 
-	var facilityJobs *facilityservice.CopyJobManager
+	var facilityJobs *facilityservice.FacilityJobManager
 	if cfg.Runtime != nil {
-		facilityJobs = cfg.Runtime.CopyJobs
+		facilityJobs = cfg.Runtime.FacilityJobs
 	}
 	if facilityJobs == nil {
-		facilityJobs = facilityservice.NewCopyJobManagerWithDB(nil, gormDB)
+		facilityJobs = facilityservice.NewFacilityJobManagerWithDB(nil, gormDB)
 	}
 	exportSvc, err := newExportService(gormDB, repos, cfg, facilityJobs)
 	if err != nil {

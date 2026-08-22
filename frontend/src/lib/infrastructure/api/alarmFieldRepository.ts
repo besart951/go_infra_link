@@ -10,6 +10,7 @@ import {
   mapPaginatedResponse,
   type ApiPaginatedListResponse
 } from './listHelpers.js';
+import { versionedDeletePath } from './versionedMutation.js';
 
 export const alarmFieldRepository: AlarmFieldRepository = {
   async list(params, signal) {
@@ -38,7 +39,10 @@ export const alarmFieldRepository: AlarmFieldRepository = {
       signal
     });
   },
-  async delete(id: string, signal?: AbortSignal) {
-    return api<void>(`/facility/alarm-fields/${id}`, { method: 'DELETE', signal });
+  async delete(command, signal?: AbortSignal) {
+    return api<void>(versionedDeletePath('/facility/alarm-fields', command), {
+      method: 'DELETE',
+      signal
+    });
   }
 };

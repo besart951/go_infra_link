@@ -5,6 +5,7 @@ import type { Apparat } from './apparat.js';
 
 export interface ObjectData {
   id: string;
+  revision: number;
   description: string;
   version: string;
   is_active: boolean;
@@ -25,6 +26,7 @@ export interface CreateObjectDataRequest {
 }
 
 export interface UpdateObjectDataRequest {
+  base_version: number;
   description?: string;
   version?: string;
   is_active?: boolean;

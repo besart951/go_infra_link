@@ -211,6 +211,7 @@ func (h *ApparatHandler) UpdateApparat(c *gin.Context) {
 // @Tags facility-apparats
 // @Produce json
 // @Param id path string true "Apparat ID"
+// @Param base_version query integer true "Expected aggregate version" minimum(1)
 // @Success 204
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 404 {object} dto.ErrorResponse
@@ -222,8 +223,12 @@ func (h *ApparatHandler) DeleteApparat(c *gin.Context) {
 	if !ok {
 		return
 	}
+	version, ok := parseRequiredBaseVersion(c)
+	if !ok {
+		return
+	}
 
-	if err := h.service.DeleteByID(c.Request.Context(), id); err != nil {
+	if err := deleteAtVersion(c.Request.Context(), h.service, id, version); err != nil {
 		respondLocalizedDomainError(c, err, "deletion_failed", "facility.deletion_failed",
 			localizedNotFound("facility.apparat_not_found"),
 			localizedReferenceInUse(),

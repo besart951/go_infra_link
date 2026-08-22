@@ -173,9 +173,7 @@ func (w fieldDeviceWriter) applyBulkSpecificationPatch(
 
 func buildProposedFieldDevice(existing *domainFacility.FieldDevice, update domainFacility.BulkFieldDeviceUpdate) *domainFacility.FieldDevice {
 	clone := *existing
-	if update.BaseVersion != nil {
-		clone.Version = *update.BaseVersion
-	}
+	clone.Version = update.BaseVersion.Uint64()
 	if update.HasBMKUpdate() {
 		clone.BMK = normalizeOptionalString(update.BMK)
 	}

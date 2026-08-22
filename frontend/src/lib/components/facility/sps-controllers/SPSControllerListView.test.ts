@@ -12,6 +12,7 @@ const mockListSystemTypes = vi.fn();
 
 type TestSPSController = {
   id: string;
+  version: number;
   control_cabinet_id: string;
   device_name: string;
   ga_device?: string;
@@ -48,6 +49,7 @@ function resetControllers(items: TestSPSController[]) {
   mockListSystemTypes.mockResolvedValue({
     items: items.map((item) => ({
       id: `system-type-${item.id}`,
+      aggregate_version: 1,
       sps_controller_id: item.id,
       system_type_id: `type-${item.id}`,
       system_type_name: `Type ${item.id}`,
@@ -126,6 +128,7 @@ describe('SPSControllerListView', () => {
   it('refreshes visible controller ids without full project list reload', async () => {
     const controller = {
       id: 'controller-1',
+      version: 1,
       control_cabinet_id: 'cabinet-1',
       device_name: 'SPS 1',
       ga_device: 'GA-1',
@@ -159,6 +162,7 @@ describe('SPSControllerListView', () => {
     resetControllers([
       {
         id: 'controller-1',
+        version: 1,
         control_cabinet_id: 'cabinet-1',
         device_name: 'SPS 1',
         ga_device: 'GA-1',
@@ -167,6 +171,7 @@ describe('SPSControllerListView', () => {
       },
       {
         id: 'controller-2',
+        version: 1,
         control_cabinet_id: 'cabinet-1',
         device_name: 'SPS 2',
         ga_device: 'GA-2',
@@ -175,6 +180,7 @@ describe('SPSControllerListView', () => {
       },
       {
         id: 'controller-3',
+        version: 1,
         control_cabinet_id: 'cabinet-2',
         device_name: 'SPS 3',
         ga_device: 'GA-3',
@@ -200,6 +206,7 @@ describe('SPSControllerListView', () => {
   it('applies controller delta without follow-up fetch', async () => {
     const controller = {
       id: 'controller-1',
+      version: 1,
       control_cabinet_id: 'cabinet-1',
       device_name: 'SPS 1',
       ga_device: 'GA-1',
@@ -231,6 +238,7 @@ describe('SPSControllerListView', () => {
   it('refreshes cabinet labels without full controller reload', async () => {
     const controller = {
       id: 'controller-1',
+      version: 1,
       control_cabinet_id: 'cabinet-1',
       device_name: 'SPS 1',
       ga_device: 'GA-1',
@@ -263,6 +271,7 @@ describe('SPSControllerListView', () => {
   it('applies cabinet label delta without follow-up fetch', async () => {
     const controller = {
       id: 'controller-1',
+      version: 1,
       control_cabinet_id: 'cabinet-1',
       device_name: 'SPS 1',
       ga_device: 'GA-1',
@@ -284,6 +293,7 @@ describe('SPSControllerListView', () => {
         items: [
           {
             id: 'cabinet-1',
+            version: 1,
             control_cabinet_nr: 'CC-1-updated',
             building_id: 'building-1',
             created_at: '2026-01-01T00:00:00Z',

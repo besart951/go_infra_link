@@ -22,7 +22,10 @@ func autoMigrateCurrentSchema(db *gorm.DB) error {
 	if err := autoMigrateTablesOnly(db, models...); err != nil {
 		return err
 	}
-	return db.AutoMigrate(models...)
+	if err := db.AutoMigrate(models...); err != nil {
+		return err
+	}
+	return nil
 }
 
 func currentSchemaModels() []any {

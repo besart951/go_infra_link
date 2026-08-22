@@ -15,8 +15,8 @@ import type {
   ProjectSPSControllerListResponse,
   ProjectFieldDeviceListResponse
 } from '$lib/domain/project/index.js';
-import type { ObjectDataListParams, CopyJob } from '$lib/domain/facility/index.js';
-import { toCopyJob } from '$lib/domain/facility/copy-job.js';
+import type { ObjectDataListParams, FacilityJob } from '$lib/domain/facility/index.js';
+import { toFacilityJob } from '$lib/domain/facility/facility-job.js';
 import { apiClient } from '$lib/api/generated/client.js';
 
 /**
@@ -78,8 +78,12 @@ export async function updateProject(
 /**
  * Delete a project
  */
-export async function deleteProject(id: string, options?: RequestInit): Promise<void> {
-  return api<void>(`/projects/${id}`, {
+export async function deleteProject(
+  id: string,
+  baseVersion: number,
+  options?: RequestInit
+): Promise<void> {
+  return api<void>(`/projects/${id}?base_version=${encodeURIComponent(baseVersion)}`, {
     ...options,
     method: 'DELETE'
   });
@@ -222,13 +226,13 @@ export async function copyProjectControlCabinet(
   controlCabinetId: string,
   operationId: string,
   signal?: AbortSignal
-): Promise<CopyJob> {
+): Promise<FacilityJob> {
   const { data } = await apiClient.POST(
     '/api/v1/projects/{id}/control-cabinets/{controlCabinetId}/copy',
     {
       params: {
         path: { id: projectId, controlCabinetId },
-        header: { 'X-Copy-Operation-ID': operationId }
+        header: { 'Idempotency-Key': operationId }
       },
       signal
     }
@@ -236,7 +240,7 @@ export async function copyProjectControlCabinet(
   if (!data) {
     throw new Error('Copy job response is empty');
   }
-  return toCopyJob(data);
+  return toFacilityJob(data);
 }
 
 // ============================================================================
@@ -286,13 +290,13 @@ export async function copyProjectSPSController(
   spsControllerId: string,
   operationId: string,
   signal?: AbortSignal
-): Promise<CopyJob> {
+): Promise<FacilityJob> {
   const { data } = await apiClient.POST(
     '/api/v1/projects/{id}/sps-controllers/{spsControllerId}/copy',
     {
       params: {
         path: { id: projectId, spsControllerId },
-        header: { 'X-Copy-Operation-ID': operationId }
+        header: { 'Idempotency-Key': operationId }
       },
       signal
     }
@@ -300,7 +304,7 @@ export async function copyProjectSPSController(
   if (!data) {
     throw new Error('Copy job response is empty');
   }
-  return toCopyJob(data);
+  return toFacilityJob(data);
 }
 
 export async function copyProjectSPSControllerSystemType(
@@ -308,13 +312,13 @@ export async function copyProjectSPSControllerSystemType(
   systemTypeId: string,
   operationId: string,
   signal?: AbortSignal
-): Promise<CopyJob> {
+): Promise<FacilityJob> {
   const { data } = await apiClient.POST(
     '/api/v1/projects/{id}/sps-controller-system-types/{systemTypeId}/copy',
     {
       params: {
         path: { id: projectId, systemTypeId },
-        header: { 'X-Copy-Operation-ID': operationId }
+        header: { 'Idempotency-Key': operationId }
       },
       signal
     }
@@ -322,7 +326,7 @@ export async function copyProjectSPSControllerSystemType(
   if (!data) {
     throw new Error('Copy job response is empty');
   }
-  return toCopyJob(data);
+  return toFacilityJob(data);
 }
 
 // ============================================================================

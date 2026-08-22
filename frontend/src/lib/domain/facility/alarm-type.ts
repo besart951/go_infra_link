@@ -5,6 +5,7 @@
 
 export interface Unit {
   id: string;
+  version: number;
   code: string;
   symbol: string;
   name: string;
@@ -17,6 +18,7 @@ export interface CreateUnitRequest {
 }
 
 export interface UpdateUnitRequest {
+  base_version: number;
   code?: string;
   symbol?: string;
   name?: string;
@@ -24,6 +26,7 @@ export interface UpdateUnitRequest {
 
 export interface AlarmField {
   id: string;
+  version: number;
   key: string;
   label: string;
   data_type:
@@ -46,6 +49,7 @@ export interface CreateAlarmFieldRequest {
 }
 
 export interface UpdateAlarmFieldRequest {
+  base_version: number;
   key?: string;
   label?: string;
   data_type?: AlarmField['data_type'];
@@ -54,6 +58,7 @@ export interface UpdateAlarmFieldRequest {
 
 export interface AlarmTypeField {
   id: string;
+  version: number;
   alarm_type_id: string;
   alarm_field_id: string;
   alarm_field?: AlarmField;
@@ -71,6 +76,7 @@ export interface AlarmTypeField {
 
 export interface AlarmType {
   id: string;
+  version: number;
   code: string;
   name: string;
   fields?: AlarmTypeField[];
@@ -84,6 +90,7 @@ export interface CreateAlarmTypeRequest {
 }
 
 export interface UpdateAlarmTypeRequest {
+  base_version: number;
   name?: string;
 }
 
@@ -99,6 +106,7 @@ export interface CreateAlarmTypeFieldRequest {
 }
 
 export interface UpdateAlarmTypeFieldRequest {
+  base_version: number;
   display_order?: number;
   is_required?: boolean;
   is_user_editable?: boolean;

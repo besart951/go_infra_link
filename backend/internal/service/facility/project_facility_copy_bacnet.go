@@ -6,6 +6,7 @@ import (
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
+	domainObjectData "github.com/besart951/go_infra_link/backend/internal/domain/facility/objectdata"
 	"github.com/google/uuid"
 )
 
@@ -150,58 +151,21 @@ func (c projectFacilityCopy) copyObjectDataTemplateForProject(ctx context.Contex
 		return nil
 	}
 
-	newBacnetObjects, err := c.copyBacnetObjectsForObjectData(ctx, tmpl.BacnetObjects)
-	if err != nil {
-		return err
+	ids := make(map[uuid.UUID]uuid.UUID, len(tmpl.BacnetObjects))
+	for _, item := range tmpl.BacnetObjects {
+		if item != nil {
+			ids[item.ID] = uuid.New()
+		}
 	}
-
-	copyEntity.BacnetObjects = newBacnetObjects
-	return c.objectDataRepo.Update(ctx, &copyEntity)
-}
-
-func (c projectFacilityCopy) copyBacnetObjectsForObjectData(ctx context.Context, templates []*domainFacility.BacnetObject) ([]*domainFacility.BacnetObject, error) {
-	oldToNew := make(map[uuid.UUID]*domainFacility.BacnetObject, len(templates))
-	oldRefs := make(map[uuid.UUID]*uuid.UUID, len(templates))
-
-	for _, bo := range templates {
-		if bo == nil {
+	templates := make([]domainObjectData.BacnetObjectTemplate, 0, len(ids))
+	for _, item := range tmpl.BacnetObjects {
+		if item == nil {
 			continue
 		}
-		newBO := cloneBacnetObjectForObjectDataTemplate(*bo)
-		if err := c.bacnetObjectRepo.Create(ctx, newBO); err != nil {
-			return nil, err
-		}
-		oldToNew[bo.ID] = newBO
-		oldRefs[bo.ID] = bo.SoftwareReferenceID
+		template := bacnetObjectToTemplate(tmpl.ID, *item)
+		templates = append(templates, copyBacnetTemplate(template, copyEntity.ID, ids))
 	}
-
-	if err := c.remapSoftwareReferences(ctx, oldToNew, oldRefs); err != nil {
-		return nil, err
-	}
-
-	newBacnetObjects := make([]*domainFacility.BacnetObject, 0, len(oldToNew))
-	for _, newBO := range oldToNew {
-		newBacnetObjects = append(newBacnetObjects, newBO)
-	}
-
-	return newBacnetObjects, nil
-}
-
-func cloneBacnetObjectForObjectDataTemplate(original domainFacility.BacnetObject) *domainFacility.BacnetObject {
-	return &domainFacility.BacnetObject{
-		TextFix:             original.TextFix,
-		Description:         original.Description,
-		GMSVisible:          original.GMSVisible,
-		Optional:            original.Optional,
-		TextIndividual:      original.TextIndividual,
-		SoftwareType:        original.SoftwareType,
-		SoftwareNumber:      original.SoftwareNumber,
-		HardwareType:        original.HardwareType,
-		HardwareQuantity:    original.HardwareQuantity,
-		StateTextID:         original.StateTextID,
-		NotificationClassID: original.NotificationClassID,
-		AlarmTypeID:         original.AlarmTypeID,
-	}
+	return c.bacnetTemplateRepo.Replace(ctx, copyEntity.ID, templates)
 }
 
 func (c projectFacilityCopy) createAlarmValuesForBacnetObjects(ctx context.Context, bacnetObjects []*domainFacility.BacnetObject) error {

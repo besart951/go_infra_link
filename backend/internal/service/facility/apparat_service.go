@@ -109,6 +109,18 @@ func (s *ApparatService) DeleteByID(ctx context.Context, id uuid.UUID) error {
 	return s.baseService.DeleteByID(ctx, id)
 }
 
+func (s *ApparatService) DeleteAtVersion(ctx context.Context, id uuid.UUID, version uint64) error {
+	if s.deleteImpact != nil {
+		if err := s.deleteImpact.EnsureDeleteAllowed(ctx, domainFacility.DeleteImpactResourceApparat, id); err != nil {
+			return err
+		}
+	}
+	if err := s.deleteGuard.ensureDeleteAllowed(ctx, id); err != nil {
+		return err
+	}
+	return s.baseService.DeleteAtVersion(ctx, id, version)
+}
+
 func (s *ApparatService) UpdateWithSystemPartIDs(ctx context.Context, apparat *domainFacility.Apparat, systemPartIDs *[]uuid.UUID) error {
 	if systemPartIDs != nil {
 		if len(*systemPartIDs) == 0 {

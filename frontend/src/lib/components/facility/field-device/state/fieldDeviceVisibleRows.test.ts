@@ -11,6 +11,7 @@ const visibleDevice = buildFieldDevice({
   id: 'fd-1',
   sps_controller_system_type: {
     id: 'sst-1',
+    aggregate_version: 1,
     system_type_id: 'st-1',
     sps_controller_id: 'sps-1',
     sps_controller_name: 'SPS old',
@@ -59,6 +60,7 @@ describe('field-device visible row helpers', () => {
       applySPSControllerNameDelta(context.items, [
         {
           id: 'sps-1',
+          version: 1,
           device_name: 'SPS new',
           control_cabinet_id: 'cc-1',
           created_at: '2026-01-01T00:00:00Z',

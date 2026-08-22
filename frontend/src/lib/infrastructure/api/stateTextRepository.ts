@@ -8,6 +8,7 @@ import type {
 } from '$lib/domain/facility/index.js';
 import { api } from '$lib/api/client.js';
 import { buildListUrl, mapPaginatedResponse } from './listHelpers.js';
+import { versionedDeletePath } from './versionedMutation.js';
 
 export const stateTextRepository: StateTextRepository = {
   async list(params: ListParams, signal?: AbortSignal): Promise<PaginatedResponse<StateText>> {
@@ -39,8 +40,8 @@ export const stateTextRepository: StateTextRepository = {
     });
   },
 
-  async delete(id: string, signal?: AbortSignal): Promise<void> {
-    return api<void>(`/facility/state-texts/${id}`, {
+  async delete(command, signal?: AbortSignal): Promise<void> {
+    return api<void>(versionedDeletePath('/facility/state-texts', command), {
       method: 'DELETE',
       signal
     });

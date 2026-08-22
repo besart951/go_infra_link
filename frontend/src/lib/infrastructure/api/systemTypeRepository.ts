@@ -8,6 +8,7 @@ import type {
 } from '$lib/domain/facility/index.js';
 import { api } from '$lib/api/client.js';
 import { buildListUrl, mapPaginatedResponse } from './listHelpers.js';
+import { versionedDeletePath } from './versionedMutation.js';
 
 export const systemTypeRepository: SystemTypeRepository = {
   async list(params: ListParams, signal?: AbortSignal): Promise<PaginatedResponse<SystemType>> {
@@ -43,8 +44,8 @@ export const systemTypeRepository: SystemTypeRepository = {
     });
   },
 
-  async delete(id: string, signal?: AbortSignal): Promise<void> {
-    return api<void>(`/facility/system-types/${id}`, {
+  async delete(command, signal?: AbortSignal): Promise<void> {
+    return api<void>(versionedDeletePath('/facility/system-types', command), {
       method: 'DELETE',
       signal
     });

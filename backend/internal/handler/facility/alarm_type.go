@@ -21,6 +21,7 @@ func NewAlarmTypeHandler(svc AlarmTypeService) *AlarmTypeHandler {
 			applyAlarmTypeUpdate,
 			respFn(toAlarmTypeResponse),
 			listRespFn(toAlarmTypeListResponse),
+			"alarm_type",
 			"facility.alarm_type_not_found",
 		),
 		service: svc,
@@ -71,6 +72,7 @@ func (h *AlarmTypeHandler) UpdateAlarmType(c *gin.Context) { h.crud.handleUpdate
 // @Summary Delete an alarm type
 // @Tags facility-alarm-types
 // @Param id path string true "Alarm Type ID"
+// @Param base_version query integer true "Expected aggregate version" minimum(1)
 // @Success 204
 // @Router /api/v1/facility/alarm-types/{id} [delete]
 func (h *AlarmTypeHandler) DeleteAlarmType(c *gin.Context) { h.crud.handleDelete(c) }

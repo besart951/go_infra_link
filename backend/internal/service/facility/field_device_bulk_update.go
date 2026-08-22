@@ -54,6 +54,11 @@ type fieldDeviceBulkUpdater struct {
 	result   *domainFacility.BulkOperationResult
 }
 
+type fieldDeviceNumberSwapStore interface {
+	LockNumberSwapRows(context.Context, []uuid.UUID) ([]*domainFacility.FieldDevice, error)
+	DeferNumberConstraint(context.Context) error
+}
+
 func newFieldDeviceBulkUpdater(ctx context.Context, writer fieldDeviceWriter) *fieldDeviceBulkUpdater {
 	return &fieldDeviceBulkUpdater{ctx: ctx, writer: writer}
 }
@@ -67,10 +72,18 @@ func (u *fieldDeviceBulkUpdater) run(updates []domainFacility.BulkFieldDeviceUpd
 		u.failAll(err)
 		return u.result
 	}
-	for index, update := range updates {
-		u.updateOne(index, update)
+	for _, group := range planFieldDeviceUpdateGroups(updates, u.existing, u.proposed) {
+		u.updateGroup(group, updates)
 	}
 	return u.result
+}
+
+func (u *fieldDeviceBulkUpdater) updateGroup(group fieldDeviceUpdateGroup, updates []domainFacility.BulkFieldDeviceUpdate) {
+	if len(group.Indexes) == 1 {
+		u.updateOne(group.Indexes[0], updates[group.Indexes[0]], group.ID)
+		return
+	}
+	u.updateDependentGroup(group, updates)
 }
 
 func bulkUpdateIDs(updates []domainFacility.BulkFieldDeviceUpdate) []uuid.UUID {
@@ -106,9 +119,10 @@ func (u *fieldDeviceBulkUpdater) failAll(err error) {
 	}
 }
 
-func (u *fieldDeviceBulkUpdater) updateOne(index int, update domainFacility.BulkFieldDeviceUpdate) {
+func (u *fieldDeviceBulkUpdater) updateOne(index int, update domainFacility.BulkFieldDeviceUpdate, groupID uuid.UUID) {
 	resultItem := &u.result.Results[index]
 	prepareBulkResultItem(resultItem, update.ID)
+	resultItem.DependencyGroupID = groupID
 	proposed, ok := u.resolveCandidate(update, resultItem)
 	if !ok {
 		u.result.FailureCount++
@@ -125,6 +139,111 @@ func (u *fieldDeviceBulkUpdater) updateOne(index int, update domainFacility.Bulk
 	})
 }
 
+func (u *fieldDeviceBulkUpdater) updateDependentGroup(group fieldDeviceUpdateGroup, updates []domainFacility.BulkFieldDeviceUpdate) {
+	executions, ok := u.prepareGroupExecutions(group, updates)
+	if !ok {
+		return
+	}
+	err := u.writer.service.transaction().run(u.ctx, func(txCtx context.Context, service *FieldDeviceService) error {
+		if err := lockNumberSwapGroup(txCtx, service, executions); err != nil {
+			return err
+		}
+		for _, execution := range executions {
+			if err := runBulkUpdatePhases(txCtx, service, execution); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	err = mapFieldDeviceNumberConflict(err)
+	u.completeGroup(group, executions, err)
+}
+
+func lockNumberSwapGroup(ctx context.Context, service *FieldDeviceService, executions []bulkUpdateExecution) error {
+	store, ok := service.repo.(fieldDeviceNumberSwapStore)
+	if !ok {
+		return domain.ErrInvalidArgument
+	}
+	ids := make([]uuid.UUID, len(executions))
+	for index := range executions {
+		ids[index] = executions[index].update.ID
+	}
+	locked, err := store.LockNumberSwapRows(ctx, ids)
+	if err != nil {
+		return err
+	}
+	if err := validateLockedSwapVersions(locked, executions); err != nil {
+		return err
+	}
+	return store.DeferNumberConstraint(ctx)
+}
+
+func validateLockedSwapVersions(locked []*domainFacility.FieldDevice, executions []bulkUpdateExecution) error {
+	versions := make(map[uuid.UUID]uint64, len(locked))
+	for _, item := range locked {
+		versions[item.ID] = item.Version
+	}
+	for _, execution := range executions {
+		if execution.update.BaseVersion == 0 || versions[execution.update.ID] != execution.update.BaseVersion.Uint64() {
+			return domain.ErrConflict
+		}
+	}
+	return nil
+}
+
+func (u *fieldDeviceBulkUpdater) prepareGroupExecutions(group fieldDeviceUpdateGroup, updates []domainFacility.BulkFieldDeviceUpdate) ([]bulkUpdateExecution, bool) {
+	executions := make([]bulkUpdateExecution, 0, len(group.Indexes))
+	valid := true
+	for _, index := range group.Indexes {
+		item := &u.result.Results[index]
+		prepareBulkResultItem(item, updates[index].ID)
+		item.DependencyGroupID = group.ID
+		proposed, ok := u.resolveCandidate(updates[index], item)
+		if !ok {
+			u.result.FailureCount++
+			valid = false
+			continue
+		}
+		executions = append(executions, bulkUpdateExecution{
+			update: updates[index], proposed: proposed, batchIDs: u.ids,
+			existing: u.existing, batch: u.proposed, report: newBulkUpdateReport(),
+		})
+	}
+	if !valid {
+		u.failUnresolvedGroupMembers(group, "dependency group validation failed")
+	}
+	return executions, valid
+}
+
+func (u *fieldDeviceBulkUpdater) failUnresolvedGroupMembers(group fieldDeviceUpdateGroup, message string) {
+	for _, index := range group.Indexes {
+		item := &u.result.Results[index]
+		if item.Error != "" {
+			continue
+		}
+		item.Error = message
+		item.Fields["fielddevice"] = message
+		u.result.FailureCount++
+	}
+}
+
+func (u *fieldDeviceBulkUpdater) completeGroup(group fieldDeviceUpdateGroup, executions []bulkUpdateExecution, err error) {
+	byID := make(map[uuid.UUID]bulkUpdateExecution, len(executions))
+	for _, execution := range executions {
+		byID[execution.update.ID] = execution
+	}
+	for _, index := range group.Indexes {
+		execution := byID[u.result.Results[index].ID]
+		if err == nil {
+			completeBulkUpdateSuccess(u.result, &u.result.Results[index], execution.proposed)
+			continue
+		}
+		completeBulkUpdateFailure(bulkUpdateFailure{
+			result: u.result, item: &u.result.Results[index], report: execution.report, cause: err,
+		})
+	}
+}
+
 func (u *fieldDeviceBulkUpdater) resolveCandidate(update domainFacility.BulkFieldDeviceUpdate, result *domainFacility.BulkOperationResultItem) (*domainFacility.FieldDevice, bool) {
 	existing := u.existing[update.ID]
 	proposed := u.proposed[update.ID]
@@ -132,7 +251,12 @@ func (u *fieldDeviceBulkUpdater) resolveCandidate(update domainFacility.BulkFiel
 		result.Error = "field device not found"
 		return nil, false
 	}
-	if update.BaseVersion != nil && existing.Version != *update.BaseVersion {
+	if update.BaseVersion == 0 {
+		result.Error = domain.ErrInvalidArgument.Error()
+		result.Fields["base_version"] = "required"
+		return nil, false
+	}
+	if existing.Version != update.BaseVersion.Uint64() {
 		result.Error = domain.ErrConflict.Error()
 		result.Fields["fielddevice"] = "write_conflict"
 		result.Version = existing.Version
@@ -150,6 +274,7 @@ func (u *fieldDeviceBulkUpdater) execute(update domainFacility.BulkFieldDeviceUp
 	err := u.writer.service.transaction().run(u.ctx, func(txCtx context.Context, txService *FieldDeviceService) error {
 		return runBulkUpdatePhases(txCtx, txService, execution)
 	})
+	err = mapFieldDeviceNumberConflict(err)
 	if err != nil && len(report.errors) == 0 {
 		report.errors["fielddevice"] = err.Error()
 	}

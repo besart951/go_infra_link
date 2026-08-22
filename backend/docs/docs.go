@@ -1093,6 +1093,14 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "Expected aggregate version",
+                        "name": "base_version",
+                        "in": "query",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -1263,6 +1271,14 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "Expected aggregate version",
+                        "name": "base_version",
+                        "in": "query",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -1322,6 +1338,14 @@ const docTemplate = `{
                         "description": "Alarm Type Field ID",
                         "name": "id",
                         "in": "path",
+                        "required": true
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "Expected aggregate version",
+                        "name": "base_version",
+                        "in": "query",
                         "required": true
                     }
                 ],
@@ -1473,6 +1497,14 @@ const docTemplate = `{
                         "description": "Alarm Type ID",
                         "name": "id",
                         "in": "path",
+                        "required": true
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "Expected aggregate version",
+                        "name": "base_version",
+                        "in": "query",
                         "required": true
                     }
                 ],
@@ -1697,6 +1729,14 @@ const docTemplate = `{
                         "description": "Unit ID",
                         "name": "id",
                         "in": "path",
+                        "required": true
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "Expected aggregate version",
+                        "name": "base_version",
+                        "in": "query",
                         "required": true
                     }
                 ],
@@ -1976,6 +2016,14 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "Expected aggregate version",
+                        "name": "base_version",
+                        "in": "query",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -2149,6 +2197,52 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "facility-bacnet-objects"
+                ],
+                "summary": "Delete one BACnet instance or template",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "BACnet object ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "Expected owner version",
+                        "name": "base_version",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
                         "schema": {
                             "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
@@ -2600,6 +2694,14 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "Expected aggregate version",
+                        "name": "base_version",
+                        "in": "query",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -3036,6 +3138,14 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "Expected aggregate version",
+                        "name": "base_version",
+                        "in": "query",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -3135,8 +3245,8 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Client-generated copy operation UUID",
-                        "name": "X-Copy-Operation-ID",
+                        "description": "Client-generated operation UUID",
+                        "name": "Idempotency-Key",
                         "in": "header"
                     }
                 ],
@@ -3144,7 +3254,7 @@ const docTemplate = `{
                     "202": {
                         "description": "Accepted",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CopyJobResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FacilityJobResponse"
                         }
                     },
                     "400": {
@@ -3273,52 +3383,6 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/facility/copy-jobs/{id}": {
-            "get": {
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "facility-copy-jobs"
-                ],
-                "summary": "Get a facility copy job",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Copy Job ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CopyJobResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
@@ -3819,10 +3883,12 @@ const docTemplate = `{
                         "required": true
                     },
                     {
+                        "minimum": 1,
                         "type": "integer",
-                        "description": "Expected aggregate version; required after the compatibility release",
+                        "description": "Expected aggregate version",
                         "name": "base_version",
-                        "in": "query"
+                        "in": "query",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -4198,6 +4264,14 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "Expected specification version",
+                        "name": "base_version",
+                        "in": "query",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -4268,6 +4342,52 @@ const docTemplate = `{
                     },
                     "401": {
                         "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/facility/jobs/{id}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "facility-jobs"
+                ],
+                "summary": "Get a facility job",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Copy Job ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FacilityJobResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
@@ -4486,6 +4606,14 @@ const docTemplate = `{
                         "description": "Notification Class ID",
                         "name": "id",
                         "in": "path",
+                        "required": true
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "Expected aggregate version",
+                        "name": "base_version",
+                        "in": "query",
                         "required": true
                     }
                 ],
@@ -4732,6 +4860,14 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "Expected aggregate revision",
+                        "name": "base_version",
+                        "in": "query",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -4850,7 +4986,7 @@ const docTemplate = `{
         },
         "/api/v1/facility/reference-data/stream": {
             "get": {
-                "description": "Upgrades the authenticated request to the shared facility WebSocket. ` + "`" + `facility_reference_data.changed` + "`" + ` tells authorized clients to refresh cached apparats and system parts. ` + "`" + `facility.changed` + "`" + ` carries authorized facility resource changes with an action, IDs, actor and timestamp. User-scoped ` + "`" + `facility.job.progress` + "`" + ` events contain job type, status, stage and 0-100 progress; copy jobs temporarily also emit the legacy ` + "`" + `facility.copy_job.progress` + "`" + ` alias. Events are delivered only to the user that started the job.",
+                "description": "Upgrades the authenticated request to the shared facility WebSocket. ` + "`" + `facility_reference_data.changed` + "`" + ` tells authorized clients to refresh cached apparats and system parts. ` + "`" + `facility.changed` + "`" + ` carries authorized facility resource changes with an action, IDs, actor and timestamp. User-scoped ` + "`" + `facility.job.progress` + "`" + ` events contain job type, status, stage and 0-100 progress. Events are delivered only to the user that started the job.",
                 "tags": [
                     "facility-reference-data"
                 ],
@@ -5110,6 +5246,14 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "Expected aggregate version",
+                        "name": "base_version",
+                        "in": "query",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -5221,8 +5365,8 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Client-generated copy operation UUID",
-                        "name": "X-Copy-Operation-ID",
+                        "description": "Client-generated operation UUID",
+                        "name": "Idempotency-Key",
                         "in": "header"
                     }
                 ],
@@ -5230,7 +5374,7 @@ const docTemplate = `{
                     "202": {
                         "description": "Accepted",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CopyJobResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FacilityJobResponse"
                         }
                     },
                     "400": {
@@ -5677,6 +5821,14 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "Expected aggregate version",
+                        "name": "base_version",
+                        "in": "query",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -5782,8 +5934,8 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Client-generated copy operation UUID",
-                        "name": "X-Copy-Operation-ID",
+                        "description": "Client-generated operation UUID",
+                        "name": "Idempotency-Key",
                         "in": "header"
                     }
                 ],
@@ -5791,7 +5943,7 @@ const docTemplate = `{
                     "202": {
                         "description": "Accepted",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CopyJobResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FacilityJobResponse"
                         }
                     },
                     "400": {
@@ -6093,6 +6245,14 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "Expected aggregate version",
+                        "name": "base_version",
+                        "in": "query",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -6337,6 +6497,14 @@ const docTemplate = `{
                         "description": "System Part ID",
                         "name": "id",
                         "in": "path",
+                        "required": true
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "Expected aggregate version",
+                        "name": "base_version",
+                        "in": "query",
                         "required": true
                     }
                 ],
@@ -6584,6 +6752,14 @@ const docTemplate = `{
                         "description": "System Type ID",
                         "name": "id",
                         "in": "path",
+                        "required": true
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "Expected aggregate version",
+                        "name": "base_version",
+                        "in": "query",
                         "required": true
                     }
                 ],
@@ -7524,6 +7700,14 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "Expected aggregate version",
+                        "name": "base_version",
+                        "in": "query",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -7910,8 +8094,8 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Client-generated copy operation UUID",
-                        "name": "X-Copy-Operation-ID",
+                        "description": "Client-generated operation UUID",
+                        "name": "Idempotency-Key",
                         "in": "header"
                     }
                 ],
@@ -7919,7 +8103,7 @@ const docTemplate = `{
                     "202": {
                         "description": "Accepted",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CopyJobResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FacilityJobResponse"
                         }
                     },
                     "400": {
@@ -8040,6 +8224,14 @@ const docTemplate = `{
                         "description": "Link ID",
                         "name": "linkId",
                         "in": "path",
+                        "required": true
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "Expected link version",
+                        "name": "base_version",
+                        "in": "query",
                         "required": true
                     }
                 ],
@@ -8870,6 +9062,14 @@ const docTemplate = `{
                         "name": "linkId",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "Expected link version",
+                        "name": "base_version",
+                        "in": "query",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -9317,8 +9517,8 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Client-generated copy operation UUID",
-                        "name": "X-Copy-Operation-ID",
+                        "description": "Client-generated operation UUID",
+                        "name": "Idempotency-Key",
                         "in": "header"
                     }
                 ],
@@ -9326,7 +9526,7 @@ const docTemplate = `{
                     "202": {
                         "description": "Accepted",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CopyJobResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FacilityJobResponse"
                         }
                     },
                     "400": {
@@ -9564,6 +9764,14 @@ const docTemplate = `{
                         "name": "linkId",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "Expected link version",
+                        "name": "base_version",
+                        "in": "query",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -9617,8 +9825,8 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Client-generated copy operation UUID",
-                        "name": "X-Copy-Operation-ID",
+                        "description": "Client-generated operation UUID",
+                        "name": "Idempotency-Key",
                         "in": "header"
                     }
                 ],
@@ -9626,7 +9834,7 @@ const docTemplate = `{
                     "202": {
                         "description": "Accepted",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CopyJobResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FacilityJobResponse"
                         }
                     },
                     "400": {
@@ -11108,6 +11316,9 @@ const docTemplate = `{
                 },
                 "updated_at": {
                     "type": "string"
+                },
+                "version": {
+                    "type": "integer"
                 }
             }
         },
@@ -11148,6 +11359,9 @@ const docTemplate = `{
                 },
                 "label": {
                     "type": "string"
+                },
+                "version": {
+                    "type": "integer"
                 }
             }
         },
@@ -11195,6 +11409,9 @@ const docTemplate = `{
                 },
                 "validation_json": {
                     "type": "string"
+                },
+                "version": {
+                    "type": "integer"
                 }
             }
         },
@@ -11221,6 +11438,9 @@ const docTemplate = `{
                 },
                 "updated_at": {
                     "type": "string"
+                },
+                "version": {
+                    "type": "integer"
                 }
             }
         },
@@ -11305,6 +11525,9 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmValueResponse"
                     }
+                },
+                "version": {
+                    "type": "integer"
                 }
             }
         },
@@ -11380,6 +11603,9 @@ const docTemplate = `{
                 },
                 "updated_at": {
                     "type": "string"
+                },
+                "version": {
+                    "type": "integer"
                 }
             }
         },
@@ -11703,15 +11929,13 @@ const docTemplate = `{
         },
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BulkDeleteFieldDeviceRequest": {
             "type": "object",
+            "required": [
+                "items"
+            ],
             "properties": {
-                "ids": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
                 "items": {
                     "type": "array",
+                    "minItems": 1,
                     "items": {
                         "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BulkDeleteFieldDeviceItem"
                     }
@@ -11741,6 +11965,9 @@ const docTemplate = `{
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BulkOperationResultItem": {
             "type": "object",
             "properties": {
+                "dependency_group_id": {
+                    "type": "string"
+                },
                 "error": {
                     "type": "string"
                 },
@@ -11785,6 +12012,7 @@ const docTemplate = `{
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BulkUpdateFieldDeviceItem": {
             "type": "object",
             "required": [
+                "base_version",
                 "id"
             ],
             "properties": {
@@ -11967,91 +12195,6 @@ const docTemplate = `{
                 },
                 "version": {
                     "type": "integer"
-                }
-            }
-        },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CopyJobResponse": {
-            "type": "object",
-            "properties": {
-                "attempts": {
-                    "type": "integer"
-                },
-                "class": {
-                    "type": "string",
-                    "enum": [
-                        "mutation",
-                        "export"
-                    ]
-                },
-                "completed_at": {
-                    "type": "string"
-                },
-                "created_at": {
-                    "type": "string"
-                },
-                "error": {
-                    "type": "string"
-                },
-                "failure_count": {
-                    "type": "integer"
-                },
-                "job_id": {
-                    "type": "string"
-                },
-                "kind": {
-                    "type": "string",
-                    "enum": [
-                        "control_cabinet",
-                        "sps_controller",
-                        "sps_controller_system_type",
-                        "field_device",
-                        "object_data"
-                    ]
-                },
-                "processed": {
-                    "type": "integer"
-                },
-                "progress": {
-                    "type": "integer",
-                    "maximum": 100,
-                    "minimum": 0
-                },
-                "result": {
-                    "type": "object"
-                },
-                "retryable": {
-                    "type": "boolean"
-                },
-                "stage": {
-                    "type": "string"
-                },
-                "status": {
-                    "type": "string",
-                    "enum": [
-                        "queued",
-                        "running",
-                        "completed",
-                        "failed"
-                    ]
-                },
-                "success_count": {
-                    "type": "integer"
-                },
-                "total": {
-                    "type": "integer"
-                },
-                "type": {
-                    "type": "string",
-                    "enum": [
-                        "copy",
-                        "export",
-                        "bulk",
-                        "delete",
-                        "restore"
-                    ]
-                },
-                "updated_at": {
-                    "type": "string"
                 }
             }
         },
@@ -12320,6 +12463,9 @@ const docTemplate = `{
         },
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateFieldDeviceSpecificationRequest": {
             "type": "object",
+            "required": [
+                "base_version"
+            ],
             "properties": {
                 "additional_info_motor_valve": {
                     "type": "string",
@@ -12331,6 +12477,10 @@ const docTemplate = `{
                 "additional_information_installation_location": {
                     "type": "string",
                     "maxLength": 250
+                },
+                "base_version": {
+                    "type": "integer",
+                    "minimum": 1
                 },
                 "electrical_connection_acdc": {
                     "type": "string"
@@ -13143,6 +13293,9 @@ const docTemplate = `{
                 },
                 "updated_at": {
                     "type": "string"
+                },
+                "version": {
+                    "type": "integer"
                 }
             }
         },
@@ -13175,6 +13328,9 @@ const docTemplate = `{
                 },
                 "project_id": {
                     "type": "string"
+                },
+                "revision": {
+                    "type": "integer"
                 },
                 "updated_at": {
                     "type": "string"
@@ -13221,9 +13377,14 @@ const docTemplate = `{
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.PutAlarmValuesRequest": {
             "type": "object",
             "required": [
+                "base_version",
                 "values"
             ],
             "properties": {
+                "base_version": {
+                    "type": "integer",
+                    "minimum": 1
+                },
                 "values": {
                     "type": "array",
                     "items": {
@@ -13505,6 +13666,9 @@ const docTemplate = `{
                 },
                 "updated_at": {
                     "type": "string"
+                },
+                "version": {
+                    "type": "integer"
                 }
             }
         },
@@ -13591,6 +13755,9 @@ const docTemplate = `{
                 },
                 "updated_at": {
                     "type": "string"
+                },
+                "version": {
+                    "type": "integer"
                 }
             }
         },
@@ -13634,6 +13801,9 @@ const docTemplate = `{
                 },
                 "updated_at": {
                     "type": "string"
+                },
+                "version": {
+                    "type": "integer"
                 }
             }
         },
@@ -13677,6 +13847,9 @@ const docTemplate = `{
                 },
                 "updated_at": {
                     "type": "string"
+                },
+                "version": {
+                    "type": "integer"
                 }
             }
         },
@@ -13714,17 +13887,27 @@ const docTemplate = `{
                 },
                 "symbol": {
                     "type": "string"
+                },
+                "version": {
+                    "type": "integer"
                 }
             }
         },
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateAlarmDefinitionRequest": {
             "type": "object",
+            "required": [
+                "base_version"
+            ],
             "properties": {
                 "alarm_note": {
                     "type": "string"
                 },
                 "alarm_type_id": {
                     "type": "string"
+                },
+                "base_version": {
+                    "type": "integer",
+                    "minimum": 1
                 },
                 "name": {
                     "type": "string"
@@ -13733,7 +13916,14 @@ const docTemplate = `{
         },
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateAlarmFieldRequest": {
             "type": "object",
+            "required": [
+                "base_version"
+            ],
             "properties": {
+                "base_version": {
+                    "type": "integer",
+                    "minimum": 1
+                },
                 "data_type": {
                     "type": "string",
                     "maxLength": 30
@@ -13754,7 +13944,14 @@ const docTemplate = `{
         },
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateAlarmTypeFieldRequest": {
             "type": "object",
+            "required": [
+                "base_version"
+            ],
             "properties": {
+                "base_version": {
+                    "type": "integer",
+                    "minimum": 1
+                },
                 "default_unit_id": {
                     "type": "string"
                 },
@@ -13782,7 +13979,14 @@ const docTemplate = `{
         },
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateAlarmTypeRequest": {
             "type": "object",
+            "required": [
+                "base_version"
+            ],
             "properties": {
+                "base_version": {
+                    "type": "integer",
+                    "minimum": 1
+                },
                 "name": {
                     "type": "string",
                     "maxLength": 120
@@ -13791,7 +13995,14 @@ const docTemplate = `{
         },
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateApparatRequest": {
             "type": "object",
+            "required": [
+                "base_version"
+            ],
             "properties": {
+                "base_version": {
+                    "type": "integer",
+                    "minimum": 1
+                },
                 "description": {
                     "type": "string",
                     "maxLength": 250
@@ -13815,6 +14026,9 @@ const docTemplate = `{
         },
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateBacnetObjectRequest": {
             "type": "object",
+            "required": [
+                "base_version"
+            ],
             "properties": {
                 "alarm_definition_id": {
                     "type": "string"
@@ -13878,6 +14092,9 @@ const docTemplate = `{
         },
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateBuildingRequest": {
             "type": "object",
+            "required": [
+                "base_version"
+            ],
             "properties": {
                 "base_version": {
                     "type": "integer",
@@ -13893,6 +14110,9 @@ const docTemplate = `{
         },
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateControlCabinetRequest": {
             "type": "object",
+            "required": [
+                "base_version"
+            ],
             "properties": {
                 "base_version": {
                     "type": "integer",
@@ -13910,6 +14130,7 @@ const docTemplate = `{
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateFieldDeviceRequest": {
             "type": "object",
             "required": [
+                "base_version",
                 "system_part_id"
             ],
             "properties": {
@@ -13956,6 +14177,9 @@ const docTemplate = `{
         },
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateFieldDeviceSpecificationRequest": {
             "type": "object",
+            "required": [
+                "base_version"
+            ],
             "properties": {
                 "additional_info_motor_valve": {
                     "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.OptionalString"
@@ -13965,6 +14189,10 @@ const docTemplate = `{
                 },
                 "additional_information_installation_location": {
                     "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.OptionalString"
+                },
+                "base_version": {
+                    "type": "integer",
+                    "minimum": 1
                 },
                 "electrical_connection_acdc": {
                     "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.OptionalString"
@@ -13994,6 +14222,9 @@ const docTemplate = `{
         },
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateNotificationClassRequest": {
             "type": "object",
+            "required": [
+                "base_version"
+            ],
             "properties": {
                 "ack_required_error": {
                     "type": "boolean"
@@ -14003,6 +14234,10 @@ const docTemplate = `{
                 },
                 "ack_required_not_normal": {
                     "type": "boolean"
+                },
+                "base_version": {
+                    "type": "integer",
+                    "minimum": 1
                 },
                 "event_category": {
                     "type": "string"
@@ -14032,6 +14267,9 @@ const docTemplate = `{
         },
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateObjectDataRequest": {
             "type": "object",
+            "required": [
+                "base_version"
+            ],
             "properties": {
                 "apparat_ids": {
                     "type": "array",
@@ -14044,6 +14282,10 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BacnetObjectInput"
                     }
+                },
+                "base_version": {
+                    "type": "integer",
+                    "minimum": 1
                 },
                 "description": {
                     "type": "string"
@@ -14061,6 +14303,9 @@ const docTemplate = `{
         },
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateSPSControllerRequest": {
             "type": "object",
+            "required": [
+                "base_version"
+            ],
             "properties": {
                 "base_version": {
                     "type": "integer",
@@ -14110,6 +14355,9 @@ const docTemplate = `{
         },
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateSPSControllerSystemTypeRequest": {
             "type": "object",
+            "required": [
+                "base_version"
+            ],
             "properties": {
                 "base_version": {
                     "type": "integer",
@@ -14127,7 +14375,14 @@ const docTemplate = `{
         },
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateStateTextRequest": {
             "type": "object",
+            "required": [
+                "base_version"
+            ],
             "properties": {
+                "base_version": {
+                    "type": "integer",
+                    "minimum": 1
+                },
                 "ref_number": {
                     "type": "integer"
                 },
@@ -14183,7 +14438,14 @@ const docTemplate = `{
         },
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateSystemPartRequest": {
             "type": "object",
+            "required": [
+                "base_version"
+            ],
             "properties": {
+                "base_version": {
+                    "type": "integer",
+                    "minimum": 1
+                },
                 "description": {
                     "type": "string",
                     "maxLength": 250
@@ -14201,7 +14463,14 @@ const docTemplate = `{
         },
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateSystemTypeRequest": {
             "type": "object",
+            "required": [
+                "base_version"
+            ],
             "properties": {
+                "base_version": {
+                    "type": "integer",
+                    "minimum": 1
+                },
                 "name": {
                     "type": "string",
                     "maxLength": 150
@@ -14216,7 +14485,14 @@ const docTemplate = `{
         },
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateUnitRequest": {
             "type": "object",
+            "required": [
+                "base_version"
+            ],
             "properties": {
+                "base_version": {
+                    "type": "integer",
+                    "minimum": 1
+                },
                 "code": {
                     "type": "string",
                     "maxLength": 30
@@ -14959,6 +15235,9 @@ const docTemplate = `{
                 "project_id": {
                     "type": "string"
                 },
+                "revision": {
+                    "type": "integer"
+                },
                 "updated_at": {
                     "type": "string"
                 },
@@ -15305,6 +15584,7 @@ const docTemplate = `{
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_project.UpdateProjectControlCabinetRequest": {
             "type": "object",
             "required": [
+                "base_version",
                 "control_cabinet_id"
             ],
             "properties": {
@@ -15320,6 +15600,7 @@ const docTemplate = `{
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_project.UpdateProjectFieldDeviceRequest": {
             "type": "object",
             "required": [
+                "base_version",
                 "field_device_id"
             ],
             "properties": {
@@ -15334,6 +15615,9 @@ const docTemplate = `{
         },
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_project.UpdateProjectRequest": {
             "type": "object",
+            "required": [
+                "base_version"
+            ],
             "properties": {
                 "base_version": {
                     "type": "integer",
@@ -15371,6 +15655,7 @@ const docTemplate = `{
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_project.UpdateProjectSPSControllerRequest": {
             "type": "object",
             "required": [
+                "base_version",
                 "sps_controller_id"
             ],
             "properties": {
@@ -16253,6 +16538,9 @@ const docTemplate = `{
                 },
                 "project_id": {
                     "type": "string"
+                },
+                "revision": {
+                    "type": "integer"
                 },
                 "updated_at": {
                     "type": "string"

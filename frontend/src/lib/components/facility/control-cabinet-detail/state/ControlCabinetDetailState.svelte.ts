@@ -4,7 +4,7 @@ import { ManageControlCabinetUseCase } from '$lib/application/useCases/facility/
 import { ManageSPSControllerUseCase } from '$lib/application/useCases/facility/manageSPSControllerUseCase.js';
 import { controlCabinetRepository } from '$lib/infrastructure/api/controlCabinetRepository.js';
 import { spsControllerRepository } from '$lib/infrastructure/api/spsControllerRepository.js';
-import { copyOperation } from '$lib/state/copyOperation.svelte.js';
+import { facilityJobState } from '$lib/state/facilityJobState.svelte.js';
 import type { ToastType } from '$lib/components/toast.svelte';
 
 import type {
@@ -104,7 +104,7 @@ export class ControlCabinetDetailState {
   }
 
   get copyInProgress(): boolean {
-    return copyOperation.isPending;
+    return facilityJobState.isPending;
   }
 
   getSystemTypesForController(controllerId: string): SPSControllerSystemType[] {
@@ -182,7 +182,10 @@ export class ControlCabinetDetailState {
         }
       }
 
-      await this.manageControlCabinet.delete(this.cabinet.id);
+      await this.manageControlCabinet.delete({
+        id: this.cabinet.id,
+        base_version: this.cabinet.version
+      });
       this.toastAction(translate('facility.control_cabinet_deleted'), 'success');
       await this.gotoAction('/facility/control-cabinets');
     } catch (error) {
@@ -212,7 +215,10 @@ export class ControlCabinetDetailState {
     }
 
     try {
-      await this.manageSpsController.delete(controller.id);
+      await this.manageSpsController.delete({
+        id: controller.id,
+        base_version: controller.version
+      });
       this.toastAction(translate('facility.sps_controller_deleted'), 'success');
       await this.refreshAfterChange();
     } catch (error) {
@@ -225,16 +231,9 @@ export class ControlCabinetDetailState {
 
   async copySps(controller: SPSController): Promise<void> {
     try {
-      await copyOperation.run({
-        start: (operationId) => this.manageSpsController.copy(controller.id, operationId),
-        onCompleted: async () => {
-          await this.refreshAfterChange();
-          this.toastAction(translate('facility.sps_controller_copied'), 'success');
-        },
-        onFailed: () => {
-          this.toastAction(translate('facility.copy_failed'), 'error');
-        }
-      });
+      await facilityJobState.submit((operationId) =>
+        this.manageSpsController.copy(controller.id, operationId)
+      );
     } catch (error) {
       this.toastAction(
         error instanceof Error ? error.message : translate('facility.copy_failed'),

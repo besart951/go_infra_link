@@ -3,9 +3,11 @@ package facility
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
+	domainObjectData "github.com/besart951/go_infra_link/backend/internal/domain/facility/objectdata"
 	"github.com/google/uuid"
 )
 
@@ -62,60 +64,49 @@ func (s *ObjectDataService) nextCopyDescription(ctx context.Context, source *dom
 }
 
 func copyObjectDataBacnetTemplates(ctx context.Context, service *ObjectDataService, sourceID, targetID uuid.UUID) error {
-	ids, err := service.extRepo.GetBacnetObjectIDs(ctx, sourceID)
+	originals, err := service.templateStore.ListByObjectDataID(ctx, sourceID)
 	if err != nil {
 		return err
 	}
-	if len(ids) == 0 {
+	ids := make(map[uuid.UUID]uuid.UUID, len(originals))
+	for _, original := range originals {
+		ids[original.ID] = uuid.New()
+	}
+	copies := make([]domainObjectData.BacnetObjectTemplate, len(originals))
+	for i := range originals {
+		copies[i] = copyBacnetTemplate(originals[i], targetID, ids)
+	}
+	return service.templateStore.Replace(ctx, targetID, copies)
+}
+
+func copyBacnetTemplate(source domainObjectData.BacnetObjectTemplate, ownerID uuid.UUID, ids map[uuid.UUID]uuid.UUID) domainObjectData.BacnetObjectTemplate {
+	copyTemplate := source
+	copyTemplate.ID = ids[source.ID]
+	copyTemplate.ObjectDataID = ownerID
+	copyTemplate.CreatedAt, copyTemplate.UpdatedAt, copyTemplate.Version = time.Time{}, time.Time{}, 0
+	copyTemplate.SoftwareReferenceID = remapOptionalID(source.SoftwareReferenceID, ids)
+	copyTemplate.AlarmValues = copyTemplateAlarmValues(source.AlarmValues, copyTemplate.ID)
+	return copyTemplate
+}
+
+func copyTemplateAlarmValues(values []domainObjectData.BacnetObjectTemplateAlarmValue, templateID uuid.UUID) []domainObjectData.BacnetObjectTemplateAlarmValue {
+	copies := make([]domainObjectData.BacnetObjectTemplateAlarmValue, len(values))
+	for i := range values {
+		copies[i] = values[i]
+		copies[i].ID = uuid.Nil
+		copies[i].TemplateID = templateID
+		copies[i].CreatedAt, copies[i].UpdatedAt, copies[i].Version = time.Time{}, time.Time{}, 0
+	}
+	return copies
+}
+
+func remapOptionalID(source *uuid.UUID, ids map[uuid.UUID]uuid.UUID) *uuid.UUID {
+	if source == nil {
 		return nil
 	}
-	originals, err := service.bacnetObjectRepo.GetByIds(ctx, ids)
-	if err != nil {
-		return err
+	target, ok := ids[*source]
+	if !ok {
+		return nil
 	}
-
-	copies := make([]*domainFacility.BacnetObject, 0, len(originals))
-	copyBySourceID := make(map[uuid.UUID]*domainFacility.BacnetObject, len(originals))
-	originalByID := make(map[uuid.UUID]*domainFacility.BacnetObject, len(originals))
-	for _, original := range originals {
-		if original == nil {
-			continue
-		}
-		copyObject := *original
-		copyObject.Base = domain.Base{}
-		copyObject.FieldDeviceID = nil
-		copyObject.FieldDevice = nil
-		copyObject.SoftwareReferenceID = nil
-		copyObject.SoftwareReference = nil
-		copyObject.StateText = nil
-		copyObject.NotificationClass = nil
-		copyObject.AlarmType = nil
-		copies = append(copies, &copyObject)
-		copyBySourceID[original.ID] = &copyObject
-		originalByID[original.ID] = original
-	}
-	if err := service.bacnetObjectRepo.BulkCreate(ctx, copies, 500); err != nil {
-		return err
-	}
-	for _, copyObject := range copies {
-		if err := service.objectDataBacnetStore.Add(ctx, targetID, copyObject.ID); err != nil {
-			return err
-		}
-	}
-	for sourceObjectID, copyObject := range copyBySourceID {
-		original := originalByID[sourceObjectID]
-		if original.SoftwareReferenceID == nil {
-			continue
-		}
-		target, ok := copyBySourceID[*original.SoftwareReferenceID]
-		if !ok {
-			continue
-		}
-		targetObjectID := target.ID
-		copyObject.SoftwareReferenceID = &targetObjectID
-		if err := service.bacnetObjectRepo.Update(ctx, copyObject); err != nil {
-			return err
-		}
-	}
-	return nil
+	return &target
 }

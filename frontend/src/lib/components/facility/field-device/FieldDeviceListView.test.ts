@@ -326,6 +326,7 @@ describe('FieldDeviceListView', () => {
     const device = buildFieldDevice({
       sps_controller_system_type: {
         id: 'system-type-1',
+        aggregate_version: 1,
         sps_controller_id: 'controller-1',
         system_type_id: 'type-1',
         sps_controller_name: 'SPS 1',
@@ -366,6 +367,7 @@ describe('FieldDeviceListView', () => {
     const device = buildFieldDevice({
       sps_controller_system_type: {
         id: 'system-type-1',
+        aggregate_version: 1,
         sps_controller_id: 'controller-1',
         system_type_id: 'type-1',
         sps_controller_name: 'SPS 1',
@@ -387,6 +389,7 @@ describe('FieldDeviceListView', () => {
         spsControllers: [
           {
             id: 'controller-1',
+            version: 1,
             control_cabinet_id: 'cabinet-1',
             device_name: 'SPS 1 updated',
             created_at: '2026-01-01T00:00:00Z',

@@ -20,7 +20,6 @@ type FieldDeviceBulkUpdateTaskPayload struct {
 }
 
 type FieldDeviceBulkDeleteTaskPayload struct {
-	IDs      []uuid.UUID                               `json:"ids,omitempty"`
 	Commands []domainFacility.FieldDeviceDeleteCommand `json:"commands,omitempty"`
 }
 
@@ -32,7 +31,8 @@ type FieldDeviceBulkJobResult struct {
 }
 
 type FieldDeviceBulkJobFailure struct {
-	Ordinal  int       `json:"ordinal"`
-	SourceID uuid.UUID `json:"source_id"`
-	Error    string    `json:"error"`
+	Ordinal           int       `json:"ordinal"`
+	SourceID          uuid.UUID `json:"source_id"`
+	DependencyGroupID uuid.UUID `json:"dependency_group_id,omitempty"`
+	Error             string    `json:"error"`
 }

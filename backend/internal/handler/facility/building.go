@@ -157,10 +157,7 @@ func (h *BuildingHandler) UpdateBuilding(c *gin.Context) {
 		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
 	}
-	baseVersion := building.Version
-	if req.BaseVersion != nil {
-		baseVersion = *req.BaseVersion
-	}
+	baseVersion := req.BaseVersion
 
 	applyBuildingUpdate(building, req)
 
@@ -180,6 +177,7 @@ func (h *BuildingHandler) UpdateBuilding(c *gin.Context) {
 // @Tags facility-buildings
 // @Produce json
 // @Param id path string true "Building ID"
+// @Param base_version query integer true "Expected aggregate version" minimum(1)
 // @Success 204
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
@@ -189,8 +187,12 @@ func (h *BuildingHandler) DeleteBuilding(c *gin.Context) {
 	if !ok {
 		return
 	}
+	version, ok := parseRequiredBaseVersion(c)
+	if !ok {
+		return
+	}
 
-	if err := h.service.DeleteByID(c.Request.Context(), id); err != nil {
+	if err := deleteAtVersion(c.Request.Context(), h.service, id, version); err != nil {
 		respondLocalizedDomainError(c, err, "deletion_failed", "facility.deletion_failed",
 			localizedNotFound("facility.building_not_found"),
 		)

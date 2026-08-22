@@ -22,7 +22,7 @@ type CreateSPSControllerRequest struct {
 }
 
 type UpdateSPSControllerRequest struct {
-	BaseVersion       *uint64                         `json:"base_version" binding:"omitempty,min=1"`
+	BaseVersion       uint64                          `json:"base_version" binding:"required,min=1"`
 	ControlCabinetID  uuid.UUID                       `json:"control_cabinet_id"`
 	GADevice          *string                         `json:"ga_device" binding:"omitempty,len=3"`
 	DeviceName        string                          `json:"device_name" binding:"omitempty,max=100"`

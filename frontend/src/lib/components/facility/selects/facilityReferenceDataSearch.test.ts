@@ -3,6 +3,7 @@ import type { Apparat, SystemPart } from '$lib/domain/facility/index.js';
 
 const apparat: Apparat = {
   id: 'apparat-1',
+  version: 1,
   short_name: 'AHU',
   name: 'Air Handler',
   description: 'Supply air treatment',
@@ -12,6 +13,7 @@ const apparat: Apparat = {
 
 const systemPart: SystemPart = {
   id: 'system-part-1',
+  version: 1,
   short_name: 'SUP',
   name: 'Supply air',
   created_at: '2026-01-01T00:00:00Z',

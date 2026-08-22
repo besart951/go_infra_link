@@ -4,6 +4,7 @@ import type { Apparat, FieldDeviceOptions, SystemPart } from '$lib/domain/facili
 
 const systemPartAir: SystemPart = {
   id: 'system-part-air',
+  version: 1,
   short_name: 'Abl',
   name: 'Abluft',
   created_at: '2026-01-01T00:00:00Z',
@@ -12,6 +13,7 @@ const systemPartAir: SystemPart = {
 
 const systemPartHeat: SystemPart = {
   id: 'system-part-heat',
+  version: 1,
   short_name: 'Hzg',
   name: 'Heizung',
   created_at: '2026-01-01T00:00:00Z',
@@ -20,6 +22,7 @@ const systemPartHeat: SystemPart = {
 
 const apparatDamper: Apparat = {
   id: 'apparat-damper',
+  version: 1,
   short_name: 'Abk',
   name: 'Abschaltung',
   created_at: '2026-01-01T00:00:00Z',
@@ -28,6 +31,7 @@ const apparatDamper: Apparat = {
 
 const apparatPump: Apparat = {
   id: 'apparat-pump',
+  version: 1,
   short_name: 'Pmp',
   name: 'Pumpe',
   created_at: '2026-01-01T00:00:00Z',

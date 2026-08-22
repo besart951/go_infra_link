@@ -3,6 +3,7 @@ import type { FieldDevice, BacnetObject, Specification } from '$lib/domain/facil
 export function buildSpecification(overrides: Partial<Specification> = {}): Specification {
   return {
     id: 'spec-1',
+    version: 1,
     field_device_id: 'fd-1',
     specification_supplier: 'Supplier A',
     specification_brand: 'Brand A',
@@ -24,6 +25,7 @@ export function buildSpecification(overrides: Partial<Specification> = {}): Spec
 export function buildBacnetObject(overrides: Partial<BacnetObject> = {}): BacnetObject {
   return {
     id: 'bo-1',
+    aggregate_version: 1,
     text_fix: 'TF-001',
     description: 'Bacnet object',
     gms_visible: true,

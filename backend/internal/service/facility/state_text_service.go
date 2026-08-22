@@ -33,3 +33,10 @@ func (s *StateTextService) DeleteByID(ctx context.Context, id uuid.UUID) error {
 	}
 	return s.baseService.DeleteByID(ctx, id)
 }
+
+func (s *StateTextService) DeleteAtVersion(ctx context.Context, id uuid.UUID, version uint64) error {
+	if err := s.deleteGuard.ensureDeleteAllowed(ctx, id); err != nil {
+		return err
+	}
+	return s.baseService.DeleteAtVersion(ctx, id, version)
+}

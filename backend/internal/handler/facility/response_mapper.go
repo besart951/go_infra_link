@@ -39,6 +39,7 @@ func toBuildingListResponse(list *domain.PaginatedList[domainFacility.Building])
 func toSystemTypeResponse(systemType domainFacility.SystemType) dto.SystemTypeResponse {
 	return dto.SystemTypeResponse{
 		ID:        systemType.ID,
+		Version:   systemType.Version,
 		NumberMin: systemType.NumberMin,
 		NumberMax: systemType.NumberMax,
 		Name:      systemType.Name,
@@ -54,6 +55,7 @@ func toSystemTypeListResponse(list *domain.PaginatedList[domainFacility.SystemTy
 func toSystemPartResponse(systemPart domainFacility.SystemPart) dto.SystemPartResponse {
 	return dto.SystemPartResponse{
 		ID:          systemPart.ID,
+		Version:     systemPart.Version,
 		ShortName:   systemPart.ShortName,
 		Name:        systemPart.Name,
 		Description: systemPart.Description,
@@ -69,6 +71,7 @@ func toSystemPartListResponse(list *domain.PaginatedList[domainFacility.SystemPa
 func toSpecificationResponse(specification domainFacility.Specification) dto.SpecificationResponse {
 	return dto.SpecificationResponse{
 		ID:                       specification.ID,
+		Version:                  specification.Version,
 		FieldDeviceID:            specification.FieldDeviceID,
 		SpecificationSupplier:    specification.SpecificationSupplier,
 		SpecificationBrand:       specification.SpecificationBrand,
@@ -99,6 +102,7 @@ func toApparatResponse(apparat domainFacility.Apparat) dto.ApparatResponse {
 
 	return dto.ApparatResponse{
 		ID:          apparat.ID,
+		Version:     apparat.Version,
 		ShortName:   apparat.ShortName,
 		Name:        apparat.Name,
 		Description: apparat.Description,
@@ -242,6 +246,7 @@ func toBacnetObjectResponses(objs []domainFacility.BacnetObject) []dto.BacnetObj
 func toStateTextResponse(stateText domainFacility.StateText) dto.StateTextResponse {
 	return dto.StateTextResponse{
 		ID:          stateText.ID,
+		Version:     stateText.Version,
 		RefNumber:   stateText.RefNumber,
 		StateText1:  stateText.StateText1,
 		StateText2:  stateText.StateText2,
@@ -271,6 +276,7 @@ func toStateTextListResponse(list *domain.PaginatedList[domainFacility.StateText
 func toNotificationClassResponse(notificationClass domainFacility.NotificationClass) dto.NotificationClassResponse {
 	return dto.NotificationClassResponse{
 		ID:                   notificationClass.ID,
+		Version:              notificationClass.Version,
 		EventCategory:        notificationClass.EventCategory,
 		Nc:                   notificationClass.Nc,
 		ObjectDescription:    notificationClass.ObjectDescription,
@@ -294,6 +300,7 @@ func toNotificationClassListResponse(list *domain.PaginatedList[domainFacility.N
 func toAlarmDefinitionResponse(alarmDefinition domainFacility.AlarmDefinition) dto.AlarmDefinitionResponse {
 	return dto.AlarmDefinitionResponse{
 		ID:          alarmDefinition.ID,
+		Version:     alarmDefinition.Version,
 		Name:        alarmDefinition.Name,
 		AlarmNote:   alarmDefinition.AlarmNote,
 		AlarmTypeID: alarmDefinition.AlarmTypeID,
@@ -332,6 +339,7 @@ func toObjectDataResponse(obj domainFacility.ObjectData) dto.ObjectDataResponse 
 
 	return dto.ObjectDataResponse{
 		ID:            obj.ID,
+		Revision:      obj.Base.Version,
 		Description:   obj.Description,
 		Version:       obj.Version,
 		IsActive:      obj.IsActive,
@@ -357,16 +365,18 @@ func toSPSControllerSystemTypeListResponse(list *domain.PaginatedList[domainFaci
 
 func toUnitResponse(unit domainFacility.Unit) dto.UnitResponse {
 	return dto.UnitResponse{
-		ID:     unit.ID,
-		Code:   unit.Code,
-		Symbol: unit.Symbol,
-		Name:   unit.Name,
+		ID:      unit.ID,
+		Version: unit.Version,
+		Code:    unit.Code,
+		Symbol:  unit.Symbol,
+		Name:    unit.Name,
 	}
 }
 
 func toAlarmFieldResponse(field domainFacility.AlarmField) dto.AlarmFieldResponse {
 	return dto.AlarmFieldResponse{
 		ID:              field.ID,
+		Version:         field.Version,
 		Key:             field.Key,
 		Label:           field.Label,
 		DataType:        field.DataType,
@@ -377,6 +387,7 @@ func toAlarmFieldResponse(field domainFacility.AlarmField) dto.AlarmFieldRespons
 func toAlarmTypeFieldResponse(atf domainFacility.AlarmTypeField) dto.AlarmTypeFieldResponse {
 	r := dto.AlarmTypeFieldResponse{
 		ID:               atf.ID,
+		Version:          atf.Version,
 		AlarmTypeID:      atf.AlarmTypeID,
 		AlarmFieldID:     atf.AlarmFieldID,
 		DisplayOrder:     atf.DisplayOrder,
@@ -403,6 +414,7 @@ func toAlarmTypeFieldResponse(atf domainFacility.AlarmTypeField) dto.AlarmTypeFi
 func toAlarmTypeResponse(at domainFacility.AlarmType) dto.AlarmTypeResponse {
 	return dto.AlarmTypeResponse{
 		ID:        at.ID,
+		Version:   at.Version,
 		Code:      at.Code,
 		Name:      at.Name,
 		Fields:    mapItems(at.Fields, toAlarmTypeFieldResponse),
@@ -440,6 +452,6 @@ func toAlarmValueResponse(v domainFacility.BacnetObjectAlarmValue) dto.AlarmValu
 	}
 }
 
-func toAlarmValuesResponse(values []domainFacility.BacnetObjectAlarmValue) dto.AlarmValuesResponse {
-	return dto.AlarmValuesResponse{Items: mapItems(values, toAlarmValueResponse)}
+func toAlarmValuesResponse(values domainFacility.BacnetAlarmValues) dto.AlarmValuesResponse {
+	return dto.AlarmValuesResponse{Version: values.Version, Items: mapItems(values.Items, toAlarmValueResponse)}
 }

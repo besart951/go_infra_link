@@ -13,7 +13,8 @@ const (
 )
 
 type FacilityDeleteTaskPayload struct {
-	SourceID uuid.UUID `json:"source_id"`
+	SourceID    uuid.UUID `json:"source_id"`
+	BaseVersion uint64    `json:"base_version"`
 }
 
 type FacilityAggregateState string
@@ -32,6 +33,7 @@ var (
 // It keeps partially processed hierarchy graphs invisible and immutable.
 type FacilityAggregateAdmission struct {
 	ResourceID   uuid.UUID
+	BaseVersion  uint64
 	State        FacilityAggregateState
 	AllowMissing bool
 }
