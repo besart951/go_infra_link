@@ -14,7 +14,10 @@ const (
 	DeleteImpactResourceSystemPart DeleteImpactResource = "system_part"
 )
 
-var ErrReferenceInUse = errors.New("facility reference in use")
+var (
+	ErrReferenceInUse  = errors.New("facility reference in use")
+	ErrAggregateLocked = errors.New("facility aggregate is locked")
+)
 
 type DeleteImpactBlocker struct {
 	Resource string

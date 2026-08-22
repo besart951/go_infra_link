@@ -42,9 +42,43 @@ type TimelineResponse struct {
 	TotalPages int                   `json:"total_pages"`
 }
 
+type TimelineCursorResponse struct {
+	Items          []ChangeEventResponse `json:"items"`
+	NextCursor     string                `json:"next_cursor,omitempty"`
+	PreviousCursor string                `json:"previous_cursor,omitempty"`
+}
+
+type UndoConflictResponse struct {
+	Code            string    `json:"code"`
+	EntityTable     string    `json:"entity_table"`
+	EntityID        uuid.UUID `json:"entity_id"`
+	ExpectedVersion *uint64   `json:"expected_version,omitempty"`
+	CurrentVersion  *uint64   `json:"current_version,omitempty"`
+	Fields          []string  `json:"fields"`
+}
+
+func UndoConflictResponseFrom(conflict domainHistory.UndoConflict) UndoConflictResponse {
+	return UndoConflictResponse{
+		Code: conflict.Code, EntityTable: conflict.EntityTable, EntityID: conflict.EntityID,
+		ExpectedVersion: conflict.ExpectedVersion, CurrentVersion: conflict.CurrentVersion,
+		Fields: conflict.Fields,
+	}
+}
+
 func TimelineResponseFrom(list *domain.PaginatedList[domainHistory.ChangeEvent]) TimelineResponse {
-	items := make([]ChangeEventResponse, len(list.Items))
-	for i, event := range list.Items {
+	return TimelineResponse{Items: changeEventResponses(list.Items), Total: list.Total, Page: list.Page, TotalPages: list.TotalPages}
+}
+
+func TimelineCursorResponseFrom(page *domainHistory.TimelineCursorPage) TimelineCursorResponse {
+	return TimelineCursorResponse{
+		Items:      changeEventResponses(page.Items),
+		NextCursor: page.NextCursor, PreviousCursor: page.PreviousCursor,
+	}
+}
+
+func changeEventResponses(events []domainHistory.ChangeEvent) []ChangeEventResponse {
+	items := make([]ChangeEventResponse, len(events))
+	for i, event := range events {
 		items[i] = ChangeEventResponse{
 			ID:           event.ID,
 			OccurredAt:   event.OccurredAt,
@@ -62,7 +96,7 @@ func TimelineResponseFrom(list *domain.PaginatedList[domainHistory.ChangeEvent])
 			MetadataJSON: json.RawMessage(event.MetadataJSON),
 		}
 	}
-	return TimelineResponse{Items: items, Total: list.Total, Page: list.Page, TotalPages: list.TotalPages}
+	return items
 }
 
 func scopesFrom(scopes []domainHistory.Scope) []ScopeResponse {

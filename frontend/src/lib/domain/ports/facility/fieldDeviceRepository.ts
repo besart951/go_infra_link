@@ -16,16 +16,21 @@ import type {
   AvailableApparatNumbersResponse,
   CreateFieldDeviceExportRequest,
   FieldDeviceExportJobResponse,
-  BacnetObject
+  BacnetObject,
+  FieldDeviceDeleteCommand
 } from '$lib/domain/facility/index.js';
 
 export interface FieldDeviceRepository extends ListRepository<FieldDevice> {
   // Standard CRUD
   list(params: ListParams, signal?: AbortSignal): Promise<PaginatedResponse<FieldDevice>>;
+  listCursor(
+    params: FieldDeviceCursorListParams,
+    signal?: AbortSignal
+  ): Promise<FieldDeviceCursorPage>;
   get(id: string, signal?: AbortSignal): Promise<FieldDevice>;
   create(data: CreateFieldDeviceRequest, signal?: AbortSignal): Promise<FieldDevice>;
   update(id: string, data: UpdateFieldDeviceRequest, signal?: AbortSignal): Promise<FieldDevice>;
-  delete(id: string, signal?: AbortSignal): Promise<void>;
+  delete(command: FieldDeviceDeleteCommand, signal?: AbortSignal): Promise<void>;
 
   // Bulk / Multi Operations
   multiCreate(
@@ -36,7 +41,10 @@ export interface FieldDeviceRepository extends ListRepository<FieldDevice> {
     data: BulkUpdateFieldDeviceRequest,
     signal?: AbortSignal
   ): Promise<BulkUpdateFieldDeviceResponse>;
-  bulkDelete(ids: string[], signal?: AbortSignal): Promise<BulkDeleteFieldDeviceResponse>;
+  bulkDelete(
+    commands: FieldDeviceDeleteCommand[],
+    signal?: AbortSignal
+  ): Promise<BulkDeleteFieldDeviceResponse>;
 
   // Options / Helpers
   getOptions(signal?: AbortSignal): Promise<FieldDeviceOptions>;
@@ -56,4 +64,19 @@ export interface FieldDeviceRepository extends ListRepository<FieldDevice> {
   ): Promise<FieldDeviceExportJobResponse>;
   getExportJob(jobId: string, signal?: AbortSignal): Promise<FieldDeviceExportJobResponse>;
   getExportDownloadUrl(jobId: string): string;
+}
+
+export interface FieldDeviceCursorListParams {
+  limit: number;
+  cursor?: string;
+  search?: string;
+  orderBy?: string;
+  order?: 'asc' | 'desc';
+  filters?: Record<string, string>;
+}
+
+export interface FieldDeviceCursorPage {
+  items: FieldDevice[];
+  nextCursor?: string;
+  previousCursor?: string;
 }

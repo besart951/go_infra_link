@@ -5,7 +5,9 @@
 package cursor
 
 import (
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -55,4 +57,15 @@ func Decode(value, kind string, target any) error {
 		return ErrInvalid
 	}
 	return nil
+}
+
+// Fingerprint returns a stable digest for a normalized query description.
+// Authorization must still be applied independently on every request.
+func Fingerprint(query any) (string, error) {
+	raw, err := json.Marshal(query)
+	if err != nil {
+		return "", fmt.Errorf("fingerprint cursor query: %w", err)
+	}
+	digest := sha256.Sum256(raw)
+	return hex.EncodeToString(digest[:]), nil
 }

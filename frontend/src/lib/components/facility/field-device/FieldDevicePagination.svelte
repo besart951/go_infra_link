@@ -8,17 +8,16 @@
   const state = useFieldDeviceState();
 </script>
 
-{#if state.totalPages > 1}
+{#if state.hasPreviousPage || state.hasNextPage}
   <div class="flex items-center justify-between">
     <div class="text-sm text-muted-foreground">
-      {$t('messages.page_of', { page: state.page, total: state.totalPages })}
-      &bull; {$t('messages.total_items', { count: state.total })}
+      {$t('field_device.pagination.cursor_hint')}
     </div>
     <div class="flex items-center gap-2">
       <Button
         variant="outline"
         size="sm"
-        disabled={state.page <= 1 || state.loading}
+        disabled={!state.hasPreviousPage || state.loading}
         onclick={() => void state.goToPreviousPage()}
       >
         <ChevronLeft class="mr-1 h-4 w-4" />
@@ -27,7 +26,7 @@
       <Button
         variant="outline"
         size="sm"
-        disabled={state.page >= state.totalPages || state.loading}
+        disabled={!state.hasNextPage || state.loading}
         onclick={() => void state.goToNextPage()}
       >
         {$t('common.next')}

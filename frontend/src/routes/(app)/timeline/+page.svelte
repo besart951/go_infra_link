@@ -153,7 +153,7 @@
     </div>
     <div class="flex items-center gap-2">
       <Badge variant="secondary">
-        {translate('history.timeline.result_count', { count: timeline.total })}
+        {translate('history.activity.cursor_loaded_count', { count: timeline.events.length })}
       </Badge>
       {#if activeFilterCount > 0}
         <Badge variant="outline">
@@ -286,10 +286,7 @@
 
   <div class="flex flex-wrap items-center justify-between gap-3">
     <p class="text-sm text-muted-foreground">
-      {translate('history.activity.loaded_count', {
-        loaded: timeline.events.length,
-        total: timeline.total
-      })}
+      {translate('history.activity.cursor_loaded_count', { count: timeline.events.length })}
     </p>
     {#if timeline.hasMore}
       <Button

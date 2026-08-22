@@ -163,6 +163,30 @@ var migrations = []migration{
 		blueGreenCompatible: true,
 		apply:               migrateFacilityJobs,
 	},
+	{
+		version:             "202608210002",
+		description:         "facility_bacnet_and_specification_ownership_expand",
+		blueGreenCompatible: true,
+		apply:               migrateFacilityOwnership,
+	},
+	{
+		version:             "202608220001",
+		description:         "partitioned_history_v2_expand",
+		blueGreenCompatible: true,
+		apply:               migrateHistoryV2,
+	},
+	{
+		version:             "202608220002",
+		description:         "facility_aggregate_lifecycle",
+		blueGreenCompatible: true,
+		apply:               migrateFacilityAggregateLifecycle,
+	},
+	{
+		version:             "202608220003",
+		description:         "facility_import_staging",
+		blueGreenCompatible: true,
+		apply:               migrateFacilityImportStaging,
+	},
 }
 
 type MigrationOptions struct {

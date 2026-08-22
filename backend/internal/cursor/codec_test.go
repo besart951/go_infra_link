@@ -26,3 +26,27 @@ func TestCodecRoundTripAndKindIsolation(t *testing.T) {
 		t.Fatalf("wrong-kind error = %v, want %v", err, ErrInvalid)
 	}
 }
+
+func TestFingerprintIsStableAndQuerySpecific(t *testing.T) {
+	first, err := Fingerprint(struct {
+		Search string `json:"search"`
+	}{Search: "ahu"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := Fingerprint(struct {
+		Search string `json:"search"`
+	}{Search: "ahu"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	other, err := Fingerprint(struct {
+		Search string `json:"search"`
+	}{Search: "pump"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first != second || first == other {
+		t.Fatalf("fingerprints = %q, %q, %q", first, second, other)
+	}
+}

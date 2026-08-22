@@ -2,8 +2,10 @@ package facility
 
 import (
 	"context"
+	"errors"
 	"net/http"
 
+	"github.com/besart951/go_infra_link/backend/internal/cursor"
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/facility"
@@ -57,6 +59,16 @@ func (h *FieldDeviceHandler) MultiCreateFieldDevices(c *gin.Context) {
 	}
 
 	items := fielddevice.CreateItems(req.FieldDevices)
+	if len(items) > 500 {
+		for i := range items {
+			if items[i].FieldDevice != nil && items[i].FieldDevice.ID == uuid.Nil {
+				items[i].FieldDevice.ID = uuid.New()
+			}
+		}
+		if submitFieldDeviceBulkJob(c, h.copyJobs, facilityservice.FacilityJobTaskMultiCreateFieldDevices, facilityservice.FieldDeviceMultiCreateTaskPayload{Items: items}, len(items)) {
+			return
+		}
+	}
 
 	// Create field devices
 	result := h.service.MultiCreate(c.Request.Context(), items)
@@ -110,19 +122,7 @@ func (h *FieldDeviceHandler) CopyFieldDevice(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if startPersistedFacilityCopyJob(c, h.copyJobs, facilityservice.CopyJobKindFieldDevice, id) {
-		return
-	}
-	if startFacilityCopyJob(c, h.copyJobs, facilityservice.CopyJobKindFieldDevice, func(ctx context.Context, actorID uuid.UUID) error {
-		copyDevice, err := h.service.CopyByID(ctx, id)
-		if err == nil && h.collaboration != nil {
-			h.collaboration.BroadcastFieldDeviceChange(ctx, &actorID, copyDevice.ID, "created")
-		}
-		return err
-	}) {
-		return
-	}
-	respondLocalizedError(c, http.StatusServiceUnavailable, "service_unavailable", "errors.service_unavailable")
+	startPersistedFacilityCopyJob(c, h.copyJobs, facilityservice.CopyJobKindFieldDevice, id)
 }
 
 // ListFieldDevices godoc
@@ -130,6 +130,7 @@ func (h *FieldDeviceHandler) CopyFieldDevice(c *gin.Context) {
 // @Tags facility-field-devices
 // @Produce json
 // @Param page query int false "Page number" default(1)
+// @Param cursor query string false "Opaque keyset cursor; omit page to use cursor pagination"
 // @Param limit query int false "Items per page" default(300)
 // @Param search query string false "Search query"
 // @Param order_by query string false "Order by (created_at,sps_system_type,bmk,description,apparat_nr,apparat,system_part,spec_supplier,spec_brand,spec_type,spec_motor_valve,spec_size,spec_install_loc,spec_ph,spec_acdc,spec_amperage,spec_power,spec_rotation)"
@@ -139,67 +140,27 @@ func (h *FieldDeviceHandler) CopyFieldDevice(c *gin.Context) {
 // @Param sps_controller_id query string false "Filter by SPS controller ID(s), accepts a single UUID or a | separated list"
 // @Param sps_controller_system_type_id query string false "Filter by SPS controller system type ID(s), accepts a single UUID or a | separated list"
 // @Param project_id query string false "Filter by project ID"
-// @Success 200 {object} dto.FieldDeviceListResponse
+// @Success 200 {object} dto.FieldDeviceCursorResponse
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/facility/field-devices [get]
 func (h *FieldDeviceHandler) ListFieldDevices(c *gin.Context) {
+	filters, ok := parseFieldDeviceFilters(c)
+	if !ok {
+		return
+	}
+	if _, legacy := c.GetQuery("page"); legacy {
+		h.listLegacyFieldDevices(c, filters)
+		return
+	}
+	h.listCursorFieldDevices(c, filters)
+}
+
+func (h *FieldDeviceHandler) listLegacyFieldDevices(c *gin.Context, filters domainFacility.FieldDeviceFilterParams) {
 	query, ok := parsePaginationQuery(c)
 	if !ok {
 		return
 	}
-
-	// Parse optional filter parameters
-	filters := domainFacility.FieldDeviceFilterParams{}
-
-	buildingIDs, ok := parseUUIDListQueryParam(c, "building_id")
-	if !ok {
-		return
-	}
-	if len(buildingIDs) == 1 {
-		filters.BuildingID = &buildingIDs[0]
-	} else if len(buildingIDs) > 1 {
-		filters.BuildingIDs = buildingIDs
-	}
-
-	controlCabinetIDs, ok := parseUUIDListQueryParam(c, "control_cabinet_id")
-	if !ok {
-		return
-	}
-	if len(controlCabinetIDs) == 1 {
-		filters.ControlCabinetID = &controlCabinetIDs[0]
-	} else if len(controlCabinetIDs) > 1 {
-		filters.ControlCabinetIDs = controlCabinetIDs
-	}
-
-	spsControllerIDs, ok := parseUUIDListQueryParam(c, "sps_controller_id")
-	if !ok {
-		return
-	}
-	if len(spsControllerIDs) == 1 {
-		filters.SPSControllerID = &spsControllerIDs[0]
-	} else if len(spsControllerIDs) > 1 {
-		filters.SPSControllerIDs = spsControllerIDs
-	}
-
-	spsControllerSystemTypeIDs, ok := parseUUIDListQueryParam(c, "sps_controller_system_type_id")
-	if !ok {
-		return
-	}
-	if len(spsControllerSystemTypeIDs) == 1 {
-		filters.SPSControllerSystemTypeID = &spsControllerSystemTypeIDs[0]
-	} else if len(spsControllerSystemTypeIDs) > 1 {
-		filters.SPSControllerSystemTypeIDs = spsControllerSystemTypeIDs
-	}
-
-	projectID, ok := parseUUIDQueryParam(c, "project_id")
-	if !ok {
-		return
-	}
-	if projectID != nil {
-		filters.ProjectID = projectID
-	}
-
 	params := domain.PaginationParams{
 		Page:    query.Page,
 		Limit:   query.Limit,
@@ -218,6 +179,67 @@ func (h *FieldDeviceHandler) ListFieldDevices(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, toFieldDeviceListResponse(result))
+}
+
+func (h *FieldDeviceHandler) listCursorFieldDevices(c *gin.Context, filters domainFacility.FieldDeviceFilterParams) {
+	query, ok := parsePaginationQuery(c)
+	if !ok {
+		return
+	}
+	result, err := h.service.ListCursor(c.Request.Context(), domainFacility.FieldDeviceCursorQuery{
+		Limit: query.Limit, Search: query.Search, OrderBy: query.OrderBy,
+		Order: query.Order, Cursor: c.Query("cursor"), Filters: filters,
+	})
+	if err != nil {
+		h.respondFieldDeviceListError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, toFieldDeviceCursorResponse(result))
+}
+
+func (h *FieldDeviceHandler) respondFieldDeviceListError(c *gin.Context, err error) {
+	if suppressCanceledRequestError(c, err) {
+		return
+	}
+	if errors.Is(err, cursor.ErrInvalid) {
+		respondLocalizedError(c, http.StatusBadRequest, "invalid_cursor", "validation.invalid_request")
+		return
+	}
+	respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
+}
+
+func parseFieldDeviceFilters(c *gin.Context) (domainFacility.FieldDeviceFilterParams, bool) {
+	var filters domainFacility.FieldDeviceFilterParams
+	var ok bool
+	filters.BuildingID, filters.BuildingIDs, ok = parseFieldDeviceFilterIDs(c, "building_id")
+	if !ok {
+		return filters, false
+	}
+	filters.ControlCabinetID, filters.ControlCabinetIDs, ok = parseFieldDeviceFilterIDs(c, "control_cabinet_id")
+	if !ok {
+		return filters, false
+	}
+	filters.SPSControllerID, filters.SPSControllerIDs, ok = parseFieldDeviceFilterIDs(c, "sps_controller_id")
+	if !ok {
+		return filters, false
+	}
+	filters.SPSControllerSystemTypeID, filters.SPSControllerSystemTypeIDs, ok = parseFieldDeviceFilterIDs(c, "sps_controller_system_type_id")
+	if !ok {
+		return filters, false
+	}
+	filters.ProjectID, filters.ProjectIDs, ok = parseFieldDeviceFilterIDs(c, "project_id")
+	return filters, ok
+}
+
+func parseFieldDeviceFilterIDs(c *gin.Context, name string) (*uuid.UUID, []uuid.UUID, bool) {
+	ids, ok := parseUUIDListQueryParam(c, name)
+	if !ok || len(ids) == 0 {
+		return nil, nil, ok
+	}
+	if len(ids) == 1 {
+		return &ids[0], nil, true
+	}
+	return nil, ids, true
 }
 
 // ListAvailableApparatNumbers godoc
@@ -315,6 +337,9 @@ func (h *FieldDeviceHandler) UpdateFieldDevice(c *gin.Context) {
 	if !bindJSON(c, &req) {
 		return
 	}
+	if req.BaseVersion == nil {
+		markLegacyBaseVersion(c)
+	}
 
 	ctx := c.Request.Context()
 
@@ -360,6 +385,7 @@ func (h *FieldDeviceHandler) UpdateFieldDevice(c *gin.Context) {
 // @Tags facility-field-devices
 // @Produce json
 // @Param id path string true "Field Device ID"
+// @Param base_version query integer false "Expected aggregate version; required after the compatibility release"
 // @Success 204
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
@@ -370,11 +396,27 @@ func (h *FieldDeviceHandler) DeleteFieldDevice(c *gin.Context) {
 		return
 	}
 
+	var query fieldDeviceDeleteQuery
+	if !bindQuery(c, &query) {
+		return
+	}
+	if query.BaseVersion == nil {
+		markLegacyBaseVersion(c)
+	}
 	ctx := c.Request.Context()
 	projectIDs := captureDeleteAudience(ctx, h.collaboration, "field_device", id)
-	if err := h.service.DeleteByID(ctx, id); err != nil {
+	command := domainFacility.FieldDeviceDeleteCommand{ID: id, BaseVersion: query.BaseVersion}
+	err := deleteFieldDevice(ctx, h.service, command)
+	if err != nil {
+		if query.BaseVersion != nil {
+			current, getErr := h.service.GetByID(ctx, id)
+			if getErr == nil && respondWriteConflict(c, err, "field_device", id, *query.BaseVersion, []string{"field_device"}, current.Version, toFieldDeviceResponse(*current)) {
+				return
+			}
+		}
 		respondLocalizedDomainError(c, err, "deletion_failed", "facility.deletion_failed",
 			localizedNotFound("facility.field_device_not_found"),
+			localizedConflict("errors.write_conflict"),
 		)
 		return
 	}
@@ -547,34 +589,10 @@ func (h *FieldDeviceHandler) BulkUpdateFieldDevices(c *gin.Context) {
 		return
 	}
 
-	// Convert DTOs to domain models
-	updates := make([]domainFacility.BulkFieldDeviceUpdate, len(req.Updates))
-	for i, item := range req.Updates {
-		var spec *domainFacility.SpecificationPatch
-		if item.Specification != nil {
-			spec = toSpecificationPatchFromInput(item.Specification)
-		}
-
-		var bacnetObjs *[]domainFacility.BacnetObjectPatch
-		if item.BacnetObjects != nil {
-			mapped := toBacnetObjectPatches(*item.BacnetObjects)
-			bacnetObjs = &mapped
-		}
-
-		updates[i] = domainFacility.BulkFieldDeviceUpdate{
-			ID:                 item.ID,
-			BaseVersion:        item.BaseVersion,
-			BMK:                item.BMK.Value,
-			HasBMK:             item.BMK.Set,
-			Description:        item.Description.Value,
-			HasDescription:     item.Description.Set,
-			TextIndividuell:    item.TextIndividuell.Value,
-			HasTextIndividuell: item.TextIndividuell.Set,
-			ApparatNr:          item.ApparatNr,
-			ApparatID:          item.ApparatID,
-			SystemPartID:       item.SystemPartID,
-			Specification:      spec,
-			BacnetObjects:      bacnetObjs,
+	updates := toBulkFieldDeviceUpdates(req.Updates)
+	if len(updates) > 500 {
+		if submitFieldDeviceBulkJob(c, h.copyJobs, facilityservice.FacilityJobTaskBulkUpdateFieldDevices, facilityservice.FieldDeviceBulkUpdateTaskPayload{Updates: updates}, len(updates)) {
+			return
 		}
 	}
 
@@ -604,8 +622,17 @@ func (h *FieldDeviceHandler) BulkDeleteFieldDevices(c *gin.Context) {
 	if !bindJSON(c, &req) {
 		return
 	}
+	commands, ok := fieldDeviceDeleteCommands(c, req)
+	if !ok {
+		return
+	}
+	if len(commands) > 500 {
+		if submitFieldDeviceBulkJob(c, h.copyJobs, facilityservice.FacilityJobTaskBulkDeleteFieldDevices, facilityservice.FieldDeviceBulkDeleteTaskPayload{Commands: commands}, len(commands)) {
+			return
+		}
+	}
 
-	result := h.service.BulkDelete(c.Request.Context(), req.IDs)
+	result := bulkDeleteFieldDevices(c.Request.Context(), h.service, commands)
 	for _, item := range result.Results {
 		if item.Success {
 			h.broadcastChange(c, item.ID, "deleted")
@@ -613,6 +640,81 @@ func (h *FieldDeviceHandler) BulkDeleteFieldDevices(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, toBulkOperationResponse(result))
+}
+
+type fieldDeviceDeleteQuery struct {
+	BaseVersion *uint64 `form:"base_version" binding:"omitempty,min=1"`
+}
+
+type versionedFieldDeviceDeleteService interface {
+	Delete(ctx context.Context, command domainFacility.FieldDeviceDeleteCommand) error
+	BulkDeleteCommands(ctx context.Context, commands []domainFacility.FieldDeviceDeleteCommand) *domainFacility.BulkOperationResult
+}
+
+func deleteFieldDevice(ctx context.Context, service FieldDeviceService, command domainFacility.FieldDeviceDeleteCommand) error {
+	if versioned, ok := service.(versionedFieldDeviceDeleteService); ok {
+		return versioned.Delete(ctx, command)
+	}
+	return service.DeleteByID(ctx, command.ID)
+}
+
+func bulkDeleteFieldDevices(ctx context.Context, service FieldDeviceService, commands []domainFacility.FieldDeviceDeleteCommand) *domainFacility.BulkOperationResult {
+	if versioned, ok := service.(versionedFieldDeviceDeleteService); ok {
+		return versioned.BulkDeleteCommands(ctx, commands)
+	}
+	ids := make([]uuid.UUID, len(commands))
+	for index := range commands {
+		ids[index] = commands[index].ID
+	}
+	return service.BulkDelete(ctx, ids)
+}
+
+func fieldDeviceDeleteCommands(c *gin.Context, request dto.BulkDeleteFieldDeviceRequest) ([]domainFacility.FieldDeviceDeleteCommand, bool) {
+	if len(request.Items) > 0 {
+		commands := make([]domainFacility.FieldDeviceDeleteCommand, len(request.Items))
+		for index, item := range request.Items {
+			commands[index] = domainFacility.FieldDeviceDeleteCommand{ID: item.ID, BaseVersion: item.BaseVersion}
+		}
+		return commands, true
+	}
+	if len(request.IDs) == 0 {
+		respondInvalidArgument(c, "ids or versioned items are required")
+		return nil, false
+	}
+	markLegacyBaseVersion(c)
+	commands := make([]domainFacility.FieldDeviceDeleteCommand, len(request.IDs))
+	for index, id := range request.IDs {
+		commands[index] = domainFacility.FieldDeviceDeleteCommand{ID: id}
+	}
+	return commands, true
+}
+
+func toBulkFieldDeviceUpdates(items []dto.BulkUpdateFieldDeviceItem) []domainFacility.BulkFieldDeviceUpdate {
+	updates := make([]domainFacility.BulkFieldDeviceUpdate, len(items))
+	for i := range items {
+		updates[i] = toBulkFieldDeviceUpdate(items[i])
+	}
+	return updates
+}
+
+func toBulkFieldDeviceUpdate(item dto.BulkUpdateFieldDeviceItem) domainFacility.BulkFieldDeviceUpdate {
+	var specification *domainFacility.SpecificationPatch
+	if item.Specification != nil {
+		specification = toSpecificationPatchFromInput(item.Specification)
+	}
+	var bacnetObjects *[]domainFacility.BacnetObjectPatch
+	if item.BacnetObjects != nil {
+		mapped := toBacnetObjectPatches(*item.BacnetObjects)
+		bacnetObjects = &mapped
+	}
+	return domainFacility.BulkFieldDeviceUpdate{
+		ID: item.ID, BaseVersion: item.BaseVersion,
+		BMK: item.BMK.Value, HasBMK: item.BMK.Set,
+		Description: item.Description.Value, HasDescription: item.Description.Set,
+		TextIndividuell: item.TextIndividuell.Value, HasTextIndividuell: item.TextIndividuell.Set,
+		ApparatNr: item.ApparatNr, ApparatID: item.ApparatID, SystemPartID: item.SystemPartID,
+		Specification: specification, BacnetObjects: bacnetObjects,
+	}
 }
 
 func toBulkOperationResponse(result *domainFacility.BulkOperationResult) dto.BulkUpdateFieldDeviceResponse {

@@ -1,7 +1,6 @@
 package facility
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -19,7 +18,8 @@ import (
 
 func startPersistedFacilityCopyJob(c *gin.Context, jobs *facilityservice.CopyJobManager, kind facilityservice.CopyJobKind, sourceID uuid.UUID) bool {
 	if jobs == nil || !jobs.SupportsDurableTasks() {
-		return false
+		respondLocalizedError(c, http.StatusServiceUnavailable, "durable_jobs_unavailable", "errors.service_unavailable")
+		return true
 	}
 	operationID, ok := copyOperationID(c)
 	if !ok {
@@ -48,21 +48,97 @@ func startPersistedFacilityCopyJob(c *gin.Context, jobs *facilityservice.CopyJob
 	return true
 }
 
-func facilityCopyTaskName(kind facilityservice.CopyJobKind) string {
-	switch kind {
-	case facilityservice.CopyJobKindControlCabinet:
-		return facilityservice.FacilityJobTaskCopyControlCabinet
-	case facilityservice.CopyJobKindSPSController:
-		return facilityservice.FacilityJobTaskCopySPSController
-	case facilityservice.CopyJobKindSPSControllerSystemType:
-		return facilityservice.FacilityJobTaskCopySPSControllerSystemType
-	case facilityservice.CopyJobKindFieldDevice:
-		return facilityservice.FacilityJobTaskCopyFieldDevice
-	case facilityservice.CopyJobKindObjectData:
-		return facilityservice.FacilityJobTaskCopyObjectData
-	default:
-		return ""
+func submitFieldDeviceBulkJob(c *gin.Context, jobs *facilityservice.CopyJobManager, task string, payload any, total int) bool {
+	if jobs == nil || !jobs.SupportsDurableTasks() {
+		respondLocalizedError(c, http.StatusServiceUnavailable, "durable_jobs_unavailable", "errors.service_unavailable")
+		return true
 	}
+	operationID, ok := copyOperationID(c)
+	if !ok {
+		return true
+	}
+	actorID, ok := middleware.GetUserID(c)
+	if !ok {
+		respondLocalizedError(c, http.StatusUnauthorized, "unauthorized", "errors.unauthorized")
+		return true
+	}
+	encoded, err := json.Marshal(payload)
+	if err != nil {
+		respondLocalizedError(c, http.StatusBadRequest, "invalid_bulk_payload", "validation.invalid_request")
+		return true
+	}
+	totalItems := int64(total)
+	job, err := jobs.SubmitTask(c.Request.Context(), facilityservice.CopyJob{
+		ID: operationID, OwnerID: actorID, Kind: facilityservice.CopyJobKindFieldDevice,
+		Class: facilityservice.FacilityJobClassMutation, Type: facilityservice.FacilityJobTypeBulk,
+		Task: task, Payload: encoded, Total: &totalItems,
+	})
+	if err != nil {
+		respondLocalizedError(c, http.StatusServiceUnavailable, "service_unavailable", "errors.service_unavailable")
+		return true
+	}
+	c.JSON(http.StatusAccepted, sharedpresenter.ToCopyJobResponse(job))
+	return true
+}
+
+var facilityDeleteTasks = map[facilityservice.CopyJobKind]string{
+	facilityservice.CopyJobKindControlCabinet:          facilityservice.FacilityJobTaskDeleteControlCabinet,
+	facilityservice.CopyJobKindSPSController:           facilityservice.FacilityJobTaskDeleteSPSController,
+	facilityservice.CopyJobKindSPSControllerSystemType: facilityservice.FacilityJobTaskDeleteSPSControllerSystemType,
+}
+
+func startPersistedFacilityDeleteJob(c *gin.Context, jobs *facilityservice.CopyJobManager, kind facilityservice.CopyJobKind, sourceID uuid.UUID) {
+	if jobs == nil || !jobs.SupportsDurableTasks() {
+		respondLocalizedError(c, http.StatusServiceUnavailable, "durable_jobs_unavailable", "errors.service_unavailable")
+		return
+	}
+	actorID, ok := middleware.GetUserID(c)
+	if !ok {
+		respondLocalizedError(c, http.StatusUnauthorized, "unauthorized", "errors.unauthorized")
+		return
+	}
+	operationID, ok := copyOperationID(c)
+	if !ok {
+		return
+	}
+	payload, err := json.Marshal(facilityservice.FacilityDeleteTaskPayload{SourceID: sourceID})
+	if err != nil {
+		respondLocalizedError(c, http.StatusInternalServerError, "deletion_failed", "facility.deletion_failed")
+		return
+	}
+	job, err := jobs.SubmitTask(c.Request.Context(), facilityservice.CopyJob{
+		ID: operationID, OwnerID: actorID, Kind: kind,
+		Class: facilityservice.FacilityJobClassMutation, Type: facilityservice.FacilityJobTypeDelete,
+		Task: facilityDeleteTasks[kind], Payload: payload,
+		Admission: &facilityservice.FacilityAggregateAdmission{
+			ResourceID: sourceID, State: facilityservice.FacilityAggregateStateDeleting,
+		},
+	})
+	if err != nil {
+		if errors.Is(err, facilityservice.ErrAggregateLocked) || errors.Is(err, facilityservice.ErrFacilityJobLimit) {
+			respondLocalizedError(c, http.StatusConflict, "aggregate_locked", "facility.aggregate_locked")
+			return
+		}
+		if errors.Is(err, facilityservice.ErrAggregateNotFound) {
+			respondLocalizedError(c, http.StatusNotFound, "not_found", "facility.fetch_failed")
+			return
+		}
+		respondLocalizedError(c, http.StatusServiceUnavailable, "service_unavailable", "errors.service_unavailable")
+		return
+	}
+	c.JSON(http.StatusAccepted, sharedpresenter.ToCopyJobResponse(job))
+}
+
+var facilityCopyTasks = map[facilityservice.CopyJobKind]string{
+	facilityservice.CopyJobKindControlCabinet:          facilityservice.FacilityJobTaskCopyControlCabinet,
+	facilityservice.CopyJobKindSPSController:           facilityservice.FacilityJobTaskCopySPSController,
+	facilityservice.CopyJobKindSPSControllerSystemType: facilityservice.FacilityJobTaskCopySPSControllerSystemType,
+	facilityservice.CopyJobKindFieldDevice:             facilityservice.FacilityJobTaskCopyFieldDevice,
+	facilityservice.CopyJobKindObjectData:              facilityservice.FacilityJobTaskCopyObjectData,
+}
+
+func facilityCopyTaskName(kind facilityservice.CopyJobKind) string {
+	return facilityCopyTasks[kind]
 }
 
 type CopyJobHandler struct {
@@ -176,38 +252,4 @@ func copyOperationID(c *gin.Context) (uuid.UUID, bool) {
 
 func toCopyJobResponse(job facilityservice.CopyJob) dto.CopyJobResponse {
 	return sharedpresenter.ToCopyJobResponse(job)
-}
-
-// startFacilityCopyJob owns the transport mechanics shared by the global
-// hierarchy-copy endpoints. The callback keeps each domain's copy and
-// realtime side effects local to its handler.
-func startFacilityCopyJob(
-	c *gin.Context,
-	jobs *facilityservice.CopyJobManager,
-	kind facilityservice.CopyJobKind,
-	work func(context.Context, uuid.UUID) error,
-) bool {
-	if jobs == nil {
-		return false
-	}
-
-	operationID, ok := copyOperationID(c)
-	if !ok {
-		return true
-	}
-	actorID, ok := middleware.GetUserID(c)
-	if !ok {
-		respondLocalizedError(c, http.StatusUnauthorized, "unauthorized", "errors.unauthorized")
-		return true
-	}
-	job, err := jobs.Start(actorID, operationID, kind, func(ctx context.Context) error {
-		return work(ctx, actorID)
-	})
-	if err != nil {
-		respondLocalizedError(c, http.StatusServiceUnavailable, "service_unavailable", "errors.service_unavailable")
-		return true
-	}
-
-	c.JSON(http.StatusAccepted, sharedpresenter.ToCopyJobResponse(job))
-	return true
 }

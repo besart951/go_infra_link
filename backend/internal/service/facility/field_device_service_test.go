@@ -2,6 +2,7 @@ package facility_test
 
 import (
 	"context"
+	"errors"
 	domainObjectData "github.com/besart951/go_infra_link/backend/internal/domain/facility/objectdata"
 	"sort"
 	"strings"
@@ -17,6 +18,44 @@ type fakeFieldDeviceStore struct {
 	items          map[uuid.UUID]*domainFacility.FieldDevice
 	deleteCalls    int
 	deletedBatches [][]uuid.UUID
+}
+
+type versionedFieldDeviceStore struct {
+	*fakeFieldDeviceStore
+	lastDelete domainFacility.FieldDeviceDeleteCommand
+}
+
+func (r *versionedFieldDeviceStore) DeleteAtVersion(_ context.Context, command domainFacility.FieldDeviceDeleteCommand) error {
+	r.lastDelete = command
+	item := r.items[command.ID]
+	if item == nil || command.BaseVersion == nil || item.Version != *command.BaseVersion {
+		return domain.ErrConflict
+	}
+	delete(r.items, command.ID)
+	return nil
+}
+
+func TestFieldDeviceDeleteChecksVersionInsideAggregateTransaction(t *testing.T) {
+	id := uuid.New()
+	repo := &versionedFieldDeviceStore{fakeFieldDeviceStore: &fakeFieldDeviceStore{items: map[uuid.UUID]*domainFacility.FieldDevice{
+		id: {Base: domain.Base{ID: id, Version: 4}},
+	}}}
+	service := facility.NewFieldDeviceService(repo, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	staleVersion := uint64(3)
+
+	if err := service.Delete(context.Background(), domainFacility.FieldDeviceDeleteCommand{ID: id, BaseVersion: &staleVersion}); !errors.Is(err, domain.ErrConflict) {
+		t.Fatalf("stale delete error = %v", err)
+	}
+	if repo.items[id] == nil {
+		t.Fatal("stale delete removed the aggregate")
+	}
+	currentVersion := uint64(4)
+	if err := service.Delete(context.Background(), domainFacility.FieldDeviceDeleteCommand{ID: id, BaseVersion: &currentVersion}); err != nil {
+		t.Fatal(err)
+	}
+	if repo.items[id] != nil || repo.lastDelete.BaseVersion == nil || *repo.lastDelete.BaseVersion != currentVersion {
+		t.Fatalf("delete command was not enforced: %+v", repo.lastDelete)
+	}
 }
 
 func (r *fakeFieldDeviceStore) GetByIds(_ context.Context, ids []uuid.UUID) ([]*domainFacility.FieldDevice, error) {

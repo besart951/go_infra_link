@@ -2,32 +2,46 @@ package history
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/besart951/go_infra_link/backend/internal/cursor"
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainHistory "github.com/besart951/go_infra_link/backend/internal/domain/history"
+	facilitydto "github.com/besart951/go_infra_link/backend/internal/handler/dto/facility"
 	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/history"
+	"github.com/besart951/go_infra_link/backend/internal/handler/middleware"
+	sharedpresenter "github.com/besart951/go_infra_link/backend/internal/handler/presenter/shared"
 	"github.com/besart951/go_infra_link/backend/internal/handlerutil"
+	facilityservice "github.com/besart951/go_infra_link/backend/internal/service/facility"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
 type Service interface {
 	ListTimeline(ctx context.Context, filter domainHistory.TimelineFilter) (*domain.PaginatedList[domainHistory.ChangeEvent], error)
+	ListTimelineCursor(ctx context.Context, filter domainHistory.TimelineFilter) (*domainHistory.TimelineCursorPage, error)
 	GetEvent(ctx context.Context, id uuid.UUID) (*domainHistory.ChangeEvent, error)
 	RestoreEntityToEvent(ctx context.Context, eventID uuid.UUID, mode domainHistory.RestoreMode) (*domainHistory.RestoreResult, error)
+	UndoBatch(ctx context.Context, batchID uuid.UUID) (*domainHistory.RestoreResult, error)
 	RestoreControlCabinet(ctx context.Context, controlCabinetID uuid.UUID, req domainHistory.RestoreControlCabinetRequest) (*domainHistory.RestoreResult, error)
 }
 
 type Handler struct {
 	service Service
+	jobs    *facilityservice.CopyJobManager
 }
 
-func NewHandler(service Service) *Handler {
-	return &Handler{service: service}
+func NewHandler(service Service, jobs ...*facilityservice.CopyJobManager) *Handler {
+	handler := &Handler{service: service}
+	if len(jobs) > 0 {
+		handler.jobs = jobs[0]
+	}
+	return handler
 }
 
 // ListTimeline godoc
@@ -44,9 +58,10 @@ func NewHandler(service Service) *Handler {
 // @Param occurred_to query string false "Latest ISO-8601 timestamp"
 // @Param action query []string false "Actions: create, update, delete, restore" collectionFormat(multi)
 // @Param field query []string false "Changed field names" collectionFormat(multi)
-// @Param page query int false "Page number" default(1)
+// @Param page query int false "Legacy page number" default(1)
+// @Param cursor query string false "Opaque keyset cursor; omit page to use cursor pagination"
 // @Param limit query int false "Items per page" default(50)
-// @Success 200 {object} dto.TimelineResponse
+// @Success 200 {object} dto.TimelineCursorResponse
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 401 {object} dto.ErrorResponse
 // @Failure 403 {object} dto.ErrorResponse
@@ -57,14 +72,7 @@ func (h *Handler) ListTimeline(c *gin.Context) {
 	if !ok {
 		return
 	}
-	result, err := h.service.ListTimeline(c.Request.Context(), filter)
-	if err != nil {
-		handlerutil.RespondDomainError(c, err,
-			handlerutil.LocalizedError(http.StatusInternalServerError, "history_fetch_failed", "facility.fetch_failed"),
-		)
-		return
-	}
-	c.JSON(http.StatusOK, dto.TimelineResponseFrom(result))
+	h.listTimeline(c, filter)
 }
 
 func (h *Handler) GetEvent(c *gin.Context) {
@@ -84,6 +92,35 @@ func (h *Handler) GetEvent(c *gin.Context) {
 }
 
 func (h *Handler) RestoreEntity(c *gin.Context) {
+	h.restoreEntity(c, "")
+}
+
+func (h *Handler) UndoEntity(c *gin.Context) {
+	h.restoreEntity(c, domainHistory.RestoreModeBefore)
+}
+
+func (h *Handler) UndoBatch(c *gin.Context) {
+	batchID, ok := handlerutil.ParseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+	result, err := h.service.UndoBatch(c.Request.Context(), batchID)
+	if err != nil {
+		var conflict *domainHistory.UndoConflictError
+		if errors.As(err, &conflict) {
+			c.JSON(http.StatusConflict, dto.UndoConflictResponseFrom(conflict.Conflict))
+			return
+		}
+		handlerutil.RespondDomainError(c, err,
+			handlerutil.LocalizedError(http.StatusInternalServerError, "undo_failed", "facility.update_failed"),
+			handlerutil.MapError(domain.ErrNotFound, handlerutil.LocalizedError(http.StatusNotFound, "not_found", "errors.not_found")),
+		)
+		return
+	}
+	c.JSON(http.StatusOK, result)
+}
+
+func (h *Handler) restoreEntity(c *gin.Context, requiredMode domainHistory.RestoreMode) {
 	eventID, ok := handlerutil.ParseUUIDParam(c, "id")
 	if !ok {
 		return
@@ -92,12 +129,20 @@ func (h *Handler) RestoreEntity(c *gin.Context) {
 	if c.Request.ContentLength > 0 && !handlerutil.BindJSON(c, &req) {
 		return
 	}
-	mode := req.Mode
+	mode := requiredMode
+	if mode == "" {
+		mode = req.Mode
+	}
 	if mode == "" {
 		mode = domainHistory.RestoreModeAfter
 	}
 	result, err := h.service.RestoreEntityToEvent(c.Request.Context(), eventID, mode)
 	if err != nil {
+		var conflict *domainHistory.UndoConflictError
+		if errors.As(err, &conflict) {
+			c.JSON(http.StatusConflict, dto.UndoConflictResponseFrom(conflict.Conflict))
+			return
+		}
 		handlerutil.RespondDomainError(c, err,
 			handlerutil.LocalizedError(http.StatusInternalServerError, "restore_failed", "facility.update_failed"),
 			handlerutil.MapError(domain.ErrNotFound, handlerutil.LocalizedError(http.StatusNotFound, "not_found", "errors.not_found")),
@@ -107,6 +152,18 @@ func (h *Handler) RestoreEntity(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
+// RestoreControlCabinet godoc
+// @Summary Restore a control-cabinet hierarchy asynchronously
+// @Tags history
+// @Accept json
+// @Produce json
+// @Param id path string true "Control cabinet UUID"
+// @Param Idempotency-Key header string false "Stable operation UUID"
+// @Param body body domainHistory.RestoreControlCabinetRequest false "Restore checkpoint"
+// @Success 202 {object} facilitydto.FacilityJobResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 409 {object} dto.ErrorResponse
+// @Router /api/v1/history/control-cabinets/{id}/restore [post]
 func (h *Handler) RestoreControlCabinet(c *gin.Context) {
 	controlCabinetID, ok := handlerutil.ParseUUIDParam(c, "id")
 	if !ok {
@@ -116,15 +173,7 @@ func (h *Handler) RestoreControlCabinet(c *gin.Context) {
 	if !ok {
 		return
 	}
-	result, err := h.service.RestoreControlCabinet(c.Request.Context(), controlCabinetID, req)
-	if err != nil {
-		handlerutil.RespondDomainError(c, err,
-			handlerutil.LocalizedError(http.StatusInternalServerError, "restore_failed", "facility.update_failed"),
-			handlerutil.MapError(domain.ErrNotFound, handlerutil.LocalizedError(http.StatusNotFound, "not_found", "errors.not_found")),
-		)
-		return
-	}
-	c.JSON(http.StatusOK, result)
+	h.submitControlCabinetRestore(c, controlCabinetID, req)
 }
 
 // ListProjectTimeline godoc
@@ -142,7 +191,8 @@ func (h *Handler) RestoreControlCabinet(c *gin.Context) {
 // @Param occurred_to query string false "Latest ISO-8601 timestamp"
 // @Param action query []string false "Actions: create, update, delete, restore" collectionFormat(multi)
 // @Param field query []string false "Changed field names" collectionFormat(multi)
-// @Param page query int false "Page number" default(1)
+// @Param page query int false "Legacy page number" default(1)
+// @Param cursor query string false "Opaque keyset cursor; omit page to use cursor pagination"
 // @Param limit query int false "Items per page" default(50)
 // @Success 200 {object} dto.TimelineResponse
 // @Failure 400 {object} dto.ErrorResponse
@@ -165,14 +215,50 @@ func (h *Handler) ListProjectTimeline(c *gin.Context) {
 	}
 	filter.ScopeType = "project"
 	filter.ScopeID = projectID
-	result, err := h.service.ListTimeline(c.Request.Context(), filter)
-	if err != nil {
-		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "history_fetch_failed", "facility.fetch_failed")
-		return
-	}
-	c.JSON(http.StatusOK, dto.TimelineResponseFrom(result))
+	h.listTimeline(c, filter)
 }
 
+func (h *Handler) listTimeline(c *gin.Context, filter domainHistory.TimelineFilter) {
+	if _, legacy := c.GetQuery("page"); legacy {
+		result, err := h.service.ListTimeline(c.Request.Context(), filter)
+		if h.respondTimelineError(c, err) {
+			return
+		}
+		c.JSON(http.StatusOK, dto.TimelineResponseFrom(result))
+		return
+	}
+	result, err := h.service.ListTimelineCursor(c.Request.Context(), filter)
+	if h.respondTimelineError(c, err) {
+		return
+	}
+	c.JSON(http.StatusOK, dto.TimelineCursorResponseFrom(result))
+}
+
+func (h *Handler) respondTimelineError(c *gin.Context, err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, cursor.ErrInvalid) {
+		handlerutil.RespondLocalizedError(c, http.StatusBadRequest, "invalid_cursor", "validation.invalid_request")
+		return true
+	}
+	handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "history_fetch_failed", "facility.fetch_failed")
+	return true
+}
+
+// RestoreProjectControlCabinet godoc
+// @Summary Restore a project-scoped control-cabinet hierarchy asynchronously
+// @Tags history, projects
+// @Accept json
+// @Produce json
+// @Param id path string true "Project UUID"
+// @Param controlCabinetId path string true "Control cabinet UUID"
+// @Param Idempotency-Key header string false "Stable operation UUID"
+// @Param body body domainHistory.RestoreControlCabinetRequest false "Restore checkpoint"
+// @Success 202 {object} facilitydto.FacilityJobResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 409 {object} dto.ErrorResponse
+// @Router /api/v1/projects/{id}/history/control-cabinets/{controlCabinetId}/restore [post]
 func (h *Handler) RestoreProjectControlCabinet(c *gin.Context) {
 	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
 	if !ok {
@@ -187,13 +273,73 @@ func (h *Handler) RestoreProjectControlCabinet(c *gin.Context) {
 		return
 	}
 	req.ProjectID = &projectID
-	result, err := h.service.RestoreControlCabinet(c.Request.Context(), controlCabinetID, req)
+	h.submitControlCabinetRestore(c, controlCabinetID, req)
+}
+
+// submitControlCabinetRestore starts the canonical durable hierarchy restore.
+func (h *Handler) submitControlCabinetRestore(c *gin.Context, cabinetID uuid.UUID, req domainHistory.RestoreControlCabinetRequest) {
+	if h.jobs == nil || !h.jobs.SupportsDurableTasks() {
+		handlerutil.RespondLocalizedError(c, http.StatusServiceUnavailable, "durable_jobs_unavailable", "errors.service_unavailable")
+		return
+	}
+	actorID, ok := middleware.GetUserID(c)
+	if !ok {
+		handlerutil.RespondLocalizedError(c, http.StatusUnauthorized, "unauthorized", "errors.unauthorized")
+		return
+	}
+	jobID, ok := historyOperationID(c)
+	if !ok {
+		return
+	}
+	asOf := req.AsOf
+	if asOf == nil && (req.EventID == nil || *req.EventID == uuid.Nil) {
+		now := time.Now().UTC()
+		asOf = &now
+	}
+	payload, err := json.Marshal(domainHistory.RestoreControlCabinetJobPayload{
+		ControlCabinetID: cabinetID, ProjectID: req.ProjectID, AsOf: asOf, EventID: req.EventID,
+	})
 	if err != nil {
 		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "restore_failed", "facility.update_failed")
 		return
 	}
-	c.JSON(http.StatusOK, result)
+	job, err := h.jobs.SubmitTask(c.Request.Context(), facilityservice.CopyJob{
+		ID: jobID, OwnerID: actorID, Kind: facilityservice.CopyJobKindControlCabinet,
+		Class: facilityservice.FacilityJobClassMutation, Type: facilityservice.FacilityJobTypeRestore,
+		Task: domainHistory.TaskRestoreControlCabinet, Payload: payload,
+		Admission: &facilityservice.FacilityAggregateAdmission{
+			ResourceID: cabinetID, State: facilityservice.FacilityAggregateStateRestoreStaging, AllowMissing: true,
+		},
+	})
+	if err != nil {
+		status := http.StatusServiceUnavailable
+		code := "service_unavailable"
+		if errors.Is(err, facilityservice.ErrAggregateLocked) || errors.Is(err, facilityservice.ErrFacilityJobLimit) {
+			status, code = http.StatusConflict, "aggregate_locked"
+		}
+		handlerutil.RespondLocalizedError(c, status, code, "facility.aggregate_locked")
+		return
+	}
+	c.JSON(http.StatusAccepted, sharedpresenter.ToCopyJobResponse(job))
 }
+
+func historyOperationID(c *gin.Context) (uuid.UUID, bool) {
+	raw := strings.TrimSpace(c.GetHeader("Idempotency-Key"))
+	if raw == "" {
+		raw = strings.TrimSpace(c.GetHeader("X-Copy-Operation-ID"))
+	}
+	if raw == "" {
+		return uuid.New(), true
+	}
+	id, err := uuid.Parse(raw)
+	if err != nil {
+		handlerutil.RespondLocalizedError(c, http.StatusBadRequest, "invalid_idempotency_key", "validation.invalid_uuid_format")
+		return uuid.Nil, false
+	}
+	return id, true
+}
+
+var _ facilitydto.FacilityJobResponse
 
 func parseTimelineFilter(c *gin.Context) (domainHistory.TimelineFilter, bool) {
 	filter := domainHistory.TimelineFilter{
@@ -260,6 +406,7 @@ func parseTimelineFilter(c *gin.Context) (domainHistory.TimelineFilter, bool) {
 	if limit != nil {
 		filter.Limit = *limit
 	}
+	filter.Cursor = c.Query("cursor")
 	return filter, true
 }
 

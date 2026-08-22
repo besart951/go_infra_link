@@ -16,6 +16,7 @@ import (
 const (
 	facilityReferenceDataEventChanged = "facility_reference_data.changed"
 	facilityChangedEvent              = "facility.changed"
+	facilityJobProgressEvent          = "facility.job.progress"
 	facilityCopyJobProgressEvent      = "facility.copy_job.progress"
 	facilityReferenceDataWriteWait    = 10 * time.Second
 	facilityReferenceDataPongWait     = 60 * time.Second
@@ -179,16 +180,27 @@ func (h *FacilityReferenceDataHub) BroadcastCopyJobProgress(_ context.Context, p
 	if progress.JobID == uuid.Nil || progress.OwnerID == uuid.Nil {
 		return
 	}
-	payload, err := json.Marshal(facilityCopyJobEvent{
-		Type: facilityCopyJobProgressEvent, JobID: progress.JobID, Kind: progress.Kind,
-		JobType: progress.JobType, Class: progress.Class, Status: progress.Status, Progress: progress.Progress, Stage: progress.Stage,
-		Error: progress.Error, Processed: progress.Processed, Total: progress.Total, Succeeded: progress.Succeeded, Failed: progress.Failed, UpdatedAt: progress.UpdatedAt.UTC(),
-	})
+	h.deliverJobProgress(progress, facilityJobProgressEvent)
+	if progress.JobType == "" || progress.JobType == "copy" {
+		h.deliverJobProgress(progress, facilityCopyJobProgressEvent)
+	}
+}
+
+func (h *FacilityReferenceDataHub) deliverJobProgress(progress apprealtime.CopyJobProgressEvent, eventType string) {
+	payload, err := json.Marshal(newFacilityJobEvent(progress, eventType))
 	if err != nil {
 		return
 	}
 	h.broadcastCopyJobBytes(progress.OwnerID, payload)
 	h.publishCopyJobPayload(progress.OwnerID, payload)
+}
+
+func newFacilityJobEvent(progress apprealtime.CopyJobProgressEvent, eventType string) facilityCopyJobEvent {
+	return facilityCopyJobEvent{
+		Type: eventType, JobID: progress.JobID, Kind: progress.Kind,
+		JobType: progress.JobType, Class: progress.Class, Status: progress.Status, Progress: progress.Progress, Stage: progress.Stage,
+		Error: progress.Error, Processed: progress.Processed, Total: progress.Total, Succeeded: progress.Succeeded, Failed: progress.Failed, UpdatedAt: progress.UpdatedAt.UTC(),
+	}
 }
 
 func (h *FacilityReferenceDataHub) startBusSubscription() {
@@ -250,7 +262,7 @@ func (h *FacilityReferenceDataHub) handleBusEvent(event apprealtime.Event) {
 			return
 		}
 		h.broadcastFacilityChangeEvent(payload)
-	case facilityCopyJobProgressEvent:
+	case facilityJobProgressEvent, facilityCopyJobProgressEvent:
 		var payload facilityCopyJobEvent
 		if err := json.Unmarshal(busEvent.Payload, &payload); err != nil || payload.JobID == uuid.Nil || busEvent.OwnerID == uuid.Nil {
 			slog.Warn("ignored invalid facility copy job event")

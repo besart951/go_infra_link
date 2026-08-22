@@ -1,6 +1,8 @@
 package facility
 
 import (
+	"time"
+
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	"github.com/google/uuid"
 )
@@ -45,6 +47,34 @@ type FieldDeviceFilterParams struct {
 	SPSControllerSystemTypeIDs []uuid.UUID
 	ProjectID                  *uuid.UUID
 	ProjectIDs                 []uuid.UUID
+}
+
+// FieldDeviceCursorQuery describes one stable keyset page. Cursor is opaque to
+// callers and is validated against every other query field by the SQL adapter.
+type FieldDeviceCursorQuery struct {
+	Limit   int
+	Search  string
+	OrderBy string
+	Order   string
+	Cursor  string
+	Filters FieldDeviceFilterParams
+}
+
+type FieldDeviceCursorPage struct {
+	Items          []FieldDevice
+	NextCursor     string
+	PreviousCursor string
+}
+
+// FieldDeviceCursorAnchor is persisted inside the opaque cursor. Values are
+// strings so the cursor stays versionable; Kind controls adapter-side parsing.
+type FieldDeviceCursorAnchor struct {
+	Direction   string     `json:"direction"`
+	Fingerprint string     `json:"fingerprint"`
+	ID          uuid.UUID  `json:"id"`
+	Value       *string    `json:"value,omitempty"`
+	SecondValue *string    `json:"second_value,omitempty"`
+	CreatedAt   *time.Time `json:"created_at,omitempty"`
 }
 
 // FieldDeviceCreateItem represents a single field device to create in a multi-create operation
@@ -178,4 +208,11 @@ type BulkOperationResult struct {
 	TotalCount   int
 	SuccessCount int
 	FailureCount int
+}
+
+// FieldDeviceDeleteCommand identifies the exact aggregate revision a caller
+// intends to delete. A nil BaseVersion exists only for the compatibility API.
+type FieldDeviceDeleteCommand struct {
+	ID          uuid.UUID `json:"id"`
+	BaseVersion *uint64   `json:"base_version,omitempty"`
 }

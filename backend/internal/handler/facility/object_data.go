@@ -1,7 +1,6 @@
 package facility
 
 import (
-	"context"
 	"net/http"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
@@ -102,16 +101,7 @@ func (h *ObjectDataHandler) CopyObjectData(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if startPersistedFacilityCopyJob(c, h.copyJobs, facilityservice.CopyJobKindObjectData, id) {
-		return
-	}
-	if startFacilityCopyJob(c, h.copyJobs, facilityservice.CopyJobKindObjectData, func(ctx context.Context, _ uuid.UUID) error {
-		_, err := h.service.CopyByID(ctx, id)
-		return err
-	}) {
-		return
-	}
-	respondLocalizedError(c, http.StatusServiceUnavailable, "service_unavailable", "errors.service_unavailable")
+	startPersistedFacilityCopyJob(c, h.copyJobs, facilityservice.CopyJobKindObjectData, id)
 }
 
 // ListObjectData godoc

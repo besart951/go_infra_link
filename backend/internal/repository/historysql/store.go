@@ -87,7 +87,7 @@ func AutoMigrate(db *gorm.DB) error {
 			return err
 		}
 	}
-	return nil
+	return AutoMigrateV2(db, time.Now().UTC())
 }
 
 func (s *Store) WithDB(db *gorm.DB) *Store {
@@ -100,6 +100,9 @@ func (s *Store) LoadRow(ctx context.Context, table string, id uuid.UUID) (domain
 	}
 	if id == uuid.Nil {
 		return nil, false, nil
+	}
+	if s.db.Dialector != nil && s.db.Dialector.Name() != "postgres" {
+		return s.loadRowPortable(ctx, table, id)
 	}
 
 	var row struct {
@@ -117,9 +120,44 @@ func (s *Store) LoadRow(ctx context.Context, table string, id uuid.UUID) (domain
 	return row.Data, true, nil
 }
 
+func (s *Store) loadRowPortable(ctx context.Context, table string, id uuid.UUID) (domainHistory.JSONB, bool, error) {
+	rows, err := s.db.WithContext(ctx).Table(table).Where("id = ?", id).Limit(1).Rows()
+	if err != nil {
+		return nil, false, err
+	}
+	defer rows.Close()
+	if !rows.Next() {
+		return nil, false, rows.Err()
+	}
+	columns, err := rows.Columns()
+	if err != nil {
+		return nil, false, err
+	}
+	values, destinations := historyDigestDestinations(len(columns))
+	if err := rows.Scan(destinations...); err != nil {
+		return nil, false, err
+	}
+	data := make(map[string]any, len(columns))
+	for index, column := range columns {
+		data[column] = portableSQLValue(values[index])
+	}
+	encoded, err := json.Marshal(data)
+	return domainHistory.JSONB(encoded), err == nil, err
+}
+
+func portableSQLValue(value any) any {
+	if bytes, ok := value.([]byte); ok {
+		return string(bytes)
+	}
+	return value
+}
+
 func (s *Store) LoadRows(ctx context.Context, table string, ids []uuid.UUID) (map[uuid.UUID]domainHistory.JSONB, error) {
 	if !allowedTable(table) {
 		return nil, fmt.Errorf("history table not allowed: %s", table)
+	}
+	if s.db.Dialector != nil && s.db.Dialector.Name() != "postgres" {
+		return s.loadRowsPortable(ctx, table, ids)
 	}
 	out := make(map[uuid.UUID]domainHistory.JSONB, len(ids))
 	for _, chunk := range uuidChunks(ids, 500) {
@@ -131,6 +169,20 @@ func (s *Store) LoadRows(ctx context.Context, table string, ids []uuid.UUID) (ma
 		}
 		for _, row := range rows {
 			out[row.ID] = row.Data
+		}
+	}
+	return out, nil
+}
+
+func (s *Store) loadRowsPortable(ctx context.Context, table string, ids []uuid.UUID) (map[uuid.UUID]domainHistory.JSONB, error) {
+	out := make(map[uuid.UUID]domainHistory.JSONB, len(ids))
+	for _, id := range ids {
+		row, found, err := s.LoadRow(ctx, table, id)
+		if err != nil {
+			return nil, err
+		}
+		if found {
+			out[id] = row
 		}
 	}
 	return out, nil
@@ -195,6 +247,12 @@ func (s *Store) RecordDelete(ctx context.Context, table string, id uuid.UUID, be
 }
 
 func (s *Store) RecordMutation(ctx context.Context, mutation Mutation) error {
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		return s.WithDB(tx).recordMutation(ctx, mutation)
+	})
+}
+
+func (s *Store) recordMutation(ctx context.Context, mutation Mutation) error {
 	if !allowedTable(mutation.EntityTable) {
 		return fmt.Errorf("history table not allowed: %s", mutation.EntityTable)
 	}
@@ -254,8 +312,8 @@ func (s *Store) RecordMutation(ctx context.Context, mutation Mutation) error {
 	if err != nil {
 		return err
 	}
+	rows := make([]domainHistory.ChangeEventScope, 0, len(scopes))
 	if len(scopes) > 0 {
-		rows := make([]domainHistory.ChangeEventScope, 0, len(scopes))
 		for _, scope := range scopes {
 			scopeID, err := uuid.NewV7()
 			if err != nil {
@@ -291,47 +349,17 @@ func (s *Store) RecordMutation(ctx context.Context, mutation Mutation) error {
 	} else {
 		version.SnapshotJSON = mutation.AfterJSON
 	}
-	return s.db.WithContext(ctx).Create(version).Error
+	if err := s.db.WithContext(ctx).Create(version).Error; err != nil {
+		return err
+	}
+	return s.recordMutationV2(ctx, mutationV2Write{event: event, scopes: rows, version: version})
 }
 
 func (s *Store) ListTimeline(ctx context.Context, filter domainHistory.TimelineFilter) (*domain.PaginatedList[domainHistory.ChangeEvent], error) {
 	page, limit := normalizeTimelinePagination(filter.Page, filter.Limit)
-	offset := (page - 1) * limit
-
-	query := s.db.WithContext(ctx).Model(&domainHistory.ChangeEvent{})
-	if filter.EntityTable != "" {
-		if !allowedTable(filter.EntityTable) {
-			return nil, fmt.Errorf("history table not allowed: %s", filter.EntityTable)
-		}
-		query = query.Where("entity_table = ?", filter.EntityTable)
-		if filter.EntityID != uuid.Nil {
-			query = query.Where("entity_id = ?", filter.EntityID)
-		}
-	}
-	if filter.ActorID != uuid.Nil {
-		query = query.Where("actor_id = ?", filter.ActorID)
-	}
-	if filter.OccurredFrom != nil {
-		query = query.Where("occurred_at >= ?", filter.OccurredFrom.UTC())
-	}
-	if filter.OccurredTo != nil {
-		query = query.Where("occurred_at <= ?", filter.OccurredTo.UTC())
-	}
-	if len(filter.Actions) > 0 {
-		query = query.Where("action IN ?", filter.Actions)
-	}
-	query = s.applyFieldFilter(query, filter.Fields)
-	if filter.ScopeType != "" && filter.ScopeID != uuid.Nil {
-		sub := s.db.WithContext(ctx).Model(&domainHistory.ChangeEventScope{}).
-			Select("change_event_id").
-			Where("scope_type = ? AND scope_id = ?", filter.ScopeType, filter.ScopeID)
-		query = query.Where("id IN (?)", sub)
-	}
-	if filter.SecondaryScopeType != "" && filter.SecondaryScopeID != uuid.Nil {
-		sub := s.db.WithContext(ctx).Model(&domainHistory.ChangeEventScope{}).
-			Select("change_event_id").
-			Where("scope_type = ? AND scope_id = ?", filter.SecondaryScopeType, filter.SecondaryScopeID)
-		query = query.Where("id IN (?)", sub)
+	query, err := s.timelineQuery(ctx, filter)
+	if err != nil {
+		return nil, err
 	}
 
 	var total int64
@@ -340,7 +368,7 @@ func (s *Store) ListTimeline(ctx context.Context, filter domainHistory.TimelineF
 	}
 
 	var items []domainHistory.ChangeEvent
-	if err := query.Order("occurred_at DESC, id DESC").Limit(limit).Offset(offset).Find(&items).Error; err != nil {
+	if err := query.Order("occurred_at DESC, id DESC").Limit(limit).Offset((page - 1) * limit).Find(&items).Error; err != nil {
 		return nil, err
 	}
 	if err := s.enrichActorNames(ctx, items); err != nil {
@@ -358,9 +386,81 @@ func (s *Store) ListTimeline(ctx context.Context, filter domainHistory.TimelineF
 	}, nil
 }
 
+func (s *Store) timelineQuery(ctx context.Context, filter domainHistory.TimelineFilter) (*gorm.DB, error) {
+	v2, err := s.V2ReadsEnabled(ctx)
+	if err != nil {
+		return nil, err
+	}
+	query := s.timelineEventQuery(ctx, v2)
+	if filter.EntityTable != "" {
+		if !allowedTable(filter.EntityTable) {
+			return nil, fmt.Errorf("history table not allowed: %s", filter.EntityTable)
+		}
+		query = query.Where("entity_table = ?", filter.EntityTable)
+		if filter.EntityID != uuid.Nil {
+			query = query.Where("entity_id = ?", filter.EntityID)
+		}
+	}
+	query = applyTimelineScalarFilters(query, filter)
+	query = s.applyFieldFilter(query, filter.Fields)
+	query = s.applyTimelineScope(query, timelineScopeFilter{scopeType: filter.ScopeType, scopeID: filter.ScopeID, v2: v2})
+	query = s.applyTimelineScope(query, timelineScopeFilter{scopeType: filter.SecondaryScopeType, scopeID: filter.SecondaryScopeID, v2: v2})
+	return query, nil
+}
+
+func (s *Store) timelineEventQuery(ctx context.Context, v2 bool) *gorm.DB {
+	if v2 {
+		return s.db.WithContext(ctx).Model(&changeEventV2Record{})
+	}
+	return s.db.WithContext(ctx).Model(&domainHistory.ChangeEvent{})
+}
+
+func applyTimelineScalarFilters(query *gorm.DB, filter domainHistory.TimelineFilter) *gorm.DB {
+	if filter.ActorID != uuid.Nil {
+		query = query.Where("actor_id = ?", filter.ActorID)
+	}
+	if filter.OccurredFrom != nil {
+		query = query.Where("occurred_at >= ?", filter.OccurredFrom.UTC())
+	}
+	if filter.OccurredTo != nil {
+		query = query.Where("occurred_at <= ?", filter.OccurredTo.UTC())
+	}
+	if len(filter.Actions) > 0 {
+		query = query.Where("action IN ?", filter.Actions)
+	}
+	return query
+}
+
+type timelineScopeFilter struct {
+	scopeType string
+	scopeID   uuid.UUID
+	v2        bool
+}
+
+func (s *Store) applyTimelineScope(query *gorm.DB, filter timelineScopeFilter) *gorm.DB {
+	if filter.scopeType == "" || filter.scopeID == uuid.Nil {
+		return query
+	}
+	sub := s.timelineScopeQuery(filter.v2).
+		Select("change_event_id").
+		Where("scope_type = ? AND scope_id = ?", filter.scopeType, filter.scopeID)
+	return query.Where("id IN (?)", sub)
+}
+
+func (s *Store) timelineScopeQuery(v2 bool) *gorm.DB {
+	if v2 {
+		return s.db.Model(&changeEventScopeV2Record{})
+	}
+	return s.db.Model(&domainHistory.ChangeEventScope{})
+}
+
 func (s *Store) GetEvent(ctx context.Context, id uuid.UUID) (*domainHistory.ChangeEvent, error) {
 	var event domainHistory.ChangeEvent
-	if err := s.db.WithContext(ctx).Where("id = ?", id).First(&event).Error; err != nil {
+	v2, err := s.V2ReadsEnabled(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.timelineEventQuery(ctx, v2).Where("id = ?", id).First(&event).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, domain.ErrNotFound
 		}

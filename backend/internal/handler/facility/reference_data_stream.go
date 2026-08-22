@@ -25,7 +25,7 @@ func (h *FacilityReferenceDataStreamHandler) SetAuthorizationChecker(authz middl
 
 // StreamFacilityReferenceData godoc
 // @Summary Stream facility reference-data changes
-// @Description Upgrades the authenticated request to the shared facility WebSocket. `facility_reference_data.changed` tells authorized clients to refresh cached apparats and system parts. `facility.changed` carries authorized facility resource changes with an action, IDs, actor and timestamp. User-scoped `facility.copy_job.progress` events contain a copy job ID, status, stage and 0-100 progress; they are only delivered to the user that started the job.
+// @Description Upgrades the authenticated request to the shared facility WebSocket. `facility_reference_data.changed` tells authorized clients to refresh cached apparats and system parts. `facility.changed` carries authorized facility resource changes with an action, IDs, actor and timestamp. User-scoped `facility.job.progress` events contain job type, status, stage and 0-100 progress; copy jobs temporarily also emit the legacy `facility.copy_job.progress` alias. Events are delivered only to the user that started the job.
 // @Tags facility-reference-data
 // @Success 101
 // @Failure 401 {object} dto.ErrorResponse

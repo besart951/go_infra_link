@@ -176,6 +176,13 @@ func toFieldDeviceListResponse(list *domain.PaginatedList[domainFacility.FieldDe
 	return dto.FieldDeviceListResponse{Items: mapItems(list.Items, toFieldDeviceResponse), Total: list.Total, Page: list.Page, TotalPages: list.TotalPages}
 }
 
+func toFieldDeviceCursorResponse(page *domainFacility.FieldDeviceCursorPage) dto.FieldDeviceCursorResponse {
+	return dto.FieldDeviceCursorResponse{
+		Items:      mapItems(page.Items, toFieldDeviceResponse),
+		NextCursor: page.NextCursor, PreviousCursor: page.PreviousCursor,
+	}
+}
+
 func toFieldDeviceOptionsResponse(options *domainFacility.FieldDeviceOptions) dto.FieldDeviceOptionsResponse {
 	return sharedpresenter.ToFieldDeviceOptionsResponse(options)
 }

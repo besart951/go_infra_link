@@ -9,14 +9,16 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/handler/middleware"
 	"github.com/besart951/go_infra_link/backend/internal/handlerutil"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 type ExportHandler struct {
-	service ExportService
+	service    ExportService
+	authorizer domainExport.DownloadAuthorizer
 }
 
-func NewExportHandler(service ExportService) *ExportHandler {
-	return &ExportHandler{service: service}
+func NewExportHandler(service ExportService, authorizer domainExport.DownloadAuthorizer) *ExportHandler {
+	return &ExportHandler{service: service, authorizer: authorizer}
 }
 
 func (h *ExportHandler) CreateFieldDeviceExport(c *gin.Context) {
@@ -73,6 +75,9 @@ func (h *ExportHandler) GetExportStatus(c *gin.Context) {
 		respondNotFound(c, "Export job not found")
 		return
 	}
+	if !h.canAccessExport(c, ownerID, job) {
+		return
+	}
 
 	c.JSON(http.StatusOK, toExportJobResponse(job))
 }
@@ -97,6 +102,9 @@ func (h *ExportHandler) DownloadExport(c *gin.Context) {
 		respondNotFound(c, "Export job not found")
 		return
 	}
+	if !h.canAccessExport(c, ownerID, job) {
+		return
+	}
 
 	if job.Status != domainExport.StatusCompleted {
 		respondError(c, http.StatusConflict, "export_not_ready", "Export is not ready for download")
@@ -111,6 +119,26 @@ func (h *ExportHandler) DownloadExport(c *gin.Context) {
 	c.Header("Content-Type", job.ContentType)
 	c.Header("Content-Disposition", "attachment; filename=\""+job.FileName+"\"")
 	c.File(job.FilePath)
+}
+
+func (h *ExportHandler) canAccessExport(c *gin.Context, ownerID uuid.UUID, job domainExport.Job) bool {
+	role, ok := middleware.GetUserRole(c)
+	if !ok {
+		respondLocalizedError(c, http.StatusUnauthorized, "unauthorized", "errors.unauthorized")
+		return false
+	}
+	if h.authorizer == nil {
+		respondLocalizedError(c, http.StatusForbidden, "forbidden", "errors.forbidden")
+		return false
+	}
+	allowed, err := h.authorizer.CanDownload(c.Request.Context(), domainExport.DownloadAuthorization{
+		RequesterID: ownerID, RequesterRole: role, Scope: job.Scope,
+	})
+	if err != nil || !allowed {
+		respondLocalizedError(c, http.StatusForbidden, "forbidden", "errors.forbidden")
+		return false
+	}
+	return true
 }
 
 func toExportJobResponse(job domainExport.Job) dto.FieldDeviceExportJobResponse {

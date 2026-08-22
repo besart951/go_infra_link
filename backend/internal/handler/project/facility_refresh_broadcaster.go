@@ -5,6 +5,7 @@ import (
 
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
+	infrarealtime "github.com/besart951/go_infra_link/backend/internal/infrastructure/realtime"
 	"github.com/google/uuid"
 )
 
@@ -241,13 +242,10 @@ func (b *FacilityRefreshBroadcaster) publishDurableChanges(ctx context.Context, 
 		return
 	}
 	for _, event := range events {
-		if event.AggregateID == nil {
+		realtimeChange, valid := infrarealtime.ProjectChangeFromDomain(event)
+		if !valid {
 			continue
 		}
-		refs := make(map[string]string, len(event.ParentRefs))
-		for k, v := range event.ParentRefs {
-			refs[k] = v.String()
-		}
-		_ = publisher.BroadcastProjectChange(ctx, ProjectChange{ProjectID: event.ProjectID, Revision: int64(event.Revision), EventID: event.EventID, AggregateType: event.AggregateType, AggregateID: *event.AggregateID, Action: string(event.Action), ActorID: event.ActorID, ChangedFields: event.ChangedFields, ParentRefs: refs, OccurredAt: event.OccurredAt})
+		_ = publisher.BroadcastProjectChange(ctx, realtimeChange)
 	}
 }

@@ -12,6 +12,7 @@ import type { SystemPart } from './system.js';
 
 export interface FieldDevice {
   id: string;
+  version: number;
   bmk?: string;
   description?: string;
   text_fix?: string;
@@ -215,7 +216,12 @@ export interface BulkUpdateFieldDeviceResponse {
  * Bulk delete field device request
  */
 export interface BulkDeleteFieldDeviceRequest {
-  ids: string[];
+  items: FieldDeviceDeleteCommand[];
+}
+
+export interface FieldDeviceDeleteCommand {
+  id: string;
+  base_version: number;
 }
 
 /**

@@ -41,6 +41,9 @@ func facilityResourceForRoute(path string) (facilityResourceDefinition, bool) {
 	if strings.HasPrefix(path, "/alarm-types/:id/fields") {
 		return facilityResourceByName("alarm_type_fields")
 	}
+	if path == "/imports/field-devices" {
+		return facilityResourceByName("field_devices")
+	}
 
 	segment := strings.TrimPrefix(path, "/")
 	if slash := strings.IndexByte(segment, '/'); slash >= 0 {

@@ -98,6 +98,7 @@ type CopyJob struct {
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 	CompletedAt *time.Time
+	Admission   *FacilityAggregateAdmission
 }
 
 type copyJobKey struct {

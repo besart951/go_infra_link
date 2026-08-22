@@ -175,7 +175,7 @@ func TestDurableCopyJobCanBeReclaimedAfterLeaseExpires(t *testing.T) {
 
 func TestMigrateCopyJobsCreatesChunkAndMappingTables(t *testing.T) {
 	db := openCopyJobTestDB(t)
-	for _, table := range []any{copyJobRecord{}, facilityJobItemRecord{}, facilityJobIDMappingRecord{}} {
+	for _, table := range []any{copyJobRecord{}, facilityJobItemRecord{}, facilityJobIDMappingRecord{}, facilityAggregateLifecycleRecord{}} {
 		if !db.Migrator().HasTable(table) {
 			t.Fatalf("missing migrated table for %T", table)
 		}
@@ -193,6 +193,65 @@ func TestMigrateCopyJobsCreatesChunkAndMappingTables(t *testing.T) {
 		}).Error; err != nil {
 			t.Fatalf("create owner-scoped job mapping: %v", err)
 		}
+	}
+}
+
+func TestDeleteJobAdmissionLocksAggregateAtomically(t *testing.T) {
+	db := openCopyJobTestDB(t)
+	if err := db.Exec("CREATE TABLE control_cabinets (id text PRIMARY KEY)").Error; err != nil {
+		t.Fatalf("create aggregate table: %v", err)
+	}
+	resourceID := uuid.New()
+	if err := db.Exec("INSERT INTO control_cabinets (id) VALUES (?)", resourceID).Error; err != nil {
+		t.Fatalf("seed aggregate: %v", err)
+	}
+
+	manager := NewCopyJobManagerWithDB(nil, db)
+	t.Cleanup(manager.Close)
+	job := admittedDeleteJob(uuid.New(), uuid.New(), resourceID)
+	if _, err := manager.SubmitTask(t.Context(), job); err != nil {
+		t.Fatalf("submit admitted job: %v", err)
+	}
+	if _, err := manager.SubmitTask(t.Context(), job); err != nil {
+		t.Fatalf("repeat idempotent admission: %v", err)
+	}
+
+	conflicting := admittedDeleteJob(uuid.New(), uuid.New(), resourceID)
+	if _, err := manager.SubmitTask(t.Context(), conflicting); !errors.Is(err, ErrAggregateLocked) {
+		t.Fatalf("conflicting admission error = %v, want %v", err, ErrAggregateLocked)
+	}
+	var count int64
+	if err := db.Model(&facilityAggregateLifecycleRecord{}).Count(&count).Error; err != nil || count != 1 {
+		t.Fatalf("lifecycle locks = %d, error = %v; want one", count, err)
+	}
+}
+
+func TestDeleteJobAdmissionRejectsMissingAggregateWithoutCreatingJob(t *testing.T) {
+	db := openCopyJobTestDB(t)
+	if err := db.Exec("CREATE TABLE control_cabinets (id text PRIMARY KEY)").Error; err != nil {
+		t.Fatalf("create aggregate table: %v", err)
+	}
+	manager := NewCopyJobManagerWithDB(nil, db)
+	t.Cleanup(manager.Close)
+
+	job := admittedDeleteJob(uuid.New(), uuid.New(), uuid.New())
+	if _, err := manager.SubmitTask(t.Context(), job); !errors.Is(err, ErrAggregateNotFound) {
+		t.Fatalf("missing aggregate error = %v, want %v", err, ErrAggregateNotFound)
+	}
+	var count int64
+	if err := db.Model(&copyJobRecord{}).Count(&count).Error; err != nil || count != 0 {
+		t.Fatalf("jobs = %d, error = %v; want zero", count, err)
+	}
+}
+
+func admittedDeleteJob(ownerID, jobID, resourceID uuid.UUID) CopyJob {
+	return CopyJob{
+		ID: jobID, OwnerID: ownerID, Kind: CopyJobKindControlCabinet,
+		Class: FacilityJobClassMutation, Type: FacilityJobTypeDelete,
+		Task: FacilityJobTaskDeleteControlCabinet,
+		Admission: &FacilityAggregateAdmission{
+			ResourceID: resourceID, State: FacilityAggregateStateDeleting,
+		},
 	}
 }
 

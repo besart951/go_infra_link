@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 
+	domainExport "github.com/besart951/go_infra_link/backend/internal/domain/exporting"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	facilityservice "github.com/besart951/go_infra_link/backend/internal/service/facility"
 	"github.com/google/uuid"
@@ -62,6 +63,8 @@ type ServiceDeps struct {
 	ObjectData              ObjectDataService
 	SPSControllerSystemType SPSControllerSystemTypeService
 	Export                  ExportService
+	Import                  FieldDeviceImportService
+	ExportDownload          domainExport.DownloadAuthorizer
 	AlarmType               AlarmTypeService
 	Unit                    UnitService
 	AlarmField              AlarmFieldService
@@ -90,6 +93,7 @@ type Handlers struct {
 	ObjectData              *ObjectDataHandler
 	SPSControllerSystemType *SPSControllerSystemTypeHandler
 	Export                  *ExportHandler
+	Import                  *ImportHandler
 	Validation              *ValidationHandler
 	AlarmType               *AlarmTypeHandler
 	Unit                    *UnitHandler
@@ -111,7 +115,8 @@ func NewHandlers(deps ServiceDeps) *Handlers {
 	registerFacilityHierarchyHandlers(handlers, deps)
 	registerFacilityLookupHandlers(handlers, deps)
 	registerFacilityAlarmHandlers(handlers, deps)
-	handlers.Export = NewExportHandler(deps.Export)
+	handlers.Export = NewExportHandler(deps.Export, deps.ExportDownload)
+	handlers.Import = NewImportHandler(deps.Import)
 	return handlers
 }
 

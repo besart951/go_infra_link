@@ -135,19 +135,11 @@ func (h *ProjectHandler) broadcastDurableProjectChanges(ctx context.Context, cha
 		return
 	}
 	for _, change := range changes {
-		if change.AggregateID == nil {
+		realtimeChange, ok := infrarealtime.ProjectChangeFromDomain(change)
+		if !ok {
 			continue
 		}
-		parentRefs := make(map[string]string, len(change.ParentRefs))
-		for key, value := range change.ParentRefs {
-			parentRefs[key] = value.String()
-		}
-		if err := h.collaboration.BroadcastProjectChange(ctx, infrarealtime.ProjectChange{
-			ProjectID: change.ProjectID, Revision: int64(change.Revision), EventID: change.EventID,
-			AggregateType: change.AggregateType, AggregateID: *change.AggregateID,
-			Action: string(change.Action), ActorID: change.ActorID, ChangedFields: change.ChangedFields,
-			ParentRefs: parentRefs, OccurredAt: change.OccurredAt,
-		}); err != nil {
+		if err := h.collaboration.BroadcastProjectChange(ctx, realtimeChange); err != nil {
 			continue
 		}
 	}

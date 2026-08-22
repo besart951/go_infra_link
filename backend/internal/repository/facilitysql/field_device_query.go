@@ -26,7 +26,7 @@ const (
 		field_devices.text_individuell,
 		field_devices.sps_controller_system_type_id,
 		field_devices.system_part_id,
-		field_devices.specification_id,
+		specs_list.id AS specification_id,
 		field_devices.apparat_id,
 		scts_list.id AS sps_system_type_id,
 		scts_list.created_at AS sps_system_type_created_at,
@@ -61,7 +61,7 @@ func newFieldDeviceQuery(db *gorm.DB) fieldDeviceQuery {
 
 func (q fieldDeviceQuery) List(ctx context.Context, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.FieldDevice], error) {
 	page, limit := normalizeFieldDeviceListPagination(params.Page, params.Limit)
-	query := q.db.WithContext(ctx).Model(&FieldDeviceRecord{})
+	query := activeFieldDevices(q.db.WithContext(ctx).Model(&FieldDeviceRecord{}))
 
 	if strings.TrimSpace(params.Search) != "" {
 		query = applyFieldDeviceSearch(query, params.Search)
@@ -72,7 +72,7 @@ func (q fieldDeviceQuery) List(ctx context.Context, params domain.PaginationPara
 
 func (q fieldDeviceQuery) ListWithFilters(ctx context.Context, params domain.PaginationParams, filters domainFacility.FieldDeviceFilterParams) (*domain.PaginatedList[domainFacility.FieldDevice], error) {
 	page, limit := normalizeFieldDeviceListPagination(params.Page, params.Limit)
-	query := q.db.WithContext(ctx).Model(&FieldDeviceRecord{})
+	query := activeFieldDevices(q.db.WithContext(ctx).Model(&FieldDeviceRecord{}))
 	query, hasPotentialDuplicateRows := applyFieldDeviceFilters(query, filters)
 	if strings.TrimSpace(filters.Search) != "" {
 		query = applyFieldDeviceSearch(query, filters.Search)
@@ -89,7 +89,7 @@ func (q fieldDeviceQuery) ExportPage(ctx context.Context, filters domainFacility
 	if limit <= 0 || limit > 500 {
 		limit = 500
 	}
-	query := q.db.WithContext(ctx).Model(&FieldDeviceRecord{})
+	query := activeFieldDevices(q.db.WithContext(ctx).Model(&FieldDeviceRecord{}))
 	query, hasPotentialDuplicateRows := applyFieldDeviceFilters(query, filters)
 	if strings.TrimSpace(filters.Search) != "" {
 		query = applyFieldDeviceSearch(query, filters.Search)
@@ -99,14 +99,14 @@ func (q fieldDeviceQuery) ExportPage(ctx context.Context, filters domainFacility
 	}
 	if hasPotentialDuplicateRows {
 		distinctIDs := query.Session(&gorm.Session{}).Select("DISTINCT field_devices.id")
-		query = q.db.WithContext(ctx).Model(&FieldDeviceRecord{}).
+		query = activeFieldDevices(q.db.WithContext(ctx).Model(&FieldDeviceRecord{})).
 			Joins("JOIN (?) ids ON ids.id = field_devices.id", distinctIDs)
 	}
 	return scanFieldDeviceListRows(query.Order("field_devices.id ASC"), limit, 0)
 }
 
 func (q fieldDeviceQuery) ExportControllerIDs(ctx context.Context, filters domainFacility.FieldDeviceFilterParams, search string) ([]uuid.UUID, error) {
-	query := q.db.WithContext(ctx).Model(&FieldDeviceRecord{})
+	query := activeFieldDevices(q.db.WithContext(ctx).Model(&FieldDeviceRecord{}))
 	query, _ = applyFieldDeviceFilters(query, filters)
 	if strings.TrimSpace(search) != "" {
 		query = applyFieldDeviceSearch(query, search)
@@ -129,8 +129,8 @@ func (q fieldDeviceQuery) page(ctx context.Context, query *gorm.DB, params domai
 	orderedQuery := query.Session(&gorm.Session{})
 	if hasPotentialDuplicateRows {
 		distinctIDs := query.Session(&gorm.Session{}).Select("DISTINCT field_devices.id")
-		orderedQuery = q.db.WithContext(ctx).
-			Model(&FieldDeviceRecord{}).
+		orderedQuery = activeFieldDevices(q.db.WithContext(ctx).
+			Model(&FieldDeviceRecord{})).
 			Joins("JOIN (?) ids ON ids.id = field_devices.id", distinctIDs)
 	}
 	orderedQuery = applyFieldDeviceSorting(orderedQuery, params)
@@ -225,16 +225,19 @@ func withFieldDeviceListJoins(query *gorm.DB) *gorm.DB {
 		Joins("LEFT JOIN sps_controllers sc_list ON sc_list.id = scts_list.sps_controller_id").
 		Joins("LEFT JOIN system_types st_list ON st_list.id = scts_list.system_type_id").
 		Joins("LEFT JOIN apparats apparats_list ON apparats_list.id = field_devices.apparat_id").
-		Joins("LEFT JOIN system_parts system_parts_list ON system_parts_list.id = field_devices.system_part_id")
+		Joins("LEFT JOIN system_parts system_parts_list ON system_parts_list.id = field_devices.system_part_id").
+		Joins("LEFT JOIN specifications specs_list ON specs_list.field_device_id = field_devices.id")
 }
 
 func scanFieldDeviceListRows(query *gorm.DB, limit, offset int) ([]domainFacility.FieldDevice, error) {
 	var rows []fieldDeviceListRow
-	if err := withFieldDeviceListJoins(query).
+	query = withFieldDeviceListJoins(query).
 		Select(fieldDeviceListSelect).
-		Limit(limit).
-		Offset(offset).
-		Scan(&rows).Error; err != nil {
+		Limit(limit)
+	if offset > 0 {
+		query = query.Offset(offset)
+	}
+	if err := query.Scan(&rows).Error; err != nil {
 		return nil, err
 	}
 	return fieldDeviceListRowDomainValues(rows), nil
@@ -268,37 +271,37 @@ func applyFieldDeviceSorting(query *gorm.DB, params domain.PaginationParams) *go
 		query = query.Joins("LEFT JOIN system_parts system_parts_sort ON system_parts_sort.id = field_devices.system_part_id")
 		return query.Order("system_parts_sort.name " + order)
 	case "spec_supplier":
-		query = query.Joins("LEFT JOIN specifications specs_sort ON specs_sort.id = field_devices.specification_id")
+		query = query.Joins("LEFT JOIN specifications specs_sort ON specs_sort.field_device_id = field_devices.id")
 		return query.Order("specs_sort.specification_supplier " + order)
 	case "spec_brand":
-		query = query.Joins("LEFT JOIN specifications specs_sort ON specs_sort.id = field_devices.specification_id")
+		query = query.Joins("LEFT JOIN specifications specs_sort ON specs_sort.field_device_id = field_devices.id")
 		return query.Order("specs_sort.specification_brand " + order)
 	case "spec_type":
-		query = query.Joins("LEFT JOIN specifications specs_sort ON specs_sort.id = field_devices.specification_id")
+		query = query.Joins("LEFT JOIN specifications specs_sort ON specs_sort.field_device_id = field_devices.id")
 		return query.Order("specs_sort.specification_type " + order)
 	case "spec_motor_valve":
-		query = query.Joins("LEFT JOIN specifications specs_sort ON specs_sort.id = field_devices.specification_id")
+		query = query.Joins("LEFT JOIN specifications specs_sort ON specs_sort.field_device_id = field_devices.id")
 		return query.Order("specs_sort.additional_info_motor_valve " + order)
 	case "spec_size":
-		query = query.Joins("LEFT JOIN specifications specs_sort ON specs_sort.id = field_devices.specification_id")
+		query = query.Joins("LEFT JOIN specifications specs_sort ON specs_sort.field_device_id = field_devices.id")
 		return query.Order("specs_sort.additional_info_size " + order)
 	case "spec_install_loc":
-		query = query.Joins("LEFT JOIN specifications specs_sort ON specs_sort.id = field_devices.specification_id")
+		query = query.Joins("LEFT JOIN specifications specs_sort ON specs_sort.field_device_id = field_devices.id")
 		return query.Order("specs_sort.additional_information_installation_location " + order)
 	case "spec_ph":
-		query = query.Joins("LEFT JOIN specifications specs_sort ON specs_sort.id = field_devices.specification_id")
+		query = query.Joins("LEFT JOIN specifications specs_sort ON specs_sort.field_device_id = field_devices.id")
 		return query.Order("specs_sort.electrical_connection_ph " + order)
 	case "spec_acdc":
-		query = query.Joins("LEFT JOIN specifications specs_sort ON specs_sort.id = field_devices.specification_id")
+		query = query.Joins("LEFT JOIN specifications specs_sort ON specs_sort.field_device_id = field_devices.id")
 		return query.Order("specs_sort.electrical_connection_acdc " + order)
 	case "spec_amperage":
-		query = query.Joins("LEFT JOIN specifications specs_sort ON specs_sort.id = field_devices.specification_id")
+		query = query.Joins("LEFT JOIN specifications specs_sort ON specs_sort.field_device_id = field_devices.id")
 		return query.Order("specs_sort.electrical_connection_amperage " + order)
 	case "spec_power":
-		query = query.Joins("LEFT JOIN specifications specs_sort ON specs_sort.id = field_devices.specification_id")
+		query = query.Joins("LEFT JOIN specifications specs_sort ON specs_sort.field_device_id = field_devices.id")
 		return query.Order("specs_sort.electrical_connection_power " + order)
 	case "spec_rotation":
-		query = query.Joins("LEFT JOIN specifications specs_sort ON specs_sort.id = field_devices.specification_id")
+		query = query.Joins("LEFT JOIN specifications specs_sort ON specs_sort.field_device_id = field_devices.id")
 		return query.Order("specs_sort.electrical_connection_rotation " + order)
 	case "created_at":
 		return query.Order("field_devices.created_at " + order)

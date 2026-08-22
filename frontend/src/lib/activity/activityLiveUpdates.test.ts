@@ -18,10 +18,10 @@ describe('project activity live updates', () => {
   });
 
   it('invalidates project and global activity caches and notifies only that project', () => {
-    const response = { items: [], page: 1, page_size: 25, total: 0, total_pages: 1 };
-    const projectKey = activityCacheKey('history:project:project-1', { page: 1, limit: 25 });
-    const globalKey = activityCacheKey('history:global', { page: 1, limit: 25 });
-    const otherProjectKey = activityCacheKey('history:project:project-2', { page: 1, limit: 25 });
+    const response = { items: [], next_cursor: 'next' };
+    const projectKey = activityCacheKey('history:project:project-1', { limit: 25 });
+    const globalKey = activityCacheKey('history:global', { limit: 25 });
+    const otherProjectKey = activityCacheKey('history:project:project-2', { limit: 25 });
     writeActivityCache(projectKey, response);
     writeActivityCache(globalKey, response);
     writeActivityCache(otherProjectKey, response);

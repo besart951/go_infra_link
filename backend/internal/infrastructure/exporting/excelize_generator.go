@@ -3,6 +3,7 @@ package exporting
 import (
 	"archive/zip"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -280,6 +281,7 @@ type machineDataSheets struct {
 	fieldDevices   *dataSheetWriter
 	specifications *dataSheetWriter
 	bacnetObjects  *dataSheetWriter
+	softwareRefs   *dataSheetWriter
 	alarmValues    *dataSheetWriter
 }
 
@@ -306,6 +308,12 @@ func newMachineDataSheets(file *excelize.File) (*machineDataSheets, error) {
 	if err != nil {
 		return nil, err
 	}
+	softwareRefs, err := newDataSheetWriter(file, "Data-SoftwareReferences", []string{
+		"source_object_id", "target_object_id", "field_device_id",
+	})
+	if err != nil {
+		return nil, err
+	}
 	alarmValues, err := newDataSheetWriter(file, "Data-AlarmValues", []string{
 		"source_id", "bacnet_object_id", "version", "alarm_type_field_id", "value_number", "value_integer",
 		"value_boolean", "value_string", "value_json", "unit_id", "source",
@@ -313,7 +321,10 @@ func newMachineDataSheets(file *excelize.File) (*machineDataSheets, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &machineDataSheets{fieldDevices: fieldDevices, specifications: specifications, bacnetObjects: bacnetObjects, alarmValues: alarmValues}, nil
+	return &machineDataSheets{
+		fieldDevices: fieldDevices, specifications: specifications, bacnetObjects: bacnetObjects,
+		softwareRefs: softwareRefs, alarmValues: alarmValues,
+	}, nil
 }
 
 func (s *machineDataSheets) Write(controller domainExport.Controller, device domainFacility.FieldDevice) error {
@@ -341,6 +352,13 @@ func (s *machineDataSheets) Write(controller domainExport.Controller, device dom
 		}); err != nil {
 			return err
 		}
+		if object.SoftwareReferenceID != nil {
+			if err := s.softwareRefs.Write([]any{
+				object.ID.String(), object.SoftwareReferenceID.String(), device.ID.String(),
+			}); err != nil {
+				return err
+			}
+		}
 		for _, value := range object.AlarmValues {
 			if err := s.alarmValues.Write([]any{
 				value.ID.String(), object.ID.String(), value.Version, value.AlarmTypeFieldID.String(), pointerValue(value.ValueNumber),
@@ -355,7 +373,10 @@ func (s *machineDataSheets) Write(controller domainExport.Controller, device dom
 }
 
 func (s *machineDataSheets) Close() error {
-	return errors.Join(s.fieldDevices.Close(), s.specifications.Close(), s.bacnetObjects.Close(), s.alarmValues.Close())
+	return errors.Join(
+		s.fieldDevices.Close(), s.specifications.Close(), s.bacnetObjects.Close(),
+		s.softwareRefs.Close(), s.alarmValues.Close(),
+	)
 }
 
 func writeExportManifest(file *excelize.File, req domainExport.Request) error {
@@ -366,22 +387,35 @@ func writeExportManifest(file *excelize.File, req domainExport.Request) error {
 	if err != nil {
 		return err
 	}
-	rows := [][]any{
+	for index, row := range exportManifestRows(req) {
+		if err := stream.SetRow(cell("A", index+1), anyToCells(row)); err != nil {
+			return err
+		}
+	}
+	return stream.Flush()
+}
+
+func exportManifestRows(req domainExport.Request) [][]any {
+	checksums, _ := json.Marshal(req.Manifest.SnapshotChecksums)
+	return [][]any{
 		{"schema_version", req.SchemaVersion},
 		{"snapshot_at", req.SnapshotAt.UTC().Format(time.RFC3339Nano)},
+		{"scope", req.AccessScope},
+		{"device_count", req.DeviceCount},
+		{"specification_count", req.Manifest.Counts.Specifications},
+		{"bacnet_object_count", req.Manifest.Counts.BacnetObjects},
+		{"software_reference_count", req.Manifest.Counts.SoftwareReferences},
+		{"alarm_value_count", req.Manifest.Counts.AlarmValues},
 		{"project_ids", joinUUIDs(req.ProjectIDs)},
 		{"building_ids", joinUUIDs(req.BuildingIDs)},
 		{"control_cabinet_ids", joinUUIDs(req.ControlCabinetIDs)},
 		{"sps_controller_ids", joinUUIDs(req.SPSControllerIDs)},
 		{"sps_controller_system_type_ids", joinUUIDs(req.SPSControllerSystemTypeIDs)},
 		{"search", req.Search},
+		{"workbook_shards", strings.Join(req.Manifest.WorkbookShards, ",")},
+		{"warnings", strings.Join(req.Manifest.Warnings, " | ")},
+		{"snapshot_checksums", string(checksums)},
 	}
-	for i, row := range rows {
-		if err := stream.SetRow(cell("A", i+1), anyToCells(row)); err != nil {
-			return err
-		}
-	}
-	return stream.Flush()
 }
 
 func stringSliceToAny(values []string) []any {
@@ -496,7 +530,8 @@ func (g *ExcelizeGenerator) GenerateZipByCabinet(ctx context.Context, outputPath
 	usedEntryNames := map[string]struct{}{}
 	var written int64
 
-	for cabinetID, cabinetControllers := range byCabinet {
+	for _, cabinetID := range sortedCabinetIDs(byCabinet) {
+		cabinetControllers := byCabinet[cabinetID]
 		select {
 		case <-ctx.Done():
 			return 0, ctx.Err()
@@ -545,6 +580,15 @@ func (g *ExcelizeGenerator) GenerateZipByCabinet(ctx context.Context, outputPath
 	}
 
 	return written, zw.Close()
+}
+
+func sortedCabinetIDs(items map[uuid.UUID][]domainExport.Controller) []uuid.UUID {
+	ids := make([]uuid.UUID, 0, len(items))
+	for id := range items {
+		ids = append(ids, id)
+	}
+	sort.Slice(ids, func(left, right int) bool { return ids[left].String() < ids[right].String() })
+	return ids
 }
 
 // ---------------------------------------------------------------------------

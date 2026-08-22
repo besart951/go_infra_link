@@ -14,6 +14,8 @@ func RegisterRoutes(protectedV1 *gin.RouterGroup, handler *Handler, authChecker 
 	history.GET("/timeline", middleware.RequirePermission(authChecker, user.PermissionTimelineRead), handler.ListTimeline)
 	history.GET("/events/:id", middleware.RequirePermission(authChecker, user.PermissionTimelineRead), handler.GetEvent)
 	history.POST("/events/:id/restore", middleware.RequirePermission(authChecker, user.PermissionTimelineRestore), handler.RestoreEntity)
+	history.POST("/events/:id/undo", middleware.RequirePermission(authChecker, user.PermissionTimelineRestore), handler.UndoEntity)
+	history.POST("/batches/:id/undo", middleware.RequirePermission(authChecker, user.PermissionTimelineRestore), handler.UndoBatch)
 	history.POST("/control-cabinets/:id/restore", middleware.RequirePermission(authChecker, user.PermissionTimelineRestore), handler.RestoreControlCabinet)
 
 	projects := protectedV1.Group("/projects/:id/history")

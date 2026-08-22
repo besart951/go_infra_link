@@ -304,7 +304,10 @@ export async function apiFetch(input: RequestInfo | URL, init?: RequestInit): Pr
   const request = new Request(input, init);
   const preparedRequest = new Request(request, {
     credentials: 'include',
-    headers: prepareHeaders(request.headers, request.body !== null)
+    headers: prepareHeaders(
+      request.headers,
+      request.body !== null && !(init?.body instanceof FormData)
+    )
   });
 
   return requestWithRetry(preparedRequest, {}, {});

@@ -25,9 +25,8 @@ export interface ChangeEventScope {
 
 export interface HistoryListResponse {
   items: ChangeEvent[];
-  total: number;
-  page: number;
-  total_pages: number;
+  next_cursor?: string;
+  previous_cursor?: string;
 }
 
 export interface RestoreResult {
@@ -47,6 +46,6 @@ export interface HistoryTimelineParams {
   occurredTo?: string;
   actions?: HistoryAction[];
   fields?: string[];
-  page?: number;
+  cursor?: string;
   limit?: number;
 }

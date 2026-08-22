@@ -56,8 +56,14 @@ func (s *Store) RestoreEntityToEvent(ctx context.Context, eventID uuid.UUID, mod
 
 	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		txStore := s.WithDB(tx)
+		if err := txStore.lockUndoEntity(ctx, event.EntityTable, event.EntityID); err != nil {
+			return err
+		}
 		before, _, err := txStore.LoadRow(ctx, event.EntityTable, event.EntityID)
 		if err != nil {
+			return err
+		}
+		if err := txStore.checkUndoConflict(ctx, undoPreflight{event: event, mode: mode, current: before}); err != nil {
 			return err
 		}
 
@@ -91,6 +97,88 @@ func (s *Store) RestoreEntityToEvent(ctx context.Context, eventID uuid.UUID, mod
 		return nil, err
 	}
 	return &result, nil
+}
+
+type undoPreflight struct {
+	event   *domainHistory.ChangeEvent
+	mode    domainHistory.RestoreMode
+	current domainHistory.JSONB
+}
+
+func (s *Store) checkUndoConflict(ctx context.Context, preflight undoPreflight) error {
+	expected := preflight.event.BeforeJSON
+	if preflight.mode == domainHistory.RestoreModeBefore {
+		expected = preflight.event.AfterJSON
+	}
+	newer, err := s.hasNewerEvent(ctx, preflight.event)
+	if err != nil {
+		return err
+	}
+	expectedVersion := snapshotVersion(expected)
+	currentVersion := snapshotVersion(preflight.current)
+	if !newer && snapshotsMatchExpectedState(undoSnapshotState{
+		expected: expected, current: preflight.current,
+		expectedVersion: expectedVersion, currentVersion: currentVersion,
+	}) {
+		return nil
+	}
+	return &domainHistory.UndoConflictError{Conflict: domainHistory.UndoConflict{
+		Code: "undo_conflict", EntityTable: preflight.event.EntityTable, EntityID: preflight.event.EntityID,
+		ExpectedVersion: expectedVersion, CurrentVersion: currentVersion, Fields: []string{"version"},
+	}}
+}
+
+func (s *Store) hasNewerEvent(ctx context.Context, event *domainHistory.ChangeEvent) (bool, error) {
+	var count int64
+	err := s.db.WithContext(ctx).Model(&domainHistory.ChangeEvent{}).
+		Where("entity_table = ? AND entity_id = ?", event.EntityTable, event.EntityID).
+		Where("occurred_at > ? OR (occurred_at = ? AND id > ?)", event.OccurredAt, event.OccurredAt, event.ID).
+		Limit(1).Count(&count).Error
+	return count > 0, err
+}
+
+func (s *Store) lockUndoEntity(ctx context.Context, table string, id uuid.UUID) error {
+	if s.db.Dialector == nil || s.db.Dialector.Name() != "postgres" {
+		return nil
+	}
+	key := table + ":" + id.String()
+	return s.db.WithContext(ctx).Exec("SELECT pg_advisory_xact_lock(hashtextextended(?, 0))", key).Error
+}
+
+type undoSnapshotState struct {
+	expected        domainHistory.JSONB
+	current         domainHistory.JSONB
+	expectedVersion *uint64
+	currentVersion  *uint64
+}
+
+func snapshotsMatchExpectedState(state undoSnapshotState) bool {
+	if len(state.expected) == 0 || len(state.current) == 0 {
+		return len(state.expected) == 0 && len(state.current) == 0
+	}
+	if state.expectedVersion == nil || state.currentVersion == nil {
+		return jsonEqual(state.expected, state.current)
+	}
+	return *state.expectedVersion == *state.currentVersion
+}
+
+func snapshotVersion(snapshot domainHistory.JSONB) *uint64 {
+	if len(snapshot) == 0 {
+		return nil
+	}
+	var values map[string]json.RawMessage
+	if json.Unmarshal(snapshot, &values) != nil {
+		return nil
+	}
+	raw, ok := values["version"]
+	if !ok {
+		return nil
+	}
+	var version uint64
+	if json.Unmarshal(raw, &version) != nil {
+		return nil
+	}
+	return &version
 }
 
 func (s *Store) RestoreControlCabinet(ctx context.Context, controlCabinetID uuid.UUID, req domainHistory.RestoreControlCabinetRequest) (*domainHistory.RestoreResult, error) {

@@ -31,3 +31,9 @@ type FieldDeviceStore interface {
 	// BulkCreate creates multiple field devices in batches.
 	BulkCreate(ctx context.Context, entities []*domainFacility.FieldDevice, batchSize int) error
 }
+
+// CursorReader is kept separate from FieldDeviceStore so legacy consumers do
+// not inherit pagination concerns they do not use.
+type CursorReader interface {
+	GetCursorPage(ctx context.Context, query domainFacility.FieldDeviceCursorQuery) (*domainFacility.FieldDeviceCursorPage, error)
+}

@@ -96,6 +96,7 @@ func fieldDeviceHandlers(handlers *Handlers) fielddevice.Handlers {
 		CreateFieldDeviceExport:        handlers.Export.CreateFieldDeviceExport,
 		GetExportStatus:                handlers.Export.GetExportStatus,
 		DownloadExport:                 handlers.Export.DownloadExport,
+		ImportFieldDevices:             handlers.Import.ImportFieldDevices,
 	}
 }
 

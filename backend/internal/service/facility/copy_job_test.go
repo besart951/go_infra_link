@@ -8,6 +8,7 @@ import (
 	"time"
 
 	apprealtime "github.com/besart951/go_infra_link/backend/internal/application/realtime"
+	cursorcodec "github.com/besart951/go_infra_link/backend/internal/cursor"
 	"github.com/google/uuid"
 )
 
@@ -166,6 +167,68 @@ func TestCopyJobManagerScopesIdempotencyKeysToTheirOwner(t *testing.T) {
 
 	finishCopies()
 	manager.Close()
+}
+
+func TestCopyJobManagerListsJobsWithBidirectionalOwnerScopedCursors(t *testing.T) {
+	manager := NewCopyJobManager(nil)
+	t.Cleanup(manager.Close)
+
+	ownerID := uuid.New()
+	updatedAt := time.Now().UTC()
+	wantIDs := make([]uuid.UUID, 7)
+	for i := range wantIDs {
+		wantIDs[i] = uuid.New()
+		job := CopyJob{
+			ID:        wantIDs[i],
+			OwnerID:   ownerID,
+			Status:    CopyJobStatusCompleted,
+			UpdatedAt: updatedAt.Add(-time.Duration(i) * time.Minute),
+		}
+		manager.jobs[copyJobKey{ownerID: ownerID, jobID: job.ID}] = job
+	}
+
+	first, err := manager.ListPage(ownerID, 3, "")
+	if err != nil {
+		t.Fatalf("list first page: %v", err)
+	}
+	assertJobIDs(t, first.Items, wantIDs[:3])
+	if first.NextCursor == "" || first.PreviousCursor != "" {
+		t.Fatalf("first page cursors = next %q previous %q", first.NextCursor, first.PreviousCursor)
+	}
+
+	second, err := manager.ListPage(ownerID, 3, first.NextCursor)
+	if err != nil {
+		t.Fatalf("list second page: %v", err)
+	}
+	assertJobIDs(t, second.Items, wantIDs[3:6])
+	if second.NextCursor == "" || second.PreviousCursor == "" {
+		t.Fatalf("second page cursors = next %q previous %q", second.NextCursor, second.PreviousCursor)
+	}
+
+	previous, err := manager.ListPage(ownerID, 3, second.PreviousCursor)
+	if err != nil {
+		t.Fatalf("list previous page: %v", err)
+	}
+	assertJobIDs(t, previous.Items, wantIDs[:3])
+	if previous.NextCursor == "" || previous.PreviousCursor != "" {
+		t.Fatalf("previous page cursors = next %q previous %q", previous.NextCursor, previous.PreviousCursor)
+	}
+
+	if _, err := manager.ListPage(uuid.New(), 3, first.NextCursor); !errors.Is(err, cursorcodec.ErrInvalid) {
+		t.Fatalf("cross-owner cursor error = %v, want invalid cursor", err)
+	}
+}
+
+func assertJobIDs(t *testing.T, jobs []CopyJob, want []uuid.UUID) {
+	t.Helper()
+	if len(jobs) != len(want) {
+		t.Fatalf("job count = %d, want %d", len(jobs), len(want))
+	}
+	for i := range want {
+		if jobs[i].ID != want[i] {
+			t.Fatalf("job %d = %s, want %s", i, jobs[i].ID, want[i])
+		}
+	}
 }
 
 func TestCopyJobManagerCloseCancelsActiveWorkAndRejectsNewJobs(t *testing.T) {

@@ -14,7 +14,8 @@ import type {
   AvailableApparatNumbersResponse,
   CreateFieldDeviceExportRequest,
   FieldDeviceExportJobResponse,
-  BacnetObject
+  BacnetObject,
+  FieldDeviceDeleteCommand
 } from '$lib/domain/facility/index.js';
 import { api } from '$lib/api/client.js';
 import { buildListUrl, mapPaginatedResponse } from './listHelpers.js';
@@ -23,6 +24,16 @@ import {
   getFieldDeviceOptions,
   getFieldDeviceOptionsForProject
 } from './fieldDeviceOptionsEndpoint.js';
+import type {
+  FieldDeviceCursorListParams,
+  FieldDeviceCursorPage
+} from '$lib/domain/ports/facility/fieldDeviceRepository.js';
+
+interface FieldDeviceCursorWire {
+  items: FieldDevice[];
+  next_cursor?: string;
+  previous_cursor?: string;
+}
 
 export const fieldDeviceRepository: FieldDeviceRepository = {
   async list(params: ListParams, signal?: AbortSignal): Promise<PaginatedResponse<FieldDevice>> {
@@ -32,6 +43,21 @@ export const fieldDeviceRepository: FieldDeviceRepository = {
     );
 
     return mapPaginatedResponse(response, params);
+  },
+
+  async listCursor(
+    params: FieldDeviceCursorListParams,
+    signal?: AbortSignal
+  ): Promise<FieldDeviceCursorPage> {
+    const searchParams = buildFieldDeviceCursorParams(params);
+    const response = await api<FieldDeviceCursorWire>(`/facility/field-devices?${searchParams}`, {
+      signal
+    });
+    return {
+      items: response.items,
+      ...(response.next_cursor ? { nextCursor: response.next_cursor } : {}),
+      ...(response.previous_cursor ? { previousCursor: response.previous_cursor } : {})
+    };
   },
 
   async get(id: string, signal?: AbortSignal): Promise<FieldDevice> {
@@ -58,8 +84,9 @@ export const fieldDeviceRepository: FieldDeviceRepository = {
     });
   },
 
-  async delete(id: string, signal?: AbortSignal): Promise<void> {
-    return api<void>(`/facility/field-devices/${id}`, {
+  async delete(command: FieldDeviceDeleteCommand, signal?: AbortSignal): Promise<void> {
+    const version = encodeURIComponent(String(command.base_version));
+    return api<void>(`/facility/field-devices/${command.id}?base_version=${version}`, {
       method: 'DELETE',
       signal
     });
@@ -87,10 +114,13 @@ export const fieldDeviceRepository: FieldDeviceRepository = {
     });
   },
 
-  async bulkDelete(ids: string[], signal?: AbortSignal): Promise<BulkDeleteFieldDeviceResponse> {
+  async bulkDelete(
+    commands: FieldDeviceDeleteCommand[],
+    signal?: AbortSignal
+  ): Promise<BulkDeleteFieldDeviceResponse> {
     return api<BulkDeleteFieldDeviceResponse>('/facility/field-devices/bulk-delete', {
       method: 'DELETE',
-      body: JSON.stringify({ ids }),
+      body: JSON.stringify({ items: commands }),
       signal
     });
   },
@@ -144,3 +174,15 @@ export const fieldDeviceRepository: FieldDeviceRepository = {
     return `/api/v1/facility/exports/jobs/${jobId}/download`;
   }
 };
+
+function buildFieldDeviceCursorParams(params: FieldDeviceCursorListParams): URLSearchParams {
+  const search = new URLSearchParams({ limit: String(params.limit) });
+  if (params.cursor) search.set('cursor', params.cursor);
+  if (params.search) search.set('search', params.search);
+  if (params.orderBy) search.set('order_by', params.orderBy);
+  if (params.order) search.set('order', params.order);
+  for (const [key, value] of Object.entries(params.filters ?? {})) {
+    if (value) search.set(key, value);
+  }
+  return search;
+}

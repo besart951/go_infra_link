@@ -1,5 +1,4 @@
 import { api } from '$lib/api/client.js';
-import { apiClient } from '$lib/api/generated/client.js';
 import type {
   ChangeEvent,
   ChangeEventScope,
@@ -7,18 +6,15 @@ import type {
   HistoryTimelineParams,
   RestoreResult
 } from '$lib/domain/history.js';
-import type { components } from '$lib/api/generated/schema.js';
 
 export const historyRepository = {
   async listTimeline(
     params: HistoryTimelineParams,
     signal?: AbortSignal
   ): Promise<HistoryListResponse> {
-    const { data } = await apiClient.GET('/api/v1/history/timeline', {
-      params: { query: toTimelineQuery(params) },
-      signal
-    });
-    return toHistoryListResponse(data);
+    return api<HistoryListResponseWire>(timelineURL('/history/timeline', params), { signal }).then(
+      toHistoryListResponse
+    );
   },
 
   async listProjectTimeline(
@@ -26,11 +22,10 @@ export const historyRepository = {
     params: HistoryTimelineParams = {},
     signal?: AbortSignal
   ): Promise<HistoryListResponse> {
-    const { data } = await apiClient.GET('/api/v1/projects/{id}/history/timeline', {
-      params: { path: { id: projectId }, query: toTimelineQuery(params) },
-      signal
-    });
-    return toHistoryListResponse(data);
+    return api<HistoryListResponseWire>(
+      timelineURL(`/projects/${projectId}/history/timeline`, params),
+      { signal }
+    ).then(toHistoryListResponse);
   },
 
   restoreEvent(
@@ -74,34 +69,41 @@ export const historyRepository = {
   }
 };
 
-type TimelineResponse =
-  components['schemas']['github_com_besart951_go_infra_link_backend_internal_handler_dto_history.TimelineResponse'];
-type TimelineEvent =
-  components['schemas']['github_com_besart951_go_infra_link_backend_internal_handler_dto_history.ChangeEventResponse'];
-
-function toTimelineQuery(params: HistoryTimelineParams) {
-  return {
-    scope_type: params.scopeType,
-    scope_id: params.scopeId,
-    entity_table: params.entityTable,
-    entity_id: params.entityId,
-    actor_id: params.actorId,
-    occurred_from: params.occurredFrom,
-    occurred_to: params.occurredTo,
-    action: params.actions,
-    field: params.fields,
-    page: params.page,
-    limit: params.limit
-  };
+interface HistoryListResponseWire {
+  items?: TimelineEvent[];
+  next_cursor?: string;
+  previous_cursor?: string;
 }
 
-function toHistoryListResponse(response: TimelineResponse | undefined): HistoryListResponse {
+type TimelineEvent = Partial<ChangeEvent>;
+
+function timelineURL(path: string, params: HistoryTimelineParams): string {
+  const query = new URLSearchParams();
+  setTimelineScalarParams(query, params);
+  for (const action of params.actions ?? []) query.append('action', action);
+  for (const field of params.fields ?? []) query.append('field', field);
+  const encoded = query.toString();
+  return `${path}${encoded ? `?${encoded}` : ''}`;
+}
+
+function setTimelineScalarParams(query: URLSearchParams, params: HistoryTimelineParams): void {
+  const values: Array<[string, string | number | undefined]> = [
+    ['scope_type', params.scopeType], ['scope_id', params.scopeId],
+    ['entity_table', params.entityTable], ['entity_id', params.entityId],
+    ['actor_id', params.actorId], ['occurred_from', params.occurredFrom],
+    ['occurred_to', params.occurredTo], ['cursor', params.cursor], ['limit', params.limit]
+  ];
+  for (const [key, value] of values) {
+    if (value !== undefined && value !== '') query.set(key, String(value));
+  }
+}
+
+function toHistoryListResponse(response: HistoryListResponseWire | undefined): HistoryListResponse {
   if (!response) throw new Error('Die Timeline-Antwort ist leer.');
   return {
     items: (response.items ?? []).map(toChangeEvent),
-    total: response.total ?? 0,
-    page: response.page ?? 1,
-    total_pages: response.total_pages ?? 1
+    ...(response.next_cursor ? { next_cursor: response.next_cursor } : {}),
+    ...(response.previous_cursor ? { previous_cursor: response.previous_cursor } : {})
   };
 }
 
@@ -138,6 +140,6 @@ function toChangeEventScope(scope: {
   return { scope_type: scope.scope_type, scope_id: scope.scope_id, label: scope.label };
 }
 
-function toJSONValue(value: Record<string, never> | undefined): Record<string, unknown> | null {
+function toJSONValue(value: Record<string, unknown> | null | undefined): Record<string, unknown> | null {
   return value ? (value as unknown as Record<string, unknown>) : null;
 }

@@ -64,6 +64,20 @@ type facilityJobIDMappingRecord struct {
 	CreatedAt  time.Time `gorm:"not null"`
 }
 
+type facilityAggregateLifecycleRecord struct {
+	Kind       string    `gorm:"type:varchar(64);primaryKey"`
+	ResourceID uuid.UUID `gorm:"type:uuid;primaryKey"`
+	State      string    `gorm:"type:varchar(32);not null;index"`
+	OwnerID    uuid.UUID `gorm:"type:uuid;not null;index"`
+	JobID      uuid.UUID `gorm:"type:uuid;not null;index"`
+	CreatedAt  time.Time `gorm:"not null"`
+	UpdatedAt  time.Time `gorm:"not null"`
+}
+
+func (facilityAggregateLifecycleRecord) TableName() string {
+	return "facility_aggregate_lifecycle"
+}
+
 func (facilityJobIDMappingRecord) TableName() string {
 	return "facility_job_id_mappings"
 }
@@ -75,7 +89,7 @@ func (copyJobRecord) TableName() string {
 // MigrateCopyJobs creates the durable store used by asynchronous facility
 // operations. It is exported only for the forward-only database migration.
 func MigrateCopyJobs(db *gorm.DB) error {
-	if err := db.AutoMigrate(&copyJobRecord{}, &facilityJobItemRecord{}, &facilityJobIDMappingRecord{}); err != nil {
+	if err := db.AutoMigrate(&copyJobRecord{}, &facilityJobItemRecord{}, &facilityJobIDMappingRecord{}, &facilityAggregateLifecycleRecord{}); err != nil {
 		return err
 	}
 	if db.Dialector != nil && db.Dialector.Name() == "postgres" {
@@ -96,6 +110,10 @@ func MigrateCopyJobs(db *gorm.DB) error {
 		ON facility_jobs (owner_id)
 		WHERE class = 'mutation' AND status IN ('queued', 'running')
 	`).Error
+}
+
+func MigrateFacilityAggregateLifecycle(db *gorm.DB) error {
+	return db.AutoMigrate(&facilityAggregateLifecycleRecord{})
 }
 
 type copyJobStore interface {
@@ -151,8 +169,11 @@ func (s *sqlCopyJobStore) CreateOrGetActive(ctx context.Context, candidate CopyJ
 			Order("created_at ASC").
 			First(&record).Error
 		if err == nil && candidate.Class == FacilityJobClassMutation {
-			selected = record.toDomain()
-			return nil
+			if candidate.Task == "" {
+				selected = record.toDomain()
+				return nil
+			}
+			return ErrFacilityJobLimit
 		}
 		if err == nil {
 			var activeExports int64
@@ -169,6 +190,9 @@ func (s *sqlCopyJobStore) CreateOrGetActive(ctx context.Context, candidate CopyJ
 			return err
 		}
 
+		if err := admitFacilityAggregate(tx, candidate); err != nil {
+			return err
+		}
 		record = copyJobRecordFromDomain(candidate)
 		if err := tx.Create(&record).Error; err != nil {
 			return err
@@ -201,6 +225,72 @@ func (s *sqlCopyJobStore) CreateOrGetActive(ctx context.Context, candidate CopyJ
 		return record.toDomain(), false, nil
 	}
 	return CopyJob{}, false, err
+}
+
+var facilityAggregateTables = map[CopyJobKind]string{
+	CopyJobKindControlCabinet:          "control_cabinets",
+	CopyJobKindSPSController:           "sps_controllers",
+	CopyJobKindSPSControllerSystemType: "sps_controller_system_types",
+	CopyJobKindFieldDevice:             "field_devices",
+	CopyJobKindObjectData:              "object_data",
+}
+
+func admitFacilityAggregate(tx *gorm.DB, job CopyJob) error {
+	if job.Admission == nil {
+		return nil
+	}
+	table, ok := facilityAggregateTables[job.Kind]
+	if !ok || job.Admission.ResourceID == uuid.Nil || job.Admission.State == "" {
+		return ErrAggregateNotFound
+	}
+	if err := lockFacilityAggregateRow(tx, table, job.Admission.ResourceID); err != nil {
+		if !job.Admission.AllowMissing || !errors.Is(err, ErrAggregateNotFound) {
+			return err
+		}
+	}
+	return createFacilityAggregateLock(tx, job)
+}
+
+func lockFacilityAggregateRow(tx *gorm.DB, table string, resourceID uuid.UUID) error {
+	var id string
+	query := tx.Table(table).Select("id").Where("id = ?", resourceID)
+	if tx.Dialector != nil && tx.Dialector.Name() == "postgres" {
+		query = query.Clauses(clause.Locking{Strength: "UPDATE"})
+	}
+	if err := query.Scan(&id).Error; err != nil {
+		return err
+	}
+	parsed, parseErr := uuid.Parse(id)
+	if parseErr != nil || parsed == uuid.Nil {
+		return ErrAggregateNotFound
+	}
+	return nil
+}
+
+func createFacilityAggregateLock(tx *gorm.DB, job CopyJob) error {
+	now := time.Now().UTC()
+	record := facilityAggregateLifecycleRecord{
+		Kind: string(job.Kind), ResourceID: job.Admission.ResourceID,
+		State: string(job.Admission.State), OwnerID: job.OwnerID, JobID: job.ID,
+		CreatedAt: now, UpdatedAt: now,
+	}
+	result := tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&record)
+	if result.Error != nil || result.RowsAffected == 1 {
+		return result.Error
+	}
+	return verifyFacilityAggregateLock(tx, record)
+}
+
+func verifyFacilityAggregateLock(tx *gorm.DB, expected facilityAggregateLifecycleRecord) error {
+	var existing facilityAggregateLifecycleRecord
+	err := tx.Where("kind = ? AND resource_id = ?", expected.Kind, expected.ResourceID).First(&existing).Error
+	if err != nil {
+		return err
+	}
+	if existing.OwnerID != expected.OwnerID || existing.JobID != expected.JobID || existing.State != expected.State {
+		return ErrAggregateLocked
+	}
+	return nil
 }
 
 func (s *sqlCopyJobStore) Get(ctx context.Context, ownerID, jobID uuid.UUID) (CopyJob, error) {

@@ -7,8 +7,10 @@ import (
 	"sync"
 	"time"
 
+	facilityjobs "github.com/besart951/go_infra_link/backend/internal/application/facilityjobs"
 	apprealtime "github.com/besart951/go_infra_link/backend/internal/application/realtime"
 	"github.com/besart951/go_infra_link/backend/internal/infrastructure/realtime"
+	"github.com/besart951/go_infra_link/backend/internal/repository/facilityjobsql"
 	facilityservice "github.com/besart951/go_infra_link/backend/internal/service/facility"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -19,6 +21,8 @@ type RuntimeAdapters struct {
 	SystemNotificationStream *realtime.SystemNotificationHub
 	FacilityReferenceData    *realtime.FacilityReferenceDataHub
 	CopyJobs                 *facilityservice.CopyJobManager
+	FacilityJobSteps         facilityjobs.StepStore
+	DB                       *gorm.DB
 	bus                      apprealtime.Bus
 	ownsBus                  bool
 	closeOnce                sync.Once
@@ -73,6 +77,10 @@ func NewRuntimeAdaptersWithBusAndStore(bus apprealtime.Bus, nodeID string, ownsB
 	facilityReferenceData := realtime.NewFacilityReferenceDataHub(
 		realtime.WithFacilityReferenceDataBus(bus, nodeID),
 	)
+	var jobSteps facilityjobs.StepStore
+	if db != nil {
+		jobSteps = facilityjobsql.NewStepStore(db)
+	}
 	return &RuntimeAdapters{
 		ProjectCollaboration: realtime.NewProjectCollaborationHub(options...),
 		SystemNotificationStream: realtime.NewSystemNotificationHub(
@@ -80,6 +88,8 @@ func NewRuntimeAdaptersWithBusAndStore(bus apprealtime.Bus, nodeID string, ownsB
 		),
 		FacilityReferenceData: facilityReferenceData,
 		CopyJobs:              facilityservice.NewCopyJobManagerWithDB(facilityReferenceData, db),
+		FacilityJobSteps:      jobSteps,
+		DB:                    db,
 		bus:                   bus,
 		ownsBus:               ownsBus,
 	}

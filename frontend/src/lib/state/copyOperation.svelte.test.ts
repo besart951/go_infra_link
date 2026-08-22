@@ -94,6 +94,7 @@ describe('CopyOperation', () => {
     });
     expect(start).toHaveBeenCalledOnce();
 
+    const eventTimestamp = new Date().toISOString();
     realtime.emitProgress({
       type: 'facility.copy_job.progress',
       job_id: jobId,
@@ -101,20 +102,24 @@ describe('CopyOperation', () => {
       status: 'running',
       progress: 63,
       stage: 'copying_field_devices',
-      updated_at: new Date().toISOString()
+      updated_at: eventTimestamp
     });
     expect(operation.progress).toBe(63);
 
-    realtime.emitProgress({
-      type: 'facility.copy_job.progress',
+    const completedAt = eventTimestamp;
+    const completedEvent = {
+      type: 'facility.job.progress',
       job_id: jobId,
       kind: 'sps_controller',
       status: 'completed',
       progress: 100,
       stage: 'completed',
-      updated_at: new Date().toISOString()
-    });
+      updated_at: completedAt
+    };
+    realtime.emitProgress(completedEvent);
+    realtime.emitProgress({ ...completedEvent, type: 'facility.copy_job.progress' });
     await vi.waitFor(() => expect(onCompleted).toHaveBeenCalledOnce());
+    expect(getCopyJob).toHaveBeenCalledOnce();
     expect(operation.isPending).toBe(false);
     expect(sessionStorage.getItem('facility-copy-job')).toBeNull();
   });

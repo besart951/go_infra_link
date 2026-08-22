@@ -132,11 +132,20 @@ func (s *timelineFilterService) ListTimeline(_ context.Context, filter domainHis
 	return &domain.PaginatedList[domainHistory.ChangeEvent]{Items: []domainHistory.ChangeEvent{}}, nil
 }
 
+func (s *timelineFilterService) ListTimelineCursor(_ context.Context, filter domainHistory.TimelineFilter) (*domainHistory.TimelineCursorPage, error) {
+	s.filter = filter
+	return &domainHistory.TimelineCursorPage{Items: []domainHistory.ChangeEvent{}}, nil
+}
+
 func (s *timelineFilterService) GetEvent(context.Context, uuid.UUID) (*domainHistory.ChangeEvent, error) {
 	return &domainHistory.ChangeEvent{}, nil
 }
 
 func (s *timelineFilterService) RestoreEntityToEvent(context.Context, uuid.UUID, domainHistory.RestoreMode) (*domainHistory.RestoreResult, error) {
+	return &domainHistory.RestoreResult{}, nil
+}
+
+func (s *timelineFilterService) UndoBatch(context.Context, uuid.UUID) (*domainHistory.RestoreResult, error) {
 	return &domainHistory.RestoreResult{}, nil
 }
 
@@ -148,11 +157,19 @@ func (historyServiceStub) ListTimeline(context.Context, domainHistory.TimelineFi
 	return &domain.PaginatedList[domainHistory.ChangeEvent]{Items: []domainHistory.ChangeEvent{}}, nil
 }
 
+func (historyServiceStub) ListTimelineCursor(context.Context, domainHistory.TimelineFilter) (*domainHistory.TimelineCursorPage, error) {
+	return &domainHistory.TimelineCursorPage{Items: []domainHistory.ChangeEvent{}}, nil
+}
+
 func (historyServiceStub) GetEvent(context.Context, uuid.UUID) (*domainHistory.ChangeEvent, error) {
 	return &domainHistory.ChangeEvent{}, nil
 }
 
 func (historyServiceStub) RestoreEntityToEvent(context.Context, uuid.UUID, domainHistory.RestoreMode) (*domainHistory.RestoreResult, error) {
+	return &domainHistory.RestoreResult{}, nil
+}
+
+func (historyServiceStub) UndoBatch(context.Context, uuid.UUID) (*domainHistory.RestoreResult, error) {
 	return &domainHistory.RestoreResult{}, nil
 }
 

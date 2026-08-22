@@ -73,8 +73,16 @@ func (s *Store) enrichScopeSummaries(ctx context.Context, events []domainHistory
 	}
 
 	var rows []scopeSummaryRow
+	v2, err := s.V2ReadsEnabled(ctx)
+	if err != nil {
+		return err
+	}
+	table := "change_event_scopes"
+	if v2 {
+		table = "change_event_scopes_v2"
+	}
 	if err := s.db.WithContext(ctx).
-		Table("change_event_scopes").
+		Table(table).
 		Select("change_event_id, scope_type, scope_id").
 		Where("change_event_id IN ?", eventIDs).
 		Order("scope_type ASC, scope_id ASC").

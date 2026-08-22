@@ -19,9 +19,9 @@ type spsControllerSystemTypeRepo struct {
 }
 
 func (r *spsControllerSystemTypeRepo) querySystemTypes(ctx context.Context) *gorm.DB {
-	return r.db.WithContext(ctx).
+	return activeSPSControllerSystemTypes(r.db.WithContext(ctx).
 		Model(&domainFacility.SPSControllerSystemType{}).
-		Omit("FieldDevicesCount")
+		Omit("FieldDevicesCount"))
 }
 
 func applySPSControllerSystemTypeSearch(query *gorm.DB, search string) *gorm.DB {
@@ -62,6 +62,19 @@ func (r *spsControllerSystemTypeRepo) GetByIds(ctx context.Context, ids []uuid.U
 		return nil, err
 	}
 	return items, r.attachFieldDeviceCounts(ctx, items)
+}
+
+func (r *spsControllerSystemTypeRepo) Update(ctx context.Context, entity *domainFacility.SPSControllerSystemType) error {
+	mutation := activeMutation{
+		target: activeMutationRequest{table: "sps_controller_system_types", id: entity.ID, query: func(tx *gorm.DB) *gorm.DB {
+			return activeSPSControllerSystemTypes(tx.Model(&domainFacility.SPSControllerSystemType{}))
+		}},
+		mutate: func(tx *gorm.DB) error {
+			repo := gormbase.NewBaseRepository[*domainFacility.SPSControllerSystemType](tx, nil)
+			return repo.Update(ctx, entity)
+		},
+	}
+	return runActiveMutation(ctx, r.db, mutation)
 }
 
 func (r *spsControllerSystemTypeRepo) GetPaginatedList(ctx context.Context, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.SPSControllerSystemType], error) {
@@ -267,7 +280,7 @@ func (r *spsControllerSystemTypeRepo) attachFieldDeviceCounts(ctx context.Contex
 
 func (r *spsControllerSystemTypeRepo) ListBySPSControllerID(ctx context.Context, spsControllerID uuid.UUID) ([]*domainFacility.SPSControllerSystemType, error) {
 	var items []*domainFacility.SPSControllerSystemType
-	err := r.db.WithContext(ctx).
+	err := activeSPSControllerSystemTypes(r.db.WithContext(ctx).Model(&domainFacility.SPSControllerSystemType{})).
 		Where("sps_controller_id = ?", spsControllerID).
 		Find(&items).Error
 	return items, err

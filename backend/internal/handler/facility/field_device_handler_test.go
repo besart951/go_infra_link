@@ -11,8 +11,12 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/facility"
+	"github.com/besart951/go_infra_link/backend/internal/handler/middleware"
+	facilityservice "github.com/besart951/go_infra_link/backend/internal/service/facility"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 )
 
 func TestListFieldDevicesReturnsAfterInvalidFilterParam(t *testing.T) {
@@ -98,7 +102,7 @@ func TestMultiCreateFieldDevicesBindJSONReturnsNestedValidationShape(t *testing.
 	}
 }
 
-func TestBulkDeleteFieldDevicesRejectsMoreThanSynchronousLimit(t *testing.T) {
+func TestBulkDeleteFieldDevicesRequiresDurableJobsAboveSynchronousLimit(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	service := &fakeFieldDeviceHandlerService{}
@@ -119,12 +123,107 @@ func TestBulkDeleteFieldDevicesRejectsMoreThanSynchronousLimit(t *testing.T) {
 
 	handler.BulkDeleteFieldDevices(context)
 
-	if recorder.Code != http.StatusBadRequest {
-		t.Fatalf("expected status 400, got %d body=%s", recorder.Code, recorder.Body.String())
+	if recorder.Code != http.StatusServiceUnavailable {
+		t.Fatalf("expected status 503, got %d body=%s", recorder.Code, recorder.Body.String())
 	}
 	if service.bulkDeleteCalls != 0 {
 		t.Fatalf("expected service not to be called, got %d call(s)", service.bulkDeleteCalls)
 	}
+}
+
+type versionedDeleteHandlerService struct {
+	*fakeFieldDeviceHandlerService
+	commands []domainFacility.FieldDeviceDeleteCommand
+}
+
+func (s *versionedDeleteHandlerService) Delete(_ context.Context, command domainFacility.FieldDeviceDeleteCommand) error {
+	s.commands = append(s.commands, command)
+	return nil
+}
+
+func (s *versionedDeleteHandlerService) BulkDeleteCommands(_ context.Context, commands []domainFacility.FieldDeviceDeleteCommand) *domainFacility.BulkOperationResult {
+	s.commands = append(s.commands, commands...)
+	return &domainFacility.BulkOperationResult{TotalCount: len(commands), SuccessCount: len(commands)}
+}
+
+func TestDeleteFieldDevicePassesRequestedBaseVersion(t *testing.T) {
+	service := &versionedDeleteHandlerService{fakeFieldDeviceHandlerService: &fakeFieldDeviceHandlerService{}}
+	handler := NewFieldDeviceHandler(service)
+	id := uuid.New()
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	context.Params = gin.Params{{Key: "id", Value: id.String()}}
+	context.Request = httptest.NewRequest(http.MethodDelete, "/field-devices/"+id.String()+"?base_version=7", nil)
+
+	handler.DeleteFieldDevice(context)
+
+	if context.Writer.Status() != http.StatusNoContent || len(service.commands) != 1 {
+		t.Fatalf("status=%d commands=%+v body=%s", context.Writer.Status(), service.commands, recorder.Body.String())
+	}
+	if service.commands[0].BaseVersion == nil || *service.commands[0].BaseVersion != 7 {
+		t.Fatalf("base version was not passed: %+v", service.commands[0])
+	}
+	if recorder.Header().Get("Deprecation") != "" {
+		t.Fatalf("versioned request was marked deprecated: %v", recorder.Header())
+	}
+}
+
+func TestBulkDeleteLegacyIDsEmitDeprecationHeader(t *testing.T) {
+	service := &versionedDeleteHandlerService{fakeFieldDeviceHandlerService: &fakeFieldDeviceHandlerService{}}
+	handler := NewFieldDeviceHandler(service)
+	body, _ := json.Marshal(dto.BulkDeleteFieldDeviceRequest{IDs: []uuid.UUID{uuid.New()}})
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	context.Request = httptest.NewRequest(http.MethodDelete, "/field-devices/bulk-delete", strings.NewReader(string(body)))
+	context.Request.Header.Set("Content-Type", "application/json")
+
+	handler.BulkDeleteFieldDevices(context)
+
+	if recorder.Code != http.StatusOK || recorder.Header().Get("Deprecation") != "true" {
+		t.Fatalf("status=%d headers=%v body=%s", recorder.Code, recorder.Header(), recorder.Body.String())
+	}
+}
+
+func TestBulkDeleteFieldDevicesQueuesDurableJobAboveSynchronousLimit(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open("file:bulk-handler?mode=memory&cache=shared"), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("open job database: %v", err)
+	}
+	if err := facilityservice.MigrateCopyJobs(db); err != nil {
+		t.Fatalf("migrate jobs: %v", err)
+	}
+	jobs := facilityservice.NewCopyJobManagerWithDB(nil, db)
+	t.Cleanup(jobs.Close)
+
+	service := &fakeFieldDeviceHandlerService{}
+	handler := NewFieldDeviceHandlerWithCopyJobs(service, nil, jobs)
+	request := dto.BulkDeleteFieldDeviceRequest{IDs: newFieldDeviceIDs(501)}
+	body, err := json.Marshal(request)
+	if err != nil {
+		t.Fatalf("marshal request: %v", err)
+	}
+
+	recorder := httptest.NewRecorder()
+	ginContext, _ := gin.CreateTestContext(recorder)
+	ginContext.Set(middleware.ContextUserIDKey, uuid.New())
+	ginContext.Request = httptest.NewRequest(http.MethodDelete, "/field-devices/bulk-delete", strings.NewReader(string(body)))
+	ginContext.Request.Header.Set("Content-Type", "application/json")
+	handler.BulkDeleteFieldDevices(ginContext)
+
+	if recorder.Code != http.StatusAccepted {
+		t.Fatalf("expected status 202, got %d body=%s", recorder.Code, recorder.Body.String())
+	}
+	if service.bulkDeleteCalls != 0 {
+		t.Fatalf("expected no synchronous service call, got %d", service.bulkDeleteCalls)
+	}
+}
+
+func newFieldDeviceIDs(count int) []uuid.UUID {
+	ids := make([]uuid.UUID, count)
+	for index := range ids {
+		ids[index] = uuid.New()
+	}
+	return ids
 }
 
 func TestListFieldDevicesAcceptsMultiValueFilterParam(t *testing.T) {
@@ -148,14 +247,28 @@ func TestListFieldDevicesAcceptsMultiValueFilterParam(t *testing.T) {
 	if recorder.Code != http.StatusOK {
 		t.Fatalf("expected status 200, got %d body=%s", recorder.Code, recorder.Body.String())
 	}
-	if service.listWithFiltersCalls != 1 {
-		t.Fatalf("expected service to be called once, got %d call(s)", service.listWithFiltersCalls)
+	if service.listCursorCalls != 1 {
+		t.Fatalf("expected cursor service to be called once, got %d call(s)", service.listCursorCalls)
 	}
 	if len(service.lastFilters.BuildingIDs) != 2 {
 		t.Fatalf("expected two building ids, got %+v", service.lastFilters.BuildingIDs)
 	}
 	if service.lastFilters.BuildingIDs[0] != firstBuildingID || service.lastFilters.BuildingIDs[1] != secondBuildingID {
 		t.Fatalf("unexpected building ids: %+v", service.lastFilters.BuildingIDs)
+	}
+}
+
+func TestListFieldDevicesUsesLegacyPaginationOnlyWhenPageIsPresent(t *testing.T) {
+	service := &fakeFieldDeviceHandlerService{}
+	handler := NewFieldDeviceHandler(service)
+	recorder := httptest.NewRecorder()
+	ginContext, _ := gin.CreateTestContext(recorder)
+	ginContext.Request = httptest.NewRequest(http.MethodGet, "/field-devices?page=1&limit=20", nil)
+
+	handler.ListFieldDevices(ginContext)
+
+	if recorder.Code != http.StatusOK || service.listWithFiltersCalls != 1 || service.listCursorCalls != 0 {
+		t.Fatalf("legacy response=%d legacy=%d cursor=%d", recorder.Code, service.listWithFiltersCalls, service.listCursorCalls)
 	}
 }
 
@@ -245,6 +358,7 @@ func (w *fieldDeviceStatusTrackingWriter) WriteHeader(code int) {
 
 type fakeFieldDeviceHandlerService struct {
 	listWithFiltersCalls int
+	listCursorCalls      int
 	listAvailableCalls   int
 	multiCreateCalls     int
 	bulkDeleteCalls      int
@@ -289,6 +403,15 @@ func (s *fakeFieldDeviceHandlerService) ListWithFilters(_ context.Context, _ dom
 		Page:       1,
 		TotalPages: 1,
 	}, nil
+}
+
+func (s *fakeFieldDeviceHandlerService) ListCursor(_ context.Context, query domainFacility.FieldDeviceCursorQuery) (*domainFacility.FieldDeviceCursorPage, error) {
+	s.listCursorCalls++
+	s.lastFilters = query.Filters
+	if s.listWithFiltersErr != nil {
+		return nil, s.listWithFiltersErr
+	}
+	return &domainFacility.FieldDeviceCursorPage{Items: []domainFacility.FieldDevice{}}, nil
 }
 
 func (s *fakeFieldDeviceHandlerService) ListAvailableApparatNumbers(context.Context, uuid.UUID, uuid.UUID, uuid.UUID) ([]int, error) {

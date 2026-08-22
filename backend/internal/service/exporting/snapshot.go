@@ -3,6 +3,7 @@ package exporting
 import (
 	"compress/gzip"
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -17,13 +18,36 @@ import (
 	"github.com/google/uuid"
 )
 
-const exportSnapshotSchemaVersion = 1
+const exportSnapshotSchemaVersion = 2
 
 type exportSnapshotManifest struct {
 	SchemaVersion int                       `json:"schema_version"`
 	SnapshotAt    time.Time                 `json:"snapshot_at"`
 	Controllers   []domainExport.Controller `json:"controllers"`
 	DeviceCount   int64                     `json:"device_count"`
+	Counts        domainExport.Counts       `json:"counts"`
+	Artifacts     []snapshotArtifact        `json:"artifacts"`
+}
+
+type snapshotArtifact struct {
+	ControllerID uuid.UUID `json:"controller_id"`
+	FileName     string    `json:"file_name"`
+	SHA256       string    `json:"sha256"`
+}
+
+type snapshotWriteRequest struct {
+	ctx        context.Context
+	directory  string
+	controller domainExport.Controller
+	source     domainExport.DataProvider
+	export     domainExport.Request
+	pageSize   int
+	report     func(int64)
+}
+
+type snapshotWriteResult struct {
+	artifact snapshotArtifact
+	counts   domainExport.Counts
 }
 
 type snapshotReadState struct {
@@ -66,17 +90,23 @@ func createOrOpenSnapshot(
 			return err
 		}
 		for _, controller := range controllers {
-			count, err := writeControllerSnapshot(ctx, directory, controller, source, req, pageSize, func(delta int64) {
-				manifest.DeviceCount += delta
-				if report != nil {
-					report(manifest.DeviceCount)
-				}
-			})
+			write := snapshotWriteRequest{
+				ctx: ctx, directory: directory, controller: controller, source: source,
+				export: req, pageSize: pageSize, report: func(delta int64) {
+					manifest.DeviceCount += delta
+					if report != nil {
+						report(manifest.DeviceCount)
+					}
+				},
+			}
+			result, err := writeControllerSnapshot(write)
 			if err != nil {
 				return err
 			}
-			if count > 0 {
+			if result.counts.FieldDevices > 0 {
 				manifest.Controllers = append(manifest.Controllers, controller)
+				manifest.Artifacts = append(manifest.Artifacts, result.artifact)
+				manifest.Counts.Add(result.counts)
 			}
 		}
 		return nil
@@ -96,32 +126,26 @@ func createOrOpenSnapshot(
 	return openSnapshot(directory)
 }
 
-func writeControllerSnapshot(
-	ctx context.Context,
-	directory string,
-	controller domainExport.Controller,
-	source domainExport.DataProvider,
-	req domainExport.Request,
-	pageSize int,
-	report func(int64),
-) (int64, error) {
-	finalPath := snapshotControllerPath(directory, controller.ID)
+func writeControllerSnapshot(request snapshotWriteRequest) (snapshotWriteResult, error) {
+	finalPath := snapshotControllerPath(request.directory, request.controller.ID)
 	partialPath := finalPath + ".partial"
 	file, err := os.OpenFile(partialPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o640)
 	if err != nil {
-		return 0, err
+		return snapshotWriteResult{}, err
 	}
 	compressed := gzip.NewWriter(file)
 	encoder := json.NewEncoder(compressed)
-	var count int64
+	var counts domainExport.Counts
 	afterID := uuid.Nil
 	writeErr := error(nil)
 	for {
-		if err := ctx.Err(); err != nil {
+		if err := request.ctx.Err(); err != nil {
 			writeErr = err
 			break
 		}
-		items, err := source.ListFieldDevicesByControllerAfter(ctx, controller.ID, req, afterID, pageSize)
+		items, err := request.source.ListFieldDevicesByControllerAfter(
+			request.ctx, request.controller.ID, request.export, afterID, request.pageSize,
+		)
 		if err != nil {
 			writeErr = err
 			break
@@ -138,60 +162,116 @@ func writeControllerSnapshot(
 		if writeErr != nil {
 			break
 		}
-		count += int64(len(items))
-		report(int64(len(items)))
+		counts.Add(countExportItems(items))
+		request.report(int64(len(items)))
 		afterID = items[len(items)-1].ID
-		if len(items) < pageSize {
+		if len(items) < request.pageSize {
 			break
 		}
 	}
 	writeErr = errors.Join(writeErr, compressed.Close(), file.Close())
 	if writeErr != nil {
 		_ = os.Remove(partialPath)
-		return 0, writeErr
+		return snapshotWriteResult{}, writeErr
 	}
-	if count == 0 {
+	if counts.FieldDevices == 0 {
 		_ = os.Remove(partialPath)
-		return 0, nil
+		return snapshotWriteResult{counts: counts}, nil
 	}
 	if err := os.Rename(partialPath, finalPath); err != nil {
 		_ = os.Remove(partialPath)
-		return 0, err
+		return snapshotWriteResult{}, err
 	}
-	return count, nil
+	checksum, err := snapshotChecksum(finalPath)
+	return snapshotWriteResult{
+		artifact: snapshotArtifact{
+			ControllerID: request.controller.ID, FileName: filepath.Base(finalPath), SHA256: checksum,
+		},
+		counts: counts,
+	}, err
+}
+
+func countExportItems(items []domainFacility.FieldDevice) domainExport.Counts {
+	counts := domainExport.Counts{FieldDevices: int64(len(items))}
+	for index := range items {
+		if items[index].Specification != nil {
+			counts.Specifications++
+		}
+		for _, object := range items[index].BacnetObjects {
+			counts.BacnetObjects++
+			counts.AlarmValues += int64(len(object.AlarmValues))
+			if object.SoftwareReferenceID != nil {
+				counts.SoftwareReferences++
+			}
+		}
+	}
+	return counts
+}
+
+func snapshotChecksum(path string) (string, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+	digest := sha256.New()
+	if _, err := io.Copy(digest, file); err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%x", digest.Sum(nil)), nil
 }
 
 func writeSnapshotManifest(directory string, manifest exportSnapshotManifest) error {
 	partial := filepath.Join(directory, "manifest.json.partial")
 	final := filepath.Join(directory, "manifest.json")
-	raw, err := json.Marshal(manifest)
+	file, err := os.OpenFile(partial, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o640)
 	if err != nil {
 		return err
 	}
-	if err := os.WriteFile(partial, raw, 0o640); err != nil {
+	encodeErr := json.NewEncoder(file).Encode(manifest)
+	closeErr := file.Close()
+	if err := errors.Join(encodeErr, closeErr); err != nil {
+		_ = os.Remove(partial)
 		return err
 	}
 	return os.Rename(partial, final)
 }
 
 func openSnapshot(directory string) (*snapshotDataProvider, error) {
-	raw, err := os.ReadFile(filepath.Join(directory, "manifest.json"))
+	file, err := os.Open(filepath.Join(directory, "manifest.json"))
 	if err != nil {
 		return nil, err
 	}
+	defer file.Close()
 	var manifest exportSnapshotManifest
-	if err := json.Unmarshal(raw, &manifest); err != nil {
+	if err := json.NewDecoder(file).Decode(&manifest); err != nil {
 		return nil, err
 	}
 	if manifest.SchemaVersion != exportSnapshotSchemaVersion || len(manifest.Controllers) == 0 {
 		return nil, errors.New("unsupported or empty export snapshot")
 	}
-	for _, controller := range manifest.Controllers {
-		if _, err := os.Stat(snapshotControllerPath(directory, controller.ID)); err != nil {
-			return nil, err
-		}
+	if err := validateSnapshotArtifacts(directory, manifest); err != nil {
+		return nil, err
 	}
 	return &snapshotDataProvider{directory: directory, manifest: manifest, states: make(map[uuid.UUID]*snapshotReadState)}, nil
+}
+
+func validateSnapshotArtifacts(directory string, manifest exportSnapshotManifest) error {
+	artifacts := make(map[uuid.UUID]snapshotArtifact, len(manifest.Artifacts))
+	for _, artifact := range manifest.Artifacts {
+		artifacts[artifact.ControllerID] = artifact
+	}
+	for _, controller := range manifest.Controllers {
+		artifact, ok := artifacts[controller.ID]
+		if !ok || artifact.SHA256 == "" {
+			return errors.New("export snapshot artifact manifest is incomplete")
+		}
+		checksum, err := snapshotChecksum(snapshotControllerPath(directory, controller.ID))
+		if err != nil || checksum != artifact.SHA256 {
+			return errors.New("export snapshot artifact checksum mismatch")
+		}
+	}
+	return nil
 }
 
 func (s *snapshotDataProvider) ResolveControllers(context.Context, domainExport.Request) ([]domainExport.Controller, error) {

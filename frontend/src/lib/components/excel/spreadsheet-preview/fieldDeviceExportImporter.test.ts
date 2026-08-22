@@ -286,6 +286,7 @@ describe('field device export importer', () => {
   it('marks already existing field devices as reusable on the source object name cell', () => {
     const existingFieldDevice: FieldDevice = {
       id: 'field-device-1',
+      version: 1,
       apparat_nr: '1',
       sps_controller_system_type_id: 'sps-controller-system-type-1',
       system_part_id: 'system-part-1',

@@ -71,7 +71,7 @@ func (r *objectDataRepo) GetPaginatedListWithFilters(ctx context.Context, params
 	page, limit := domain.NormalizePagination(params.Page, params.Limit, 10)
 	offset := (page - 1) * limit
 
-	query := r.db.WithContext(ctx).Model(&domainFacility.ObjectData{})
+	query := activeObjectData(r.db.WithContext(ctx).Model(&domainFacility.ObjectData{}))
 	if filters.ProjectID == nil {
 		query = query.Where("project_id IS NULL")
 	} else {
@@ -131,7 +131,8 @@ func NewObjectDataRepository(db *gorm.DB) domainObjectData.ObjectDataStore {
 
 func (r *objectDataRepo) GetByIds(ctx context.Context, ids []uuid.UUID) ([]*domainFacility.ObjectData, error) {
 	var items []*domainFacility.ObjectData
-	if err := r.withObjectDataPreloads(r.db.WithContext(ctx).Where("id IN ?", ids)).Find(&items).Error; err != nil {
+	query := activeObjectData(r.db.WithContext(ctx).Model(&domainFacility.ObjectData{})).Where("object_data.id IN ?", ids)
+	if err := r.withObjectDataPreloads(query).Find(&items).Error; err != nil {
 		return nil, err
 	}
 	return items, nil
@@ -139,7 +140,8 @@ func (r *objectDataRepo) GetByIds(ctx context.Context, ids []uuid.UUID) ([]*doma
 
 func (r *objectDataRepo) GetByID(ctx context.Context, id uuid.UUID) (*domainFacility.ObjectData, error) {
 	var item domainFacility.ObjectData
-	if err := r.withObjectDataPreloads(r.db.WithContext(ctx).Where("id = ?", id)).First(&item).Error; err != nil {
+	query := activeObjectData(r.db.WithContext(ctx).Model(&domainFacility.ObjectData{})).Where("object_data.id = ?", id)
+	if err := r.withObjectDataPreloads(query).First(&item).Error; err != nil {
 		return nil, err
 	}
 	return &item, nil
@@ -167,17 +169,21 @@ func (r *objectDataRepo) Create(ctx context.Context, entity *domainFacility.Obje
 }
 
 func (r *objectDataRepo) Update(ctx context.Context, entity *domainFacility.ObjectData) error {
-	// Mirror BaseRepository.Update behavior (Save) and sync Apparats association.
+	mutation := activeMutation{
+		target: activeMutationRequest{table: "object_data", id: entity.ID, query: func(tx *gorm.DB) *gorm.DB {
+			return activeObjectData(tx.Model(&domainFacility.ObjectData{}))
+		}},
+		mutate: func(tx *gorm.DB) error { return updateObjectData(ctx, tx, entity) },
+	}
+	return runActiveMutation(ctx, r.db, mutation)
+}
+
+func updateObjectData(ctx context.Context, tx *gorm.DB, entity *domainFacility.ObjectData) error {
 	entity.GetBase().TouchForUpdate(time.Now().UTC())
-	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := tx.Save(entity).Error; err != nil {
-			return err
-		}
-		if err := tx.Model(entity).Association("Apparats").Replace(entity.Apparats); err != nil {
-			return err
-		}
-		return nil
-	})
+	if err := tx.WithContext(ctx).Save(entity).Error; err != nil {
+		return err
+	}
+	return tx.WithContext(ctx).Model(entity).Association("Apparats").Replace(entity.Apparats)
 }
 
 func (r *objectDataRepo) GetPaginatedList(ctx context.Context, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.ObjectData], error) {

@@ -25,12 +25,6 @@ type ZipGenerator interface {
 	GenerateZipByCabinet(ctx context.Context, outputPath string, controllers []Controller, source DataProvider, req Request, pageSize int) (int64, error)
 }
 
-type JobStore interface {
-	Create(ctx context.Context, job Job) error
-	Update(ctx context.Context, job Job) error
-	Get(ctx context.Context, id uuid.UUID) (Job, error)
-}
-
 type FileStore interface {
 	BuildOutputPath(jobID uuid.UUID, outputType OutputType, downloadFileName string) (string, string)
 	BuildStagingPath(jobID uuid.UUID, outputType OutputType) string

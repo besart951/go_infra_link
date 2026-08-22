@@ -73,10 +73,15 @@ func TestFacilityCopyJobProgressIsOnlyDeliveredToTheOwningUser(t *testing.T) {
 		Progress: 50, Stage: "copying_controllers",
 	})
 
-	message := receiveSocketMessageOfType(t, ownerClient.socket, facilityCopyJobProgressEvent)
+	message := receiveSocketMessageOfType(t, ownerClient.socket, facilityJobProgressEvent)
 	if message["job_id"] != jobID.String() || message["progress"] != float64(50) {
 		t.Fatalf("copy job message = %#v, want job ID %s and progress 50", message, jobID)
 	}
+	legacy := receiveSocketMessageOfType(t, ownerClient.socket, facilityCopyJobProgressEvent)
+	if legacy["job_id"] != jobID.String() {
+		t.Fatalf("legacy copy job message = %#v, want job ID %s", legacy, jobID)
+	}
+	assertNoSocketMessageOfType(t, otherClient.socket, facilityJobProgressEvent)
 	assertNoSocketMessageOfType(t, otherClient.socket, facilityCopyJobProgressEvent)
 }
 

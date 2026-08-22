@@ -1,4 +1,8 @@
-import type { ChangeEvent, HistoryTimelineParams } from '$lib/domain/history.js';
+import type {
+  ChangeEvent,
+  HistoryListResponse,
+  HistoryTimelineParams
+} from '$lib/domain/history.js';
 import { getErrorMessage } from '$lib/api/client.js';
 import {
   activityCacheKey,
@@ -7,17 +11,25 @@ import {
   writeActivityCache
 } from './activityCache.js';
 import type { ActivityDataSource } from './contract.js';
+import { SvelteSet } from 'svelte/reactivity';
+
+interface ActivityLoadOptions {
+  append?: boolean;
+  force?: boolean;
+  cursor?: string;
+}
 
 export class ActivityTimelineController {
   events = $state.raw<ChangeEvent[]>([]);
   loading = $state(false);
   loadingMore = $state(false);
   error = $state<string | null>(null);
-  page = $state(0);
-  total = $state(0);
-  totalPages = $state(1);
+  nextCursor = $state<string | undefined>();
+  previousCursor = $state<string | undefined>();
   pendingLiveChanges = $state(0);
-  hasMore = $derived(this.page < this.totalPages);
+
+  readonly hasMore = $derived(Boolean(this.nextCursor));
+  readonly hasPrevious = $derived(Boolean(this.previousCursor));
 
   private requestId = 0;
   private controller: AbortController | undefined;
@@ -25,71 +37,31 @@ export class ActivityTimelineController {
 
   constructor(private readonly source: ActivityDataSource) {}
 
-  async load(
-    params: HistoryTimelineParams,
-    options: { append?: boolean; force?: boolean } = {}
-  ): Promise<void> {
+  async load(params: HistoryTimelineParams, options: ActivityLoadOptions = {}): Promise<void> {
     const append = options.append ?? false;
     if (append && (this.loading || this.loadingMore || !this.hasMore)) return;
+    const cursor = options.cursor ?? (append ? this.nextCursor : undefined);
+    const requestParams = { ...params, ...(cursor ? { cursor } : {}) };
+    const queryKey = activityQueryKey(this.source.cacheNamespace, params);
+    if (!append && queryKey !== this.activeQueryKey) this.resetQuery(queryKey);
 
-    const targetPage = append ? this.page + 1 : (params.page ?? 1);
-    const requestParams = { ...params, page: targetPage };
     const cacheKey = activityCacheKey(this.source.cacheNamespace, requestParams);
-    const queryKey = activityCacheKey(this.source.cacheNamespace, { ...params, page: 1 });
-    if (!append && this.activeQueryKey && this.activeQueryKey !== queryKey) {
-      this.events = [];
-      this.page = 0;
-      this.total = 0;
-      this.totalPages = 1;
+    const cached = options.force ? undefined : readActivityCache(cacheKey);
+    if (cached) {
+      this.applyResponse(cached, append);
+      return;
     }
-    if (!append) this.activeQueryKey = queryKey;
-    if (!append && !options.force) {
-      const cached = readActivityCache(cacheKey);
-      if (cached) {
-        this.applyResponse(
-          cached.items,
-          cached.total,
-          cached.page || targetPage,
-          cached.total_pages || 1,
-          false
-        );
-        return;
-      }
-    }
+    await this.fetch(requestParams, append);
+  }
 
-    this.controller?.abort();
-    const controller = new AbortController();
-    this.controller = controller;
-    const requestId = ++this.requestId;
-    this.error = null;
-    if (append) {
-      this.loadingMore = true;
-    } else {
-      this.loading = true;
-      this.loadingMore = false;
-    }
+  loadNext(params: HistoryTimelineParams): Promise<void> {
+    if (!this.nextCursor) return Promise.resolve();
+    return this.load(params, { cursor: this.nextCursor, force: true });
+  }
 
-    try {
-      const response = await this.source.list(requestParams, controller.signal);
-      if (requestId !== this.requestId) return;
-      writeActivityCache(cacheKey, response);
-      this.applyResponse(
-        response.items,
-        response.total,
-        response.page || targetPage,
-        response.total_pages || 1,
-        append
-      );
-      if (!append) this.pendingLiveChanges = 0;
-    } catch (error) {
-      if (requestId !== this.requestId || isAbortError(error)) return;
-      this.error = getErrorMessage(error);
-    } finally {
-      if (requestId === this.requestId) {
-        this.loading = false;
-        this.loadingMore = false;
-      }
-    }
+  loadPrevious(params: HistoryTimelineParams): Promise<void> {
+    if (!this.previousCursor) return Promise.resolve();
+    return this.load(params, { cursor: this.previousCursor, force: true });
   }
 
   markLiveChange(): void {
@@ -102,22 +74,58 @@ export class ActivityTimelineController {
     this.controller = undefined;
   }
 
-  private applyResponse(
-    items: ChangeEvent[],
-    total: number,
-    page: number,
-    totalPages: number,
-    append: boolean
-  ): void {
-    this.events = append ? mergeEvents(this.events, items) : items;
-    this.total = total;
-    this.page = page;
-    this.totalPages = Math.max(totalPages, 1);
+  private async fetch(params: HistoryTimelineParams, append: boolean): Promise<void> {
+    const request = this.startRequest(append);
+    try {
+      const response = await this.source.list(params, request.controller.signal);
+      if (request.id !== this.requestId) return;
+      writeActivityCache(activityCacheKey(this.source.cacheNamespace, params), response);
+      this.applyResponse(response, append);
+      if (!append) this.pendingLiveChanges = 0;
+    } catch (error) {
+      if (request.id !== this.requestId || isAbortError(error)) return;
+      this.error = getErrorMessage(error);
+    } finally {
+      if (request.id === this.requestId) this.finishRequest();
+    }
+  }
+
+  private startRequest(append: boolean): { id: number; controller: AbortController } {
+    this.controller?.abort();
+    const controller = new AbortController();
+    this.controller = controller;
+    this.error = null;
+    this.loading = !append;
+    this.loadingMore = append;
+    return { id: ++this.requestId, controller };
+  }
+
+  private finishRequest(): void {
+    this.loading = false;
+    this.loadingMore = false;
+  }
+
+  private applyResponse(response: HistoryListResponse, append: boolean): void {
+    this.events = append ? mergeEvents(this.events, response.items) : response.items;
+    this.nextCursor = response.next_cursor;
+    this.previousCursor = response.previous_cursor;
+  }
+
+  private resetQuery(queryKey: string): void {
+    this.activeQueryKey = queryKey;
+    this.events = [];
+    this.nextCursor = undefined;
+    this.previousCursor = undefined;
   }
 }
 
+function activityQueryKey(namespace: string, params: HistoryTimelineParams): string {
+  const { cursor: _cursor, ...query } = params;
+  return activityCacheKey(namespace, query);
+}
+
 function mergeEvents(existing: ChangeEvent[], incoming: ChangeEvent[]): ChangeEvent[] {
-  const seen = new Set(existing.map((event) => event.id));
+  const seen = new SvelteSet(existing.map((event) => event.id));
   return [...existing, ...incoming.filter((event) => !seen.has(event.id))];
 }
 

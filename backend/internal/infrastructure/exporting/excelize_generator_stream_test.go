@@ -64,7 +64,7 @@ func TestGenerateWorkbookStreamsPastFormerThreeHundredRowLimit(t *testing.T) {
 		t.Fatalf("OpenFile() error = %v", err)
 	}
 	defer func() { _ = workbook.Close() }()
-	for _, sheet := range []string{"Export-Manifest", "Data-FieldDevices", "Data-Specifications", "Data-BACnetObjects", "Data-AlarmValues"} {
+	for _, sheet := range []string{"Export-Manifest", "Data-FieldDevices", "Data-Specifications", "Data-BACnetObjects", "Data-SoftwareReferences", "Data-AlarmValues"} {
 		if index, err := workbook.GetSheetIndex(sheet); err != nil || index < 0 {
 			t.Fatalf("missing machine sheet %q (index=%d, error=%v)", sheet, index, err)
 		}

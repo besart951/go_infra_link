@@ -133,6 +133,22 @@ func (s *FieldDeviceService) ListWithFilters(ctx context.Context, params domain.
 	params.Limit = limit
 	return s.repo.GetPaginatedListWithFilters(ctx, params, filters)
 }
+
+func (s *FieldDeviceService) ListCursor(ctx context.Context, query domainFacility.FieldDeviceCursorQuery) (*domainFacility.FieldDeviceCursorPage, error) {
+	reader, ok := s.repo.(domainFieldDevice.CursorReader)
+	if !ok {
+		return nil, fmt.Errorf("field device cursor reader unavailable")
+	}
+	query.Limit = normalizeFieldDeviceCursorLimit(query.Limit)
+	return reader.GetCursorPage(ctx, query)
+}
+
+func normalizeFieldDeviceCursorLimit(limit int) int {
+	if limit <= 0 || limit > fieldDeviceListMaxLimit {
+		return fieldDeviceListDefaultLimit
+	}
+	return limit
+}
 func (s *FieldDeviceService) Update(ctx context.Context, fieldDevice *domainFacility.FieldDevice) error {
 	return s.writer().updateBase(ctx, fieldDevice)
 }
@@ -157,7 +173,48 @@ func (s *FieldDeviceService) Validate(ctx context.Context, fieldDevice *domainFa
 }
 
 func (s *FieldDeviceService) DeleteByID(ctx context.Context, id uuid.UUID) error {
-	return s.DeleteByIDs(ctx, []uuid.UUID{id})
+	return s.Delete(ctx, domainFacility.FieldDeviceDeleteCommand{ID: id})
+}
+
+type fieldDeviceVersionedDeleteStore interface {
+	DeleteAtVersion(ctx context.Context, command domainFacility.FieldDeviceDeleteCommand) error
+}
+
+func (s *FieldDeviceService) Delete(ctx context.Context, command domainFacility.FieldDeviceDeleteCommand) error {
+	return s.transaction().run(ctx, func(txCtx context.Context, txService *FieldDeviceService) error {
+		current, err := domain.GetByID(txCtx, txService.repo, command.ID)
+		if err != nil {
+			return err
+		}
+		if command.BaseVersion != nil && current.Version != *command.BaseVersion {
+			return domain.ErrConflict
+		}
+		version := current.Version
+		command.BaseVersion = &version
+		return txService.deleteFieldDevice(txCtx, command)
+	})
+}
+
+func (s *FieldDeviceService) deleteFieldDevice(ctx context.Context, command domainFacility.FieldDeviceDeleteCommand) error {
+	if s.bacnetObjectRepo != nil {
+		if err := s.bacnetObjectRepo.DeleteByFieldDeviceIDs(ctx, []uuid.UUID{command.ID}); err != nil {
+			return err
+		}
+	}
+	if s.specificationRepo != nil {
+		if err := s.specificationRepo.DeleteByFieldDeviceIDs(ctx, []uuid.UUID{command.ID}); err != nil {
+			return err
+		}
+	}
+	deleter, ok := s.repo.(fieldDeviceVersionedDeleteStore)
+	if !ok {
+		if err := s.repo.DeleteByIds(ctx, []uuid.UUID{command.ID}); err != nil {
+			return err
+		}
+	} else if err := deleter.DeleteAtVersion(ctx, command); err != nil {
+		return err
+	}
+	return s.recordFieldDeviceChange(ctx, changecapture.ActionDeleted, command.ID)
 }
 
 func (s *FieldDeviceService) DeleteByIDs(ctx context.Context, ids []uuid.UUID) error {
@@ -700,19 +757,27 @@ func (s *FieldDeviceService) BulkUpdate(ctx context.Context, updates []domainFac
 // BulkDelete deletes multiple field devices in a single operation.
 // It processes each deletion independently and returns detailed results.
 func (s *FieldDeviceService) BulkDelete(ctx context.Context, ids []uuid.UUID) *domainFacility.BulkOperationResult {
+	commands := make([]domainFacility.FieldDeviceDeleteCommand, len(ids))
+	for index, id := range ids {
+		commands[index] = domainFacility.FieldDeviceDeleteCommand{ID: id}
+	}
+	return s.BulkDeleteCommands(ctx, commands)
+}
+
+func (s *FieldDeviceService) BulkDeleteCommands(ctx context.Context, commands []domainFacility.FieldDeviceDeleteCommand) *domainFacility.BulkOperationResult {
 	result := &domainFacility.BulkOperationResult{
-		Results:      make([]domainFacility.BulkOperationResultItem, len(ids)),
-		TotalCount:   len(ids),
+		Results:      make([]domainFacility.BulkOperationResultItem, len(commands)),
+		TotalCount:   len(commands),
 		SuccessCount: 0,
 		FailureCount: 0,
 	}
 
-	for i, id := range ids {
+	for i, command := range commands {
 		resultItem := &result.Results[i]
-		resultItem.ID = id
+		resultItem.ID = command.ID
 		resultItem.Success = false
 
-		if err := s.DeleteByID(ctx, id); err != nil {
+		if err := s.Delete(ctx, command); err != nil {
 			resultItem.Error = err.Error()
 			result.FailureCount++
 			continue

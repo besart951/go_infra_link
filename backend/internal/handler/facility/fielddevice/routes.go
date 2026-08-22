@@ -25,6 +25,7 @@ type Handlers struct {
 	CreateFieldDeviceExport        gin.HandlerFunc
 	GetExportStatus                gin.HandlerFunc
 	DownloadExport                 gin.HandlerFunc
+	ImportFieldDevices             gin.HandlerFunc
 }
 
 func Routes(handlers Handlers) []routing.Definition {
@@ -46,6 +47,7 @@ func Routes(handlers Handlers) []routing.Definition {
 		routing.Patch("/field-devices/bulk-update", domainUser.PermissionFieldDeviceUpdate, handlers.BulkUpdateFieldDevices),
 		routing.Delete("/field-devices/bulk-delete", domainUser.PermissionFieldDeviceDelete, handlers.BulkDeleteFieldDevices),
 		routing.Post("/exports/field-devices", domainUser.PermissionFieldDeviceRead, handlers.CreateFieldDeviceExport),
+		routing.Post("/imports/field-devices", domainUser.PermissionFieldDeviceCreate, handlers.ImportFieldDevices),
 		routing.Get("/exports/jobs/:jobId", domainUser.PermissionFieldDeviceRead, handlers.GetExportStatus),
 		routing.Get("/exports/jobs/:jobId/download", domainUser.PermissionFieldDeviceRead, handlers.DownloadExport),
 	}

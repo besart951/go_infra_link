@@ -144,6 +144,7 @@
       "load_more": "Weitere Aktivitäten laden",
       "loading": "Wird geladen",
       "loaded_count": "{loaded} von {total} geladen",
+      "cursor_loaded_count": "{count} Aktivitäten geladen",
       "field_history_apparat": "Apparat-Verlauf",
       "field_history_system_part": "Systemteil-Verlauf"
     },
@@ -1132,6 +1133,7 @@
     "referenced_entity_in_use": "Der Eintrag wird noch von anderen Elementen referenziert und kann nicht gelöscht werden.",
     "bacnet_reference_delete_blocked": "Der Eintrag wird von BACnet-Objekten verwendet und kann nicht gelöscht werden.",
     "reference_delete_blocked": "Der Eintrag wird noch von Feldgeräten, Systemteilen oder Objektdaten verwendet und kann nicht gelöscht werden.",
+    "aggregate_locked": "Die Anlage wird gerade verarbeitet und kann bis zum Abschluss des Jobs nicht geändert werden.",
     "invalid_delete_impact_resource": "Ungültige Referenz für die Löschvorschau.",
     "invalid_bacnet_reference_resource": "Ungültige BACnet-Referenz.",
     "ids_required": "IDs erforderlich.",
@@ -1419,7 +1421,8 @@
     "worksheet_preview": {
       "loading_workbook": "Arbeitsmappe wird gelesen...",
       "toasts": {
-        "workbook_loaded": "Excel-Arbeitsmappe geladen."
+        "workbook_loaded": "Excel-Arbeitsmappe geladen.",
+        "archive_selected": "Exportpaket ausgewählt. Die enthaltenen Arbeitsmappen werden serverseitig geprüft."
       },
       "errors": {
         "no_worksheets": "Die Arbeitsmappe enthält keine Arbeitsblätter.",
@@ -1429,8 +1432,8 @@
       },
       "dropzone": {
         "aria_label": "Tabellendatei ablegen oder Dateiauswahl öffnen",
-        "title": "Excel- oder CSV-Datei hier ablegen",
-        "supported_formats": "Unterstützte Formate: .xlsx, .xlsm, .csv",
+        "title": "Excel-, CSV- oder Exportpaket hier ablegen",
+        "supported_formats": "Unterstützte Formate: .xlsx, .xlsm, .csv, .zip",
         "choose_file": "Datei auswählen"
       },
       "selector": {
@@ -1443,6 +1446,13 @@
         "empty_worksheet": "Das ausgewählte Arbeitsblatt enthält keine Werte.",
         "dimensions": "{rows} Zeilen | {columns} Spalten",
         "truncated": "Vorschau auf die ersten {count} Zeilen"
+      },
+      "versioned": {
+        "title": "Verlustfreier Feldgeräte-Import",
+        "description": "Die versionierten Datentabs werden vollständig geprüft. Erst danach werden Feldgeräte einzeln und transaktionssicher importiert.",
+        "import": "Geprüften Import starten",
+        "importing": "Import läuft...",
+        "result": "{imported} Feldgeräte importiert, {failed} fehlgeschlagen."
       }
     }
   },
@@ -2025,6 +2035,9 @@
     }
   },
   "field_device": {
+    "pagination": {
+      "cursor_hint": "Weitere Ergebnisse sind verfügbar"
+    },
     "actions": {
       "create": "Neue Feldgeräte",
       "hide_export": "Export ausblenden",

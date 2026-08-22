@@ -146,30 +146,7 @@ func (h *SPSControllerHandler) CopySPSController(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if startPersistedFacilityCopyJob(c, h.copyJobs, facilityservice.CopyJobKindSPSController, id) {
-		return
-	}
-	if startFacilityCopyJob(c, h.copyJobs, facilityservice.CopyJobKindSPSController, func(ctx context.Context, actorID uuid.UUID) error {
-		copyEntity, err := h.service.CopyByID(ctx, id)
-		if err == nil {
-			h.broadcastProjectDelta(ctx, &actorID, copyEntity)
-		}
-		return err
-	}) {
-		return
-	}
-
-	copyEntity, err := h.service.CopyByID(c.Request.Context(), id)
-	if err != nil {
-		respondLocalizedDomainError(c, err, "creation_failed", "facility.creation_failed",
-			localizedNotFound("facility.sps_controller_not_found"),
-			localizedConflict("facility.update_failed"),
-		)
-		return
-	}
-
-	h.broadcastProjectDelta(c.Request.Context(), currentActorID(c), copyEntity)
-	c.JSON(http.StatusCreated, toSPSControllerResponse(*copyEntity))
+	startPersistedFacilityCopyJob(c, h.copyJobs, facilityservice.CopyJobKindSPSController, id)
 }
 
 // ListSPSControllers godoc
@@ -318,7 +295,7 @@ func (h *SPSControllerHandler) UpdateSPSController(c *gin.Context) {
 // @Tags facility-sps-controllers
 // @Produce json
 // @Param id path string true "SPS Controller ID"
-// @Success 204
+// @Success 202 {object} dto.FacilityJobResponse
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 409 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
@@ -329,18 +306,5 @@ func (h *SPSControllerHandler) DeleteSPSController(c *gin.Context) {
 		return
 	}
 
-	ctx := c.Request.Context()
-	projectIDs := captureDeleteAudience(ctx, h.collaboration, "sps_controller", id)
-	if err := h.service.DeleteByID(ctx, id); err != nil {
-		respondLocalizedDomainError(c, err, "deletion_failed", "facility.deletion_failed",
-			localizedNotFound("facility.sps_controller_not_found"),
-			localizedReferenceInUse(),
-		)
-		return
-	}
-
-	if !broadcastCapturedDelete(ctx, h.collaboration, currentActorID(c), projectIDs, "sps_controller", id) {
-		h.broadcastProjectRefresh(ctx, currentActorID(c), id)
-	}
-	c.Status(http.StatusNoContent)
+	startPersistedFacilityDeleteJob(c, h.copyJobs, facilityservice.CopyJobKindSPSController, id)
 }

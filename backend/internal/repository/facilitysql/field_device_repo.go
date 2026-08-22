@@ -21,6 +21,10 @@ func (r *fieldDeviceRepo) GetExportPage(ctx context.Context, filters domainFacil
 	return newFieldDeviceQuery(r.db).ExportPage(ctx, filters, afterID, limit)
 }
 
+func (r *fieldDeviceRepo) GetCursorPage(ctx context.Context, query domainFacility.FieldDeviceCursorQuery) (*domainFacility.FieldDeviceCursorPage, error) {
+	return newFieldDeviceQuery(r.db).CursorPage(ctx, query)
+}
+
 func (r *fieldDeviceRepo) GetExportControllerIDs(ctx context.Context, filters domainFacility.FieldDeviceFilterParams, search string) ([]uuid.UUID, error) {
 	return newFieldDeviceQuery(r.db).ExportControllerIDs(ctx, filters, search)
 }
@@ -32,13 +36,44 @@ func NewFieldDeviceRepository(db *gorm.DB) domainFieldDevice.FieldDeviceStore {
 }
 
 func (r *fieldDeviceRepo) GetByIds(ctx context.Context, ids []uuid.UUID) ([]*domainFacility.FieldDevice, error) {
-	// FieldDevice needs to preload Specification
 	if len(ids) == 0 {
 		return []*domainFacility.FieldDevice{}, nil
 	}
 	var records []*FieldDeviceRecord
-	err := r.db.WithContext(ctx).Where("id IN ?", ids).Preload("Specification").Find(&records).Error
-	return toFieldDeviceDomains(records), err
+	query := activeFieldDevices(r.db.WithContext(ctx).Model(&FieldDeviceRecord{}))
+	if err := query.Where("field_devices.id IN ?", ids).Find(&records).Error; err != nil {
+		return nil, err
+	}
+	items := toFieldDeviceDomains(records)
+	if err := r.attachCanonicalSpecifications(ctx, items, ids); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+func (r *fieldDeviceRepo) attachCanonicalSpecifications(ctx context.Context, items []*domainFacility.FieldDevice, ids []uuid.UUID) error {
+	var specifications []*domainFacility.Specification
+	if err := r.db.WithContext(ctx).Where("field_device_id IN ?", ids).Find(&specifications).Error; err != nil {
+		return err
+	}
+	byDeviceID := make(map[uuid.UUID]*domainFacility.Specification, len(specifications))
+	for _, specification := range specifications {
+		if specification != nil && specification.FieldDeviceID != nil {
+			byDeviceID[*specification.FieldDeviceID] = specification
+		}
+	}
+	for _, item := range items {
+		attachCanonicalSpecification(item, byDeviceID[item.ID])
+	}
+	return nil
+}
+
+func attachCanonicalSpecification(item *domainFacility.FieldDevice, specification *domainFacility.Specification) {
+	if item == nil || specification == nil {
+		return
+	}
+	item.Specification = specification
+	item.SpecificationID = &specification.ID
 }
 
 func (r *fieldDeviceRepo) Create(ctx context.Context, entity *domainFacility.FieldDevice) error {
@@ -75,10 +110,20 @@ func (r *fieldDeviceRepo) BulkCreate(ctx context.Context, entities []*domainFaci
 }
 
 func (r *fieldDeviceRepo) Update(ctx context.Context, entity *domainFacility.FieldDevice) error {
+	mutation := activeMutation{
+		target: activeMutationRequest{table: "field_devices", id: entity.ID, query: func(tx *gorm.DB) *gorm.DB {
+			return activeFieldDevices(tx.Model(&FieldDeviceRecord{}))
+		}},
+		mutate: func(tx *gorm.DB) error { return updateFieldDeviceRecord(ctx, tx, entity) },
+	}
+	return runActiveMutation(ctx, r.db, mutation)
+}
+
+func updateFieldDeviceRecord(ctx context.Context, db *gorm.DB, entity *domainFacility.FieldDevice) error {
 	expectedVersion := entity.Version
 	entity.Base.TouchForUpdate(time.Now().UTC())
 	record := toFieldDeviceRecord(entity)
-	query := r.db.WithContext(ctx).Model(&FieldDeviceRecord{}).
+	query := db.WithContext(ctx).Model(&FieldDeviceRecord{}).
 		Where("id = ?", entity.ID)
 	if expectedVersion > 0 {
 		query = query.Where("version = ?", expectedVersion)
@@ -108,6 +153,21 @@ func (r *fieldDeviceRepo) DeleteByIds(ctx context.Context, ids []uuid.UUID) erro
 	}
 
 	return r.db.WithContext(ctx).Where("id IN ?", ids).Delete(&FieldDeviceRecord{}).Error
+}
+
+func (r *fieldDeviceRepo) DeleteAtVersion(ctx context.Context, command domainFacility.FieldDeviceDeleteCommand) error {
+	if command.BaseVersion == nil {
+		return domain.ErrInvalidArgument
+	}
+	query := activeFieldDevices(r.db.WithContext(ctx).Model(&FieldDeviceRecord{}))
+	result := query.Where("field_devices.id = ? AND field_devices.version = ?", command.ID, *command.BaseVersion).Delete(&FieldDeviceRecord{})
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return domain.ErrConflict
+	}
+	return nil
 }
 
 func (r *fieldDeviceRepo) DeleteBySPSControllerSystemTypeIDs(ctx context.Context, systemTypeIDs []uuid.UUID) error {

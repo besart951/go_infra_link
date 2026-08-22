@@ -1,6 +1,7 @@
 package history
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -91,6 +92,20 @@ type TimelineFilter struct {
 	Fields             []string
 	Page               int
 	Limit              int
+	Cursor             string
+}
+
+type TimelineCursorPage struct {
+	Items          []ChangeEvent
+	NextCursor     string
+	PreviousCursor string
+}
+
+type TimelineCursorAnchor struct {
+	Direction   string    `json:"direction"`
+	Fingerprint string    `json:"fingerprint"`
+	OccurredAt  time.Time `json:"occurred_at"`
+	ID          uuid.UUID `json:"id"`
 }
 
 type RestoreMode string
@@ -111,9 +126,35 @@ type RestoreControlCabinetRequest struct {
 	ProjectID *uuid.UUID `json:"project_id"`
 }
 
+const TaskRestoreControlCabinet = "controlcabinet.restore.v1"
+
+type RestoreControlCabinetJobPayload struct {
+	ControlCabinetID uuid.UUID  `json:"control_cabinet_id"`
+	ProjectID        *uuid.UUID `json:"project_id,omitempty"`
+	AsOf             *time.Time `json:"as_of,omitempty"`
+	EventID          *uuid.UUID `json:"event_id,omitempty"`
+}
+
 type RestoreResult struct {
 	RestoredCount int       `json:"restored_count"`
 	DeletedCount  int       `json:"deleted_count"`
 	SkippedCount  int       `json:"skipped_count"`
 	BatchID       uuid.UUID `json:"batch_id"`
+}
+
+type UndoConflict struct {
+	Code            string
+	EntityTable     string
+	EntityID        uuid.UUID
+	ExpectedVersion *uint64
+	CurrentVersion  *uint64
+	Fields          []string
+}
+
+type UndoConflictError struct {
+	Conflict UndoConflict
+}
+
+func (e *UndoConflictError) Error() string {
+	return fmt.Sprintf("undo conflict for %s %s", e.Conflict.EntityTable, e.Conflict.EntityID)
 }

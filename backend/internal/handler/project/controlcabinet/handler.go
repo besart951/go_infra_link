@@ -10,7 +10,6 @@ import (
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	facilitydto "github.com/besart951/go_infra_link/backend/internal/handler/dto/facility"
 	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/project"
-	sharedpresenter "github.com/besart951/go_infra_link/backend/internal/handler/presenter/shared"
 	projectshared "github.com/besart951/go_infra_link/backend/internal/handler/project/shared"
 	"github.com/besart951/go_infra_link/backend/internal/handlerutil"
 	facilityservice "github.com/besart951/go_infra_link/backend/internal/service/facility"
@@ -33,7 +32,6 @@ type Handler struct {
 }
 
 type ProjectControlCabinetDeltaNotifier func(*gin.Context, uuid.UUID, domainFacility.ControlCabinet)
-type ProjectCopyJobNotifier = projectshared.ProjectCopyJobNotifier
 
 // copyJobResponseContract keeps Swag's imported DTO reference available while
 // the shared project-link module writes the asynchronous response.
@@ -47,8 +45,8 @@ func NewHandler(access projectshared.AccessPolicyService, facilityLink FacilityL
 	return &Handler{base: projectshared.NewFacilityLinkHandler(access, notify), facilityLink: facilityLink, notifyDelta: delta}
 }
 
-func (h *Handler) ConfigureCopyJobs(copyJobs *facilityservice.CopyJobManager, notify ProjectCopyJobNotifier) {
-	h.base.ConfigureCopyJobs(copyJobs, notify)
+func (h *Handler) ConfigureCopyJobs(copyJobs *facilityservice.CopyJobManager) {
+	h.base.ConfigureCopyJobs(copyJobs)
 }
 
 // CreateProjectControlCabinet godoc
@@ -152,33 +150,12 @@ func (h *Handler) CopyProjectControlCabinet(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if h.base.StartCopy(c, projectID, facilityservice.CopyJobKindControlCabinet, "project.control_cabinet.copied", func(ctx context.Context) (string, error) {
-		copyEntity, err := h.facilityLink.CopyControlCabinet(ctx, projectID, controlCabinetID)
-		if err != nil {
-			return "", err
-		}
-		return copyEntity.ID.String(), nil
-	}) {
-		return
-	}
-
-	copyEntity, err := h.facilityLink.CopyControlCabinet(c.Request.Context(), projectID, controlCabinetID)
-	if err != nil {
-		handlerutil.RespondDomainError(c, err,
-			handlerutil.LocalizedError(http.StatusInternalServerError, "creation_failed", "project.creation_failed"),
-			handlerutil.MapError(domain.ErrNotFound, handlerutil.LocalizedError(http.StatusNotFound, "not_found", "facility.control_cabinet_not_found")),
-			handlerutil.MapError(domain.ErrConflict, handlerutil.LocalizedError(http.StatusConflict, "conflict", "project.creation_failed")),
-		)
-		return
-	}
-
-	if h.notifyDelta != nil {
-		h.notifyDelta(c, projectID, *copyEntity)
-	} else {
-		h.base.Notify(c, projectID, "project.control_cabinet.copied", copyEntity.ID.String())
-	}
-
-	c.JSON(http.StatusCreated, sharedpresenter.ToControlCabinetResponse(*copyEntity))
+	h.base.StartCopy(c, projectshared.ProjectCopyCommand{
+		ProjectID: projectID,
+		SourceID:  controlCabinetID,
+		Kind:      facilityservice.CopyJobKindControlCabinet,
+		Task:      domainProject.TaskCopyProjectControlCabinet,
+	})
 }
 
 // UpdateProjectControlCabinet godoc

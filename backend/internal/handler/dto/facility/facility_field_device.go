@@ -62,6 +62,12 @@ type FieldDeviceListResponse struct {
 	TotalPages int                   `json:"total_pages"`
 }
 
+type FieldDeviceCursorResponse struct {
+	Items          []FieldDeviceResponse `json:"items"`
+	NextCursor     string                `json:"next_cursor,omitempty"`
+	PreviousCursor string                `json:"previous_cursor,omitempty"`
+}
+
 type AvailableApparatNumbersResponse struct {
 	Available []int `json:"available"`
 }
@@ -78,7 +84,7 @@ type FieldDeviceOptionsResponse struct {
 
 // MultiCreateFieldDeviceRequest represents a request to create multiple field devices
 type MultiCreateFieldDeviceRequest struct {
-	FieldDevices []CreateFieldDeviceRequest `json:"field_devices" binding:"required,min=1,max=500,dive"`
+	FieldDevices []CreateFieldDeviceRequest `json:"field_devices" binding:"required,min=1,dive"`
 }
 
 // FieldDeviceCreateResultResponse represents the result of creating a single field device
@@ -129,7 +135,7 @@ type BulkUpdateFieldDeviceItem struct {
 
 // BulkUpdateFieldDeviceRequest represents a request to update multiple field devices
 type BulkUpdateFieldDeviceRequest struct {
-	Updates []BulkUpdateFieldDeviceItem `json:"updates" binding:"required,min=1,max=500,dive"`
+	Updates []BulkUpdateFieldDeviceItem `json:"updates" binding:"required,min=1,dive"`
 }
 
 // BulkOperationResultItem represents the result of a single item in a bulk operation
@@ -155,7 +161,13 @@ type BulkUpdateFieldDeviceResponse struct {
 
 // BulkDeleteFieldDeviceRequest represents a request to delete multiple field devices
 type BulkDeleteFieldDeviceRequest struct {
-	IDs []uuid.UUID `json:"ids" binding:"required,min=1,max=500"`
+	IDs   []uuid.UUID                 `json:"ids,omitempty"`
+	Items []BulkDeleteFieldDeviceItem `json:"items,omitempty" binding:"omitempty,dive"`
+}
+
+type BulkDeleteFieldDeviceItem struct {
+	ID          uuid.UUID `json:"id" binding:"required"`
+	BaseVersion *uint64   `json:"base_version" binding:"required,min=1"`
 }
 
 // BulkDeleteFieldDeviceResponse represents the response from a bulk delete operation

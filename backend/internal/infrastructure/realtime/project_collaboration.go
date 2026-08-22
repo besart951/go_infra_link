@@ -13,6 +13,7 @@ import (
 
 	apprealtime "github.com/besart951/go_infra_link/backend/internal/application/realtime"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
+	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
 	"github.com/google/uuid"
 )
 
@@ -112,6 +113,24 @@ type ProjectChange struct {
 	ChangedFields []string          `json:"changed_fields"`
 	ParentRefs    map[string]string `json:"parent_refs"`
 	OccurredAt    time.Time         `json:"occurred_at"`
+}
+
+// ProjectChangeFromDomain is the single adapter from the durable project
+// change model to its realtime representation.
+func ProjectChangeFromDomain(change domainProject.Change) (ProjectChange, bool) {
+	if change.AggregateID == nil {
+		return ProjectChange{}, false
+	}
+	parentRefs := make(map[string]string, len(change.ParentRefs))
+	for key, value := range change.ParentRefs {
+		parentRefs[key] = value.String()
+	}
+	return ProjectChange{
+		ProjectID: change.ProjectID, Revision: int64(change.Revision), EventID: change.EventID,
+		AggregateType: change.AggregateType, AggregateID: *change.AggregateID,
+		Action: string(change.Action), ActorID: change.ActorID, ChangedFields: change.ChangedFields,
+		ParentRefs: parentRefs, OccurredAt: change.OccurredAt,
+	}, true
 }
 
 type projectCollaborationProjectChangeMessage struct {

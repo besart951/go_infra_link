@@ -86,8 +86,10 @@ type Repositories struct {
 
 type HistoryRepository interface {
 	ListTimeline(ctx context.Context, filter domainHistory.TimelineFilter) (*domain.PaginatedList[domainHistory.ChangeEvent], error)
+	ListTimelineCursor(ctx context.Context, filter domainHistory.TimelineFilter) (*domainHistory.TimelineCursorPage, error)
 	GetEvent(ctx context.Context, id uuid.UUID) (*domainHistory.ChangeEvent, error)
 	RestoreEntityToEvent(ctx context.Context, eventID uuid.UUID, mode domainHistory.RestoreMode) (*domainHistory.RestoreResult, error)
+	UndoBatch(ctx context.Context, batchID uuid.UUID) (*domainHistory.RestoreResult, error)
 	RestoreControlCabinet(ctx context.Context, controlCabinetID uuid.UUID, req domainHistory.RestoreControlCabinetRequest) (*domainHistory.RestoreResult, error)
 }
 

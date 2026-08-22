@@ -1,7 +1,6 @@
 package facility
 
 import (
-	"context"
 	"net/http"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
@@ -9,7 +8,6 @@ import (
 	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/facility"
 	facilityservice "github.com/besart951/go_infra_link/backend/internal/service/facility"
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
 // CreateSPSControllerSystemType godoc
@@ -211,31 +209,7 @@ func (h *SPSControllerSystemTypeHandler) CopySPSControllerSystemType(c *gin.Cont
 	if !ok {
 		return
 	}
-	if startPersistedFacilityCopyJob(c, h.copyJobs, facilityservice.CopyJobKindSPSControllerSystemType, id) {
-		return
-	}
-	if startFacilityCopyJob(c, h.copyJobs, facilityservice.CopyJobKindSPSControllerSystemType, func(ctx context.Context, actorID uuid.UUID) error {
-		copyEntity, err := h.service.CopyByID(ctx, id)
-		if err == nil && h.collaboration != nil {
-			h.collaboration.BroadcastSPSControllerSystemTypeChange(ctx, &actorID, copyEntity.SPSControllerID, copyEntity.ID, "created")
-		}
-		return err
-	}) {
-		return
-	}
-
-	copyEntity, err := h.service.CopyByID(c.Request.Context(), id)
-	if err != nil {
-		respondLocalizedDomainError(c, err, "creation_failed", "facility.creation_failed",
-			localizedNotFound("facility.sps_controller_system_type_not_found"),
-		)
-		return
-	}
-
-	if h.collaboration != nil {
-		h.collaboration.BroadcastSPSControllerSystemTypeChange(c.Request.Context(), currentActorID(c), copyEntity.SPSControllerID, copyEntity.ID, "created")
-	}
-	c.JSON(http.StatusCreated, toSPSControllerSystemTypeResponse(*copyEntity))
+	startPersistedFacilityCopyJob(c, h.copyJobs, facilityservice.CopyJobKindSPSControllerSystemType, id)
 }
 
 // DeleteSPSControllerSystemType godoc
@@ -243,7 +217,7 @@ func (h *SPSControllerSystemTypeHandler) CopySPSControllerSystemType(c *gin.Cont
 // @Tags facility-sps-controller-system-types
 // @Produce json
 // @Param id path string true "SPS Controller System Type ID"
-// @Success 204
+// @Success 202 {object} dto.FacilityJobResponse
 // @Failure 400 {object} ErrorResponse
 // @Failure 404 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
@@ -254,20 +228,5 @@ func (h *SPSControllerSystemTypeHandler) DeleteSPSControllerSystemType(c *gin.Co
 		return
 	}
 
-	item, err := h.service.GetByID(c.Request.Context(), id)
-	if err != nil {
-		respondLocalizedDomainError(c, err, "deletion_failed", "facility.deletion_failed", localizedNotFound("facility.sps_controller_system_type_not_found"))
-		return
-	}
-	if err := h.service.DeleteByID(c.Request.Context(), id); err != nil {
-		respondLocalizedDomainError(c, err, "deletion_failed", "facility.deletion_failed",
-			localizedNotFound("facility.sps_controller_system_type_not_found"),
-		)
-		return
-	}
-	if h.collaboration != nil {
-		h.collaboration.BroadcastSPSControllerSystemTypeChange(c.Request.Context(), currentActorID(c), item.SPSControllerID, item.ID, "deleted")
-	}
-
-	c.Status(http.StatusNoContent)
+	startPersistedFacilityDeleteJob(c, h.copyJobs, facilityservice.CopyJobKindSPSControllerSystemType, id)
 }

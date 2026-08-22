@@ -20,7 +20,7 @@ export function activityCacheKey(namespace: string, params: HistoryTimelineParam
     ['actor_id', params.actorId],
     ['occurred_from', params.occurredFrom],
     ['occurred_to', params.occurredTo],
-    ['page', params.page?.toString()],
+    ['cursor', params.cursor],
     ['limit', params.limit?.toString()]
   ];
   for (const [key, value] of values) {

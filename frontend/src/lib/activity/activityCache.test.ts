@@ -10,10 +10,7 @@ import {
 } from './activityCache.js';
 
 const response: HistoryListResponse = {
-  items: [],
-  total: 0,
-  page: 1,
-  total_pages: 1
+  items: []
 };
 
 afterEach(() => {
@@ -26,12 +23,12 @@ describe('activityCache', () => {
     const first: HistoryTimelineParams = {
       fields: ['apparat_id', 'system_part_id'],
       actions: ['update', 'create'],
-      page: 1
+      cursor: 'cursor-1'
     };
     const second: HistoryTimelineParams = {
       fields: ['system_part_id', 'apparat_id'],
       actions: ['create', 'update'],
-      page: 1
+      cursor: 'cursor-1'
     };
 
     expect(activityCacheKey('history:global', first)).toBe(
@@ -42,7 +39,7 @@ describe('activityCache', () => {
   it('keeps a scope page for thirty minutes and expires it afterwards', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-08-15T10:00:00Z'));
-    const key = activityCacheKey('history:project:project-1', { page: 1 });
+    const key = activityCacheKey('history:project:project-1', { cursor: 'cursor-1' });
 
     writeActivityCache(key, response);
     expect(readActivityCache(key)).toBe(response);
@@ -55,8 +52,8 @@ describe('activityCache', () => {
   });
 
   it('invalidates only the live project scope that changed', () => {
-    const changed = activityCacheKey('history:project:project-1', { page: 1 });
-    const untouched = activityCacheKey('history:project:project-2', { page: 1 });
+    const changed = activityCacheKey('history:project:project-1', { cursor: 'cursor-1' });
+    const untouched = activityCacheKey('history:project:project-2', { cursor: 'cursor-1' });
     writeActivityCache(changed, response);
     writeActivityCache(untouched, response);
 

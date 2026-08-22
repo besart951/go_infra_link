@@ -3553,12 +3553,14 @@ export type paths = {
             };
             requestBody?: never;
             responses: {
-                /** @description No Content */
-                204: {
+                /** @description Accepted */
+                202: {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FacilityJobResponse"];
+                    };
                 };
                 /** @description Bad Request */
                 400: {
@@ -4115,6 +4117,8 @@ export type paths = {
                     building_id?: string;
                     /** @description Filter by control cabinet ID(s), accepts a single UUID or a | separated list */
                     control_cabinet_id?: string;
+                    /** @description Opaque keyset cursor; omit page to use cursor pagination */
+                    cursor?: string;
                     /** @description Items per page */
                     limit?: number;
                     /** @description Order direction (asc, desc) */
@@ -4144,7 +4148,7 @@ export type paths = {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FieldDeviceListResponse"];
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FieldDeviceCursorResponse"];
                     };
                 };
                 /** @description Bad Request */
@@ -4288,7 +4292,10 @@ export type paths = {
         /** Delete a field device */
         delete: {
             parameters: {
-                query?: never;
+                query?: {
+                    /** @description Expected aggregate version; required after the compatibility release */
+                    base_version?: number;
+                };
                 header?: never;
                 path: {
                     /** @description Field Device ID */
@@ -5052,6 +5059,61 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/facility/imports/field-devices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Import a versioned field-device workbook */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "multipart/form-data": {
+                        /**
+                         * Format: binary
+                         * @description Versioned XLSX export or ZIP workbook package
+                         */
+                        file: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_application_fielddeviceimport.Result"];
+                    };
+                };
+                /** @description Unprocessable Entity */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_application_fielddeviceimport.Result"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/facility/jobs": {
         parameters: {
             query?: never;
@@ -5764,7 +5826,7 @@ export type paths = {
         };
         /**
          * Stream facility reference-data changes
-         * @description Upgrades the authenticated request to the shared facility WebSocket. `facility_reference_data.changed` tells authorized clients to refresh cached apparats and system parts. `facility.changed` carries authorized facility resource changes with an action, IDs, actor and timestamp. User-scoped `facility.copy_job.progress` events contain a copy job ID, status, stage and 0-100 progress; they are only delivered to the user that started the job.
+         * @description Upgrades the authenticated request to the shared facility WebSocket. `facility_reference_data.changed` tells authorized clients to refresh cached apparats and system parts. `facility.changed` carries authorized facility resource changes with an action, IDs, actor and timestamp. User-scoped `facility.job.progress` events contain job type, status, stage and 0-100 progress; copy jobs temporarily also emit the legacy `facility.copy_job.progress` alias. Events are delivered only to the user that started the job.
          */
         get: {
             parameters: {
@@ -6059,12 +6121,14 @@ export type paths = {
             };
             requestBody?: never;
             responses: {
-                /** @description No Content */
-                204: {
+                /** @description Accepted */
+                202: {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FacilityJobResponse"];
+                    };
                 };
                 /** @description Bad Request */
                 400: {
@@ -6528,12 +6592,14 @@ export type paths = {
             };
             requestBody?: never;
             responses: {
-                /** @description No Content */
-                204: {
+                /** @description Accepted */
+                202: {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FacilityJobResponse"];
+                    };
                 };
                 /** @description Bad Request */
                 400: {
@@ -7781,6 +7847,66 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/history/control-cabinets/{id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Restore a control-cabinet hierarchy asynchronously */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    /** @description Stable operation UUID */
+                    "Idempotency-Key"?: string;
+                };
+                path: {
+                    /** @description Control cabinet UUID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: components["requestBodies"]["github_com_besart951_go_infra_link_backend_internal_domain_history.RestoreControlCabinetRequest"];
+            responses: {
+                /** @description Accepted */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FacilityJobResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_history.ErrorResponse"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_history.ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/history/timeline": {
         parameters: {
             query?: never;
@@ -7799,6 +7925,8 @@ export type paths = {
                     action?: string[];
                     /** @description Actor UUID */
                     actor_id?: string;
+                    /** @description Opaque keyset cursor; omit page to use cursor pagination */
+                    cursor?: string;
                     /** @description Entity UUID */
                     entity_id?: string;
                     /** @description Entity table */
@@ -7811,7 +7939,7 @@ export type paths = {
                     occurred_from?: string;
                     /** @description Latest ISO-8601 timestamp */
                     occurred_to?: string;
-                    /** @description Page number */
+                    /** @description Legacy page number */
                     page?: number;
                     /** @description Scope UUID */
                     scope_id?: string;
@@ -7830,7 +7958,7 @@ export type paths = {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_history.TimelineResponse"];
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_history.TimelineCursorResponse"];
                     };
                 };
                 /** @description Bad Request */
@@ -10223,6 +10351,68 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/projects/{id}/history/control-cabinets/{controlCabinetId}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Restore a project-scoped control-cabinet hierarchy asynchronously */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    /** @description Stable operation UUID */
+                    "Idempotency-Key"?: string;
+                };
+                path: {
+                    /** @description Control cabinet UUID */
+                    controlCabinetId: string;
+                    /** @description Project UUID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: components["requestBodies"]["github_com_besart951_go_infra_link_backend_internal_domain_history.RestoreControlCabinetRequest"];
+            responses: {
+                /** @description Accepted */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FacilityJobResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_history.ErrorResponse"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_history.ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/projects/{id}/history/timeline": {
         parameters: {
             query?: never;
@@ -10241,6 +10431,8 @@ export type paths = {
                     action?: string[];
                     /** @description Actor UUID */
                     actor_id?: string;
+                    /** @description Opaque keyset cursor; omit page to use cursor pagination */
+                    cursor?: string;
                     /** @description Entity UUID */
                     entity_id?: string;
                     /** @description Entity table */
@@ -10253,7 +10445,7 @@ export type paths = {
                     occurred_from?: string;
                     /** @description Latest ISO-8601 timestamp */
                     occurred_to?: string;
-                    /** @description Page number */
+                    /** @description Legacy page number */
                     page?: number;
                     /** @description Secondary scope UUID */
                     scope_id?: string;
@@ -12278,6 +12470,25 @@ export type paths = {
 export type webhooks = Record<string, never>;
 export type components = {
     schemas: {
+        "github_com_besart951_go_infra_link_backend_internal_application_fielddeviceimport.Issue": {
+            code?: string;
+            entity?: string;
+            field?: string;
+            message?: string;
+            source_id?: string;
+        };
+        "github_com_besart951_go_infra_link_backend_internal_application_fielddeviceimport.Result": {
+            failed?: number;
+            import_id?: string;
+            imported?: number;
+            issues?: components["schemas"]["github_com_besart951_go_infra_link_backend_internal_application_fielddeviceimport.Issue"][];
+            total?: number;
+        };
+        "github_com_besart951_go_infra_link_backend_internal_domain_history.RestoreControlCabinetRequest": {
+            as_of?: string;
+            event_id?: string;
+            project_id?: string;
+        };
         /** @enum {string} */
         "github_com_besart951_go_infra_link_backend_internal_domain_project.ProjectStatus": "planned" | "ongoing" | "completed";
         /** @enum {string} */
@@ -12533,8 +12744,13 @@ export type components = {
             updated_at?: string;
             version?: number;
         };
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BulkDeleteFieldDeviceItem": {
+            base_version: number;
+            id: string;
+        };
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BulkDeleteFieldDeviceRequest": {
-            ids: string[];
+            ids?: string[];
+            items?: components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BulkDeleteFieldDeviceItem"][];
         };
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BulkDeleteFieldDeviceResponse": {
             failure_count?: number;
@@ -12875,16 +13091,15 @@ export type components = {
             /** @description Whether the creation succeeded */
             success?: boolean;
         };
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FieldDeviceCursorResponse": {
+            items?: components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FieldDeviceResponse"][];
+            next_cursor?: string;
+            previous_cursor?: string;
+        };
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FieldDeviceDetailResponse": {
             capabilities?: components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.DetailCapabilities"];
             field_device?: components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FieldDeviceResponse"];
             relations?: components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.DetailRelation"][];
-        };
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FieldDeviceListResponse": {
-            items?: components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FieldDeviceResponse"][];
-            page?: number;
-            total?: number;
-            total_pages?: number;
         };
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FieldDeviceOptionsResponse": {
             /** @description apparat_id -> [system_part_ids] */
@@ -13355,6 +13570,11 @@ export type components = {
             label?: string;
             scope_id?: string;
             scope_type?: string;
+        };
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_history.TimelineCursorResponse": {
+            items?: components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_history.ChangeEventResponse"][];
+            next_cursor?: string;
+            previous_cursor?: string;
         };
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_history.TimelineResponse": {
             items?: components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_history.ChangeEventResponse"][];
@@ -13985,6 +14205,12 @@ export type components = {
     responses: never;
     parameters: never;
     requestBodies: {
+        /** @description Restore checkpoint */
+        "github_com_besart951_go_infra_link_backend_internal_domain_history.RestoreControlCabinetRequest": {
+            content: {
+                "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_domain_history.RestoreControlCabinetRequest"];
+            };
+        };
         /** @description Building data */
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateBuildingRequest": {
             content: {

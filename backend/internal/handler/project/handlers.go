@@ -1,8 +1,6 @@
 package project
 
 import (
-	"context"
-
 	"github.com/besart951/go_infra_link/backend/internal/handler/middleware"
 	changeshandler "github.com/besart951/go_infra_link/backend/internal/handler/project/changes"
 	controlcabinethandler "github.com/besart951/go_infra_link/backend/internal/handler/project/controlcabinet"
@@ -11,10 +9,8 @@ import (
 	objectdatahandler "github.com/besart951/go_infra_link/backend/internal/handler/project/objectdata"
 	phasehandler "github.com/besart951/go_infra_link/backend/internal/handler/project/phase"
 	phasepermissionhandler "github.com/besart951/go_infra_link/backend/internal/handler/project/phasepermission"
-	projectshared "github.com/besart951/go_infra_link/backend/internal/handler/project/shared"
 	spscontrollerhandler "github.com/besart951/go_infra_link/backend/internal/handler/project/spscontroller"
 	facilityservice "github.com/besart951/go_infra_link/backend/internal/service/facility"
-	"github.com/google/uuid"
 )
 
 type Handlers struct {
@@ -60,13 +56,10 @@ func NewHandlers(deps ServiceDeps) *Handlers {
 		workflow = newWorkflowFromServices(deps.Lifecycle, deps.Membership)
 	}
 	projectHandler := newProjectHandler(deps.Lifecycle, deps.AccessPolicy, deps.Membership, workflow, deps.FacilityLink, collaboration, deps.Notifications, deps.Changes)
-	notifyCopy := projectshared.ProjectCopyJobNotifier(func(ctx context.Context, actorID *uuid.UUID, projectID uuid.UUID, eventType, entityID string) {
-		projectHandler.notifyProjectChangeForActor(ctx, actorID, projectID, eventType, entityID)
-	})
 	controlCabinetHandler := controlcabinethandler.NewHandler(deps.AccessPolicy, deps.FacilityLink, projectHandler.notifyProjectChange, projectHandler.notifyProjectControlCabinetDelta)
-	controlCabinetHandler.ConfigureCopyJobs(deps.CopyJobs, notifyCopy)
+	controlCabinetHandler.ConfigureCopyJobs(deps.CopyJobs)
 	spsControllerHandler := spscontrollerhandler.NewHandler(deps.AccessPolicy, deps.FacilityLink, projectHandler.notifyProjectChange, projectHandler.notifyProjectSPSControllerDelta)
-	spsControllerHandler.ConfigureCopyJobs(deps.CopyJobs, notifyCopy)
+	spsControllerHandler.ConfigureCopyJobs(deps.CopyJobs)
 
 	fieldDeviceHandler := fielddevicehandler.NewHandler(deps.AccessPolicy, deps.FacilityLink, projectHandler.notifyProjectChange, projectHandler.notifyProjectFieldDeviceDelta)
 	fieldDeviceHandler.ConfigureExport(deps.Export)

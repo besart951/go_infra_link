@@ -162,9 +162,8 @@
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div class="text-sm text-muted-foreground">
           {timeline
-            ? translate('history.activity.loaded_count', {
-                loaded: timeline.events.length,
-                total: timeline.total
+            ? translate('history.activity.cursor_loaded_count', {
+                count: timeline.events.length
               })
             : ''}
         </div>
@@ -181,9 +180,11 @@
           <Button
             variant="outline"
             size="sm"
-            disabled={!timeline || timeline.loading || timeline.loadingMore || timeline.page <= 1}
-            onclick={() =>
-              void timeline?.load({ ...params, page: timeline.page - 2 }, { force: true })}
+            disabled={!timeline ||
+              timeline.loading ||
+              timeline.loadingMore ||
+              !timeline.hasPrevious}
+            onclick={() => void timeline?.loadPrevious(params)}
           >
             <ChevronLeftIcon class="size-4" />
             {translate('common.back')}
@@ -192,7 +193,7 @@
             variant="outline"
             size="sm"
             disabled={!timeline || timeline.loading || timeline.loadingMore || !timeline.hasMore}
-            onclick={() => void timeline?.load(params, { append: true })}
+            onclick={() => void timeline?.loadNext(params)}
           >
             {translate('common.next')}
             <ChevronRightIcon class="size-4" />

@@ -44,6 +44,7 @@ export function buildBacnetObject(overrides: Partial<BacnetObject> = {}): Bacnet
 export function buildFieldDevice(overrides: Partial<FieldDevice> = {}): FieldDevice {
   return {
     id: 'fd-1',
+    version: 1,
     bmk: 'FD-001',
     description: 'Field Device',
     text_fix: 'TXT-1',

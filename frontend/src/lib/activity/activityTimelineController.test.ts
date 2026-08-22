@@ -14,9 +14,7 @@ function response(id: string) {
         entity_id: 'field-device-1'
       }
     ],
-    total: 1,
-    page: 1,
-    total_pages: 1
+    next_cursor: 'next-page'
   };
 }
 
@@ -61,5 +59,26 @@ describe('ActivityTimelineController', () => {
     await first;
 
     expect(controller.events.map((event) => event.id)).toEqual(['new-event']);
+  });
+
+  it('uses the server cursor and appends the next page without duplicates', async () => {
+    const first = response('event-1');
+    const second = { ...response('event-2'), next_cursor: undefined, previous_cursor: 'previous' };
+    const source: ActivityDataSource = {
+      cacheNamespace: 'test:cursor',
+      list: vi.fn().mockResolvedValueOnce(first).mockResolvedValueOnce(second)
+    };
+    const controller = new ActivityTimelineController(source);
+
+    await controller.load({ limit: 25 });
+    await controller.load({ limit: 25 }, { append: true });
+
+    expect(source.list).toHaveBeenLastCalledWith(
+      { limit: 25, cursor: 'next-page' },
+      expect.any(AbortSignal)
+    );
+    expect(controller.events.map((event) => event.id)).toEqual(['event-1', 'event-2']);
+    expect(controller.hasMore).toBe(false);
+    expect(controller.hasPrevious).toBe(true);
   });
 });

@@ -1,4 +1,41 @@
 definitions:
+  github_com_besart951_go_infra_link_backend_internal_application_fielddeviceimport.Issue:
+    properties:
+      code:
+        type: string
+      entity:
+        type: string
+      field:
+        type: string
+      message:
+        type: string
+      source_id:
+        type: string
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_application_fielddeviceimport.Result:
+    properties:
+      failed:
+        type: integer
+      import_id:
+        type: string
+      imported:
+        type: integer
+      issues:
+        items:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_application_fielddeviceimport.Issue'
+        type: array
+      total:
+        type: integer
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_domain_history.RestoreControlCabinetRequest:
+    properties:
+      as_of:
+        type: string
+      event_id:
+        type: string
+      project_id:
+        type: string
+    type: object
   github_com_besart951_go_infra_link_backend_internal_domain_project.ProjectStatus:
     enum:
     - planned
@@ -554,16 +591,27 @@ definitions:
       version:
         type: integer
     type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BulkDeleteFieldDeviceItem:
+    properties:
+      base_version:
+        minimum: 1
+        type: integer
+      id:
+        type: string
+    required:
+    - base_version
+    - id
+    type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BulkDeleteFieldDeviceRequest:
     properties:
       ids:
         items:
           type: string
-        maxItems: 500
-        minItems: 1
         type: array
-    required:
-    - ids
+      items:
+        items:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BulkDeleteFieldDeviceItem'
+        type: array
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BulkDeleteFieldDeviceResponse:
     properties:
@@ -642,7 +690,6 @@ definitions:
       updates:
         items:
           $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BulkUpdateFieldDeviceItem'
-        maxItems: 500
         minItems: 1
         type: array
     required:
@@ -1374,6 +1421,17 @@ definitions:
         description: Whether the creation succeeded
         type: boolean
     type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FieldDeviceCursorResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FieldDeviceResponse'
+        type: array
+      next_cursor:
+        type: string
+      previous_cursor:
+        type: string
+    type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FieldDeviceDetailResponse:
     properties:
       capabilities:
@@ -1384,19 +1442,6 @@ definitions:
         items:
           $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.DetailRelation'
         type: array
-    type: object
-  github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FieldDeviceListResponse:
-    properties:
-      items:
-        items:
-          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FieldDeviceResponse'
-        type: array
-      page:
-        type: integer
-      total:
-        type: integer
-      total_pages:
-        type: integer
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FieldDeviceOptionsResponse:
     properties:
@@ -1473,7 +1518,6 @@ definitions:
       field_devices:
         items:
           $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateFieldDeviceRequest'
-        maxItems: 500
         minItems: 1
         type: array
     required:
@@ -2380,6 +2424,17 @@ definitions:
       scope_id:
         type: string
       scope_type:
+        type: string
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto_history.TimelineCursorResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_history.ChangeEventResponse'
+        type: array
+      next_cursor:
+        type: string
+      previous_cursor:
         type: string
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_history.TimelineResponse:
@@ -5571,8 +5626,10 @@ paths:
       produces:
       - application/json
       responses:
-        "204":
-          description: No Content
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FacilityJobResponse'
         "400":
           description: Bad Request
           schema:
@@ -5927,6 +5984,10 @@ paths:
         in: query
         name: page
         type: integer
+      - description: Opaque keyset cursor; omit page to use cursor pagination
+        in: query
+        name: cursor
+        type: string
       - default: 300
         description: Items per page
         in: query
@@ -5974,7 +6035,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FieldDeviceListResponse'
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FieldDeviceCursorResponse'
         "400":
           description: Bad Request
           schema:
@@ -5994,6 +6055,11 @@ paths:
         name: id
         required: true
         type: string
+      - description: Expected aggregate version; required after the compatibility
+          release
+        in: query
+        name: base_version
+        type: integer
       produces:
       - application/json
       responses:
@@ -6465,6 +6531,30 @@ paths:
       summary: Get all metadata needed for creating/editing field devices
       tags:
       - facility-field-devices
+  /api/v1/facility/imports/field-devices:
+    post:
+      consumes:
+      - multipart/form-data
+      parameters:
+      - description: Versioned XLSX export or ZIP workbook package
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_application_fielddeviceimport.Result'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_application_fielddeviceimport.Result'
+      summary: Import a versioned field-device workbook
+      tags:
+      - Facility - Field Devices
   /api/v1/facility/jobs:
     get:
       produces:
@@ -6862,9 +6952,10 @@ paths:
       description: Upgrades the authenticated request to the shared facility WebSocket.
         `facility_reference_data.changed` tells authorized clients to refresh cached
         apparats and system parts. `facility.changed` carries authorized facility
-        resource changes with an action, IDs, actor and timestamp. User-scoped `facility.copy_job.progress`
-        events contain a copy job ID, status, stage and 0-100 progress; they are only
-        delivered to the user that started the job.
+        resource changes with an action, IDs, actor and timestamp. User-scoped `facility.job.progress`
+        events contain job type, status, stage and 0-100 progress; copy jobs temporarily
+        also emit the legacy `facility.copy_job.progress` alias. Events are delivered
+        only to the user that started the job.
       responses:
         "101":
           description: Switching Protocols
@@ -6966,8 +7057,10 @@ paths:
       produces:
       - application/json
       responses:
-        "204":
-          description: No Content
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FacilityJobResponse'
         "400":
           description: Bad Request
           schema:
@@ -7246,8 +7339,10 @@ paths:
       produces:
       - application/json
       responses:
-        "204":
-          description: No Content
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FacilityJobResponse'
         "400":
           description: Bad Request
           schema:
@@ -8017,6 +8112,43 @@ paths:
       summary: Update a system type
       tags:
       - facility-system-types
+  /api/v1/history/control-cabinets/{id}/restore:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Control cabinet UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Stable operation UUID
+        in: header
+        name: Idempotency-Key
+        type: string
+      - description: Restore checkpoint
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_domain_history.RestoreControlCabinetRequest'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FacilityJobResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_history.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_history.ErrorResponse'
+      summary: Restore a control-cabinet hierarchy asynchronously
+      tags:
+      - history
   /api/v1/history/timeline:
     get:
       description: Returns authoritative audit events with their actual before/after
@@ -8066,10 +8198,14 @@ paths:
         name: field
         type: array
       - default: 1
-        description: Page number
+        description: Legacy page number
         in: query
         name: page
         type: integer
+      - description: Opaque keyset cursor; omit page to use cursor pagination
+        in: query
+        name: cursor
+        type: string
       - default: 50
         description: Items per page
         in: query
@@ -8081,7 +8217,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_history.TimelineResponse'
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_history.TimelineCursorResponse'
         "400":
           description: Bad Request
           schema:
@@ -9511,6 +9647,49 @@ paths:
       summary: Create multiple project field device links
       tags:
       - projects
+  /api/v1/projects/{id}/history/control-cabinets/{controlCabinetId}/restore:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Control cabinet UUID
+        in: path
+        name: controlCabinetId
+        required: true
+        type: string
+      - description: Stable operation UUID
+        in: header
+        name: Idempotency-Key
+        type: string
+      - description: Restore checkpoint
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_domain_history.RestoreControlCabinetRequest'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FacilityJobResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_history.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_history.ErrorResponse'
+      summary: Restore a project-scoped control-cabinet hierarchy asynchronously
+      tags:
+      - history
+      - projects
   /api/v1/projects/{id}/history/timeline:
     get:
       description: Returns authoritative audit events for one project. The optional
@@ -9564,10 +9743,14 @@ paths:
         name: field
         type: array
       - default: 1
-        description: Page number
+        description: Legacy page number
         in: query
         name: page
         type: integer
+      - description: Opaque keyset cursor; omit page to use cursor pagination
+        in: query
+        name: cursor
+        type: string
       - default: 50
         description: Items per page
         in: query

@@ -1,12 +1,19 @@
 import { ApiException } from '$lib/api/client.js';
-import type { CopyJob, FacilityJob } from '$lib/domain/facility/copy-job.js';
+import type { CopyJob } from '$lib/domain/facility/copy-job.js';
 import { copyJobRepository } from '$lib/infrastructure/api/copyJobRepository.js';
+import type { FacilityCopyJobProgressEvent } from '$lib/services/facilityReferenceDataCache.js';
 import {
-  facilityReferenceDataCache,
-  type FacilityCopyJobProgressEvent
-} from '$lib/services/facilityReferenceDataCache.js';
-
-const storageKey = 'facility-copy-job';
+  normalizeFacilityJob,
+  reconcileFacilityJob,
+  sameFacilityJobProgress,
+  type FacilityJobInput
+} from './facilityJobModel.js';
+import {
+  clearFacilityJobHint,
+  persistFacilityJobHint,
+  readFacilityJobHint
+} from './facilityJobSession.js';
+import { FacilityJobRecovery } from './facilityJobRecovery.js';
 
 type CopyOperationResult = { started: true } | { started: false };
 
@@ -14,14 +21,6 @@ interface CopyOperationCallbacks {
   start: (operationId: string) => Promise<FacilityJobInput>;
   onCompleted: () => Promise<void> | void;
   onFailed: () => Promise<void> | void;
-}
-
-type FacilityJobInput = Pick<FacilityJob, 'jobId' | 'kind' | 'status' | 'progress' | 'stage'> &
-  Partial<Omit<FacilityJob, 'jobId' | 'kind' | 'status' | 'progress' | 'stage'>>;
-
-interface PersistedCopyJob {
-  jobId: string;
-  ownerId?: string;
 }
 
 /**
@@ -41,46 +40,31 @@ export class FacilityJobState {
   private jobId: string | null = null;
   private ownerId: string | null = null;
   private callbacks: CopyOperationCallbacks | null = null;
-  private unsubscribeProgress: (() => void) | null = null;
-  private unsubscribeRealtimeOpen: (() => void) | null = null;
   private settlePromise: Promise<void> | null = null;
-  private onOnline: (() => void) | null = null;
-  private onOffline: (() => void) | null = null;
-  private onFocus: (() => void) | null = null;
-  private pollTimer: ReturnType<typeof setTimeout> | null = null;
+  private recovery: FacilityJobRecovery | null = null;
 
   initialize(ownerId?: string | null): void {
     if (this.initialized) return;
     this.initialized = true;
     this.ownerId = ownerId ?? null;
-    this.unsubscribeProgress = facilityReferenceDataCache.subscribeCopyJobProgress((event) =>
-      this.handleProgress(event)
-    );
-    this.unsubscribeRealtimeOpen = facilityReferenceDataCache.subscribeRealtimeOpen(() => {
-      void this.reconcile();
+    this.recovery = new FacilityJobRecovery({
+      hasActiveJobs: () => this.hasActiveJobs,
+      onProgress: (event) => this.handleProgress(event),
+      reconcile: () => this.reconcile(),
+      refresh: () => this.loadJobsAndRecover(),
+      setInterrupted: (interrupted) => {
+        this.connectionInterrupted = interrupted;
+      }
     });
+    this.recovery.start();
 
-    if (typeof window !== 'undefined') {
-      this.onOnline = () => {
-        this.connectionInterrupted = false;
-        void this.reconcile();
-      };
-      this.onOffline = () => {
-        if (this.hasActiveJobs) this.connectionInterrupted = true;
-      };
-      this.onFocus = () => void this.loadJobsAndRecover();
-      window.addEventListener('online', this.onOnline);
-      window.addEventListener('offline', this.onOffline);
-      window.addEventListener('focus', this.onFocus);
-    }
-
-    const persisted = readPersistedCopyJob();
+    const persisted = readFacilityJobHint();
     if (!persisted) {
       void this.loadJobsAndRecover();
       return;
     }
     if (persisted.ownerId && this.ownerId && persisted.ownerId !== this.ownerId) {
-      clearPersistedCopyJob();
+      clearFacilityJobHint();
       return;
     }
 
@@ -89,23 +73,12 @@ export class FacilityJobState {
     this.stage = 'preparing';
     this.connectionInterrupted = typeof navigator !== 'undefined' && !navigator.onLine;
     void this.reconcile();
-    this.schedulePolling();
+    this.recovery.schedule();
   }
 
   dispose(): void {
-    this.unsubscribeProgress?.();
-    this.unsubscribeRealtimeOpen?.();
-    this.unsubscribeProgress = null;
-    this.unsubscribeRealtimeOpen = null;
-    if (typeof window !== 'undefined') {
-      if (this.onOnline) window.removeEventListener('online', this.onOnline);
-      if (this.onOffline) window.removeEventListener('offline', this.onOffline);
-      if (this.onFocus) window.removeEventListener('focus', this.onFocus);
-    }
-    this.onOnline = null;
-    this.onOffline = null;
-    this.onFocus = null;
-    this.stopPolling();
+    this.recovery?.stop();
+    this.recovery = null;
     this.initialized = false;
     this.isPending = false;
     this.progress = 0;
@@ -129,12 +102,8 @@ export class FacilityJobState {
   }
 
   track(job: FacilityJobInput): void {
-    const normalized = normalizeJob(job);
-    this.jobs = [
-      normalized,
-      ...this.jobs.filter((candidate) => candidate.jobId !== normalized.jobId)
-    ];
-    this.schedulePolling();
+    this.jobs = reconcileFacilityJob(this.jobs, job);
+    this.recovery?.schedule();
   }
 
   async retry(jobId: string): Promise<void> {
@@ -153,16 +122,22 @@ export class FacilityJobState {
     this.progress = 0;
     this.stage = 'queued';
     this.connectionInterrupted = false;
-    persistCopyJob({ jobId: operationId, ...(this.ownerId ? { ownerId: this.ownerId } : {}) });
+    persistFacilityJobHint({
+      jobId: operationId,
+      ...(this.ownerId ? { ownerId: this.ownerId } : {})
+    });
 
     try {
       const job = await callbacks.start(operationId);
       if (job.jobId !== this.jobId) {
         this.jobId = job.jobId;
-        persistCopyJob({ jobId: job.jobId, ...(this.ownerId ? { ownerId: this.ownerId } : {}) });
+        persistFacilityJobHint({
+          jobId: job.jobId,
+          ...(this.ownerId ? { ownerId: this.ownerId } : {})
+        });
       }
       this.applyJob(job);
-      this.schedulePolling();
+      this.recovery?.schedule();
       return { started: true };
     } catch (error) {
       if (isNetworkInterruption(error)) {
@@ -176,13 +151,14 @@ export class FacilityJobState {
 
   private handleProgress(event: FacilityCopyJobProgressEvent): void {
     const existing = this.jobs.find((job) => job.jobId === event.job_id);
-    const next = normalizeJob({
+    const next = normalizeFacilityJob({
       ...existing,
       jobId: event.job_id,
       kind: event.kind,
       status: event.status,
       progress: event.progress,
       stage: event.stage,
+      updatedAt: event.updated_at,
       ...(event.job_type ? { type: event.job_type } : {}),
       ...(event.class ? { class: event.class } : {}),
       ...(event.processed !== undefined ? { processed: event.processed } : {}),
@@ -191,7 +167,8 @@ export class FacilityJobState {
       ...(event.failure_count !== undefined ? { failureCount: event.failure_count } : {}),
       ...(event.error ? { error: event.error } : {})
     });
-    this.jobs = [next, ...this.jobs.filter((candidate) => candidate.jobId !== next.jobId)];
+    if (existing && sameFacilityJobProgress(existing, next)) return;
+    this.jobs = reconcileFacilityJob(this.jobs, next);
     if (event.job_id === this.jobId) this.applyJob(next);
     if (event.status === 'completed' || event.status === 'failed') {
       void this.refreshJob(event.job_id);
@@ -223,7 +200,7 @@ export class FacilityJobState {
 
   private async loadJobsAndRecover(): Promise<void> {
     try {
-      const jobs = (await copyJobRepository.list()).map(normalizeJob);
+      const jobs = (await copyJobRepository.list()).map(normalizeFacilityJob);
       this.jobs = jobs;
       const active = jobs.find(
         (job) => (job.status === 'queued' || job.status === 'running') && job.type !== 'export'
@@ -232,19 +209,22 @@ export class FacilityJobState {
 
       this.jobId = active.jobId;
       this.isPending = true;
-      persistCopyJob({ jobId: active.jobId, ...(this.ownerId ? { ownerId: this.ownerId } : {}) });
+      persistFacilityJobHint({
+        jobId: active.jobId,
+        ...(this.ownerId ? { ownerId: this.ownerId } : {})
+      });
       this.applyJob(active);
-      this.schedulePolling();
+      this.recovery?.schedule();
     } catch {
       this.connectionInterrupted = true;
     }
   }
 
   private applyJob(input: FacilityJobInput): void {
-    const job = normalizeJob(input);
+    const job = normalizeFacilityJob(input);
     if (job.jobId !== this.jobId) return;
 
-    this.jobs = [job, ...this.jobs.filter((candidate) => candidate.jobId !== job.jobId)];
+    this.jobs = reconcileFacilityJob(this.jobs, job);
 
     this.progress = job.progress;
     this.stage = job.stage;
@@ -281,7 +261,7 @@ export class FacilityJobState {
   }
 
   private reset(): void {
-    this.stopPolling();
+    this.recovery?.pausePolling();
     this.isPending = false;
     this.progress = 0;
     this.stage = 'queued';
@@ -289,72 +269,12 @@ export class FacilityJobState {
     this.jobId = null;
     this.callbacks = null;
     this.settlePromise = null;
-    clearPersistedCopyJob();
+    clearFacilityJobHint();
   }
-
-  private schedulePolling(): void {
-    if (import.meta.env.MODE === 'test' || !this.hasActiveJobs || this.pollTimer) return;
-    this.pollTimer = setTimeout(() => {
-      this.pollTimer = null;
-      void this.loadJobsAndRecover().finally(() => this.schedulePolling());
-    }, 5_000);
-  }
-
-  private stopPolling(): void {
-    if (!this.pollTimer) return;
-    clearTimeout(this.pollTimer);
-    this.pollTimer = null;
-  }
-}
-
-function normalizeJob(job: FacilityJobInput): CopyJob {
-  return {
-    ...job,
-    type: job.type ?? 'copy',
-    class: job.class ?? (job.type === 'export' ? 'export' : 'mutation'),
-    attempts: job.attempts ?? 0,
-    processed: job.processed ?? 0,
-    successCount: job.successCount ?? 0,
-    failureCount: job.failureCount ?? 0,
-    retryable: job.retryable ?? false
-  };
 }
 
 function isNetworkInterruption(error: unknown): boolean {
   return error instanceof ApiException && error.status === 0;
-}
-
-function readPersistedCopyJob(): PersistedCopyJob | null {
-  if (typeof sessionStorage === 'undefined') return null;
-  try {
-    const parsed: unknown = JSON.parse(sessionStorage.getItem(storageKey) ?? 'null');
-    if (
-      !parsed ||
-      typeof parsed !== 'object' ||
-      !('jobId' in parsed) ||
-      typeof parsed.jobId !== 'string'
-    ) {
-      return null;
-    }
-    return {
-      jobId: parsed.jobId,
-      ...('ownerId' in parsed && typeof parsed.ownerId === 'string'
-        ? { ownerId: parsed.ownerId }
-        : {})
-    };
-  } catch {
-    return null;
-  }
-}
-
-function persistCopyJob(job: PersistedCopyJob): void {
-  if (typeof sessionStorage === 'undefined') return;
-  sessionStorage.setItem(storageKey, JSON.stringify(job));
-}
-
-function clearPersistedCopyJob(): void {
-  if (typeof sessionStorage === 'undefined') return;
-  sessionStorage.removeItem(storageKey);
 }
 
 export { FacilityJobState as CopyOperation };

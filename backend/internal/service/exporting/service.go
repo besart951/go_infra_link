@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 	"time"
 
@@ -65,6 +66,9 @@ func (s *Service) Create(ctx context.Context, ownerID, operationID uuid.UUID, re
 	if s.jobs == nil {
 		return domainExport.Job{}, errors.New("facility jobs unavailable")
 	}
+	if req.AccessScope == "" {
+		req.AccessScope = domainExport.AccessScopeGlobal
+	}
 	payload, err := json.Marshal(req)
 	if err != nil {
 		return domainExport.Job{}, fmt.Errorf("encode export request: %w", err)
@@ -121,6 +125,8 @@ func (s *Service) run(ctx context.Context, job facilityservice.CopyJob, report f
 	report(facilityservice.FacilityJobProgress{Progress: 25, Stage: "snapshotting", Processed: snapshotTotal, Total: &snapshotTotal, Checkpoint: checkpoint})
 	req.SnapshotAt = snapshot.manifest.SnapshotAt
 	req.SchemaVersion = exportSnapshotSchemaVersion
+	req.DeviceCount = snapshotTotal
+	req.Manifest = exportManifest(snapshot.manifest)
 
 	outputType := domainExport.OutputTypeExcel
 	if uniqueControlCabinetCount(controllers) > 1 {
@@ -165,6 +171,29 @@ func (s *Service) run(ctx context.Context, job facilityservice.CopyJob, report f
 	return facilityservice.FacilityJobTaskResult{Result: result}, nil
 }
 
+func exportManifest(snapshot exportSnapshotManifest) domainExport.Manifest {
+	checksums := make(map[string]string, len(snapshot.Artifacts))
+	for _, artifact := range snapshot.Artifacts {
+		checksums[artifact.FileName] = artifact.SHA256
+	}
+	return domainExport.Manifest{
+		Counts: snapshot.Counts, WorkbookShards: workbookShardNames(snapshot.Controllers), SnapshotChecksums: checksums,
+	}
+}
+
+func workbookShardNames(controllers []domainExport.Controller) []string {
+	unique := make(map[string]struct{})
+	for _, controller := range controllers {
+		unique[controller.ControlCabinetID.String()+".xlsx"] = struct{}{}
+	}
+	names := make([]string, 0, len(unique))
+	for name := range unique {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
+}
+
 func (s *Service) toExportJob(job facilityservice.CopyJob) (domainExport.Job, error) {
 	status := domainExport.Status(job.Status)
 	if job.Status == facilityservice.CopyJobStatusRunning {
@@ -180,11 +209,28 @@ func (s *Service) toExportJob(job facilityservice.CopyJob) (domainExport.Job, er
 	if result.OutputType != "" {
 		filePath, _ = s.files.BuildOutputPath(job.ID, result.OutputType, result.FileName)
 	}
+	scope, err := exportScopeFromPayload(job.Payload)
+	if err != nil {
+		return domainExport.Job{}, err
+	}
 	return domainExport.Job{
 		ID: job.ID, Status: status, Progress: job.Progress, Message: job.Stage,
 		OutputType: result.OutputType, FileName: result.FileName, ContentType: result.ContentType,
 		FilePath: filePath, Error: job.Error, CreatedAt: job.CreatedAt, UpdatedAt: job.UpdatedAt,
+		Scope: scope,
 	}, nil
+}
+
+func exportScopeFromPayload(payload json.RawMessage) (domainExport.Scope, error) {
+	var request domainExport.Request
+	if err := json.Unmarshal(payload, &request); err != nil {
+		return domainExport.Scope{}, fmt.Errorf("decode export scope: %w", err)
+	}
+	scope := request.AccessScope
+	if scope == "" {
+		scope = domainExport.AccessScopeGlobal
+	}
+	return domainExport.Scope{Kind: scope, ProjectIDs: append([]uuid.UUID(nil), request.ProjectIDs...)}, nil
 }
 
 func exportDownloadFileName(outputType domainExport.OutputType, controllers []domainExport.Controller) string {

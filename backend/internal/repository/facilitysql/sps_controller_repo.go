@@ -10,6 +10,7 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/repository/searchspec"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type spsControllerRepo struct {
@@ -23,7 +24,15 @@ func NewSPSControllerRepository(db *gorm.DB) domainFacility.SPSControllerReposit
 }
 
 func (r *spsControllerRepo) GetPaginatedList(ctx context.Context, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.SPSController], error) {
-	result, err := r.BaseRepository.GetPaginatedList(ctx, params, 10)
+	query := activeSPSControllers(r.db.WithContext(ctx).Model(&domainFacility.SPSController{}))
+	if strings.TrimSpace(params.Search) != "" {
+		query = spsControllerSearchCallback()(query, params.Search)
+	}
+	result, err := gormbase.ExactOffsetPage[*domainFacility.SPSController](
+		query, gormbase.NormalizeOffsetPage(params, 10), clause.OrderByColumn{
+			Column: clause.Column{Table: clause.CurrentTable, Name: "created_at"}, Desc: true,
+		},
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -36,6 +45,7 @@ func (r *spsControllerRepo) GetPaginatedListByControlCabinetID(ctx context.Conte
 
 	query := r.db.WithContext(ctx).Model(&domainFacility.SPSController{}).
 		Where("control_cabinet_id = ?", controlCabinetID)
+	query = activeSPSControllers(query)
 
 	if strings.TrimSpace(params.Search) != "" {
 		query = spsControllerSearchCallback()(query, params.Search)
@@ -57,6 +67,29 @@ func (r *spsControllerRepo) GetPaginatedListByControlCabinetID(ctx context.Conte
 		Page:       page,
 		TotalPages: domain.CalculateTotalPages(total, limit),
 	}, nil
+}
+
+func (r *spsControllerRepo) GetByIds(ctx context.Context, ids []uuid.UUID) ([]*domainFacility.SPSController, error) {
+	if len(ids) == 0 {
+		return []*domainFacility.SPSController{}, nil
+	}
+	var items []*domainFacility.SPSController
+	err := activeSPSControllers(r.db.WithContext(ctx).Model(&domainFacility.SPSController{})).
+		Where("sps_controllers.id IN ?", ids).Find(&items).Error
+	return items, err
+}
+
+func (r *spsControllerRepo) Update(ctx context.Context, entity *domainFacility.SPSController) error {
+	mutation := activeMutation{
+		target: activeMutationRequest{table: "sps_controllers", id: entity.ID, query: func(tx *gorm.DB) *gorm.DB {
+			return activeSPSControllers(tx.Model(&domainFacility.SPSController{}))
+		}},
+		mutate: func(tx *gorm.DB) error {
+			repo := gormbase.NewBaseRepository[*domainFacility.SPSController](tx, spsControllerSearchCallback())
+			return repo.Update(ctx, entity)
+		},
+	}
+	return runActiveMutation(ctx, r.db, mutation)
 }
 
 func spsControllerSearchCallback() gormbase.SearchCallback[*domainFacility.SPSController] {

@@ -95,6 +95,7 @@ func (h *Handler) CreateProjectFieldDeviceExport(c *gin.Context) {
 		ProjectIDs: []uuid.UUID{projectID}, BuildingIDs: request.BuildingIDs,
 		ControlCabinetIDs: request.ControlCabinetIDs, SPSControllerIDs: request.SPSControllerIDs,
 		SPSControllerSystemTypeIDs: request.SPSControllerSystemTypeIDs, Search: request.Search,
+		AccessScope: domainExport.AccessScopeProject,
 	})
 	if err != nil {
 		handlerutil.RespondLocalizedError(c, http.StatusServiceUnavailable, "export_creation_failed", "errors.service_unavailable")

@@ -92,6 +92,11 @@ func bindQuery(c *gin.Context, dst any) bool {
 	return handlerutil.BindQuery(c, dst)
 }
 
+func markLegacyBaseVersion(c *gin.Context) {
+	c.Header("Deprecation", "true")
+	c.Header("Warning", `299 - "base_version becomes mandatory in the next API release"`)
+}
+
 func parseUUIDParam(c *gin.Context, name string) (uuid.UUID, bool) {
 	return handlerutil.ParseUUIDParam(c, name)
 }
@@ -199,6 +204,9 @@ func currentActorID(c *gin.Context) *uuid.UUID {
 }
 
 func respondLocalizedDomainError(c *gin.Context, err error, fallbackCode, fallbackKey string, mappings ...handlerutil.ErrorMapping) bool {
+	mappings = append([]handlerutil.ErrorMapping{
+		handlerutil.MapError(domainFacility.ErrAggregateLocked, handlerutil.LocalizedError(http.StatusConflict, "aggregate_locked", "facility.aggregate_locked")),
+	}, mappings...)
 	return handlerutil.RespondDomainError(c, err,
 		handlerutil.LocalizedError(http.StatusInternalServerError, fallbackCode, fallbackKey),
 		mappings...,

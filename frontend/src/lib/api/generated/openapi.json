@@ -3625,8 +3625,15 @@
           }
         ],
         "responses": {
-          "204": {
-            "description": "No Content"
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FacilityJobResponse"
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
@@ -4085,6 +4092,14 @@
             }
           },
           {
+            "description": "Opaque keyset cursor; omit page to use cursor pagination",
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "description": "Items per page",
             "name": "limit",
             "in": "query",
@@ -4164,7 +4179,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FieldDeviceListResponse"
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FieldDeviceCursorResponse"
                 }
               }
             }
@@ -4582,6 +4597,14 @@
             "required": true,
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "description": "Expected aggregate version; required after the compatibility release",
+            "name": "base_version",
+            "in": "query",
+            "schema": {
+              "type": "integer"
             }
           }
         ],
@@ -5064,6 +5087,56 @@
               "*/*": {
                 "schema": {
                   "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/facility/imports/field-devices": {
+      "post": {
+        "tags": [
+          "Facility - Field Devices"
+        ],
+        "summary": "Import a versioned field-device workbook",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "description": "Versioned XLSX export or ZIP workbook package",
+                    "type": "string",
+                    "format": "binary"
+                  }
+                },
+                "required": [
+                  "file"
+                ]
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_application_fielddeviceimport.Result"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_application_fielddeviceimport.Result"
                 }
               }
             }
@@ -5822,7 +5895,7 @@
     },
     "/api/v1/facility/reference-data/stream": {
       "get": {
-        "description": "Upgrades the authenticated request to the shared facility WebSocket. `facility_reference_data.changed` tells authorized clients to refresh cached apparats and system parts. `facility.changed` carries authorized facility resource changes with an action, IDs, actor and timestamp. User-scoped `facility.copy_job.progress` events contain a copy job ID, status, stage and 0-100 progress; they are only delivered to the user that started the job.",
+        "description": "Upgrades the authenticated request to the shared facility WebSocket. `facility_reference_data.changed` tells authorized clients to refresh cached apparats and system parts. `facility.changed` carries authorized facility resource changes with an action, IDs, actor and timestamp. User-scoped `facility.job.progress` events contain job type, status, stage and 0-100 progress; copy jobs temporarily also emit the legacy `facility.copy_job.progress` alias. Events are delivered only to the user that started the job.",
         "tags": [
           "facility-reference-data"
         ],
@@ -6146,8 +6219,15 @@
           }
         ],
         "responses": {
-          "204": {
-            "description": "No Content"
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FacilityJobResponse"
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
@@ -6840,8 +6920,15 @@
           }
         ],
         "responses": {
-          "204": {
-            "description": "No Content"
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FacilityJobResponse"
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
@@ -8004,6 +8091,68 @@
         }
       }
     },
+    "/api/v1/history/control-cabinets/{id}/restore": {
+      "post": {
+        "tags": [
+          "history"
+        ],
+        "summary": "Restore a control-cabinet hierarchy asynchronously",
+        "parameters": [
+          {
+            "description": "Control cabinet UUID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Stable operation UUID",
+            "name": "Idempotency-Key",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/github_com_besart951_go_infra_link_backend_internal_domain_history.RestoreControlCabinetRequest"
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FacilityJobResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_history.ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_history.ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/history/timeline": {
       "get": {
         "description": "Returns authoritative audit events with their actual before/after diff. Multiple action and field parameters are combined as OR filters within their category.",
@@ -8093,12 +8242,20 @@
             }
           },
           {
-            "description": "Page number",
+            "description": "Legacy page number",
             "name": "page",
             "in": "query",
             "schema": {
               "type": "integer",
               "default": 1
+            }
+          },
+          {
+            "description": "Opaque keyset cursor; omit page to use cursor pagination",
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
             }
           },
           {
@@ -8117,7 +8274,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_history.TimelineResponse"
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_history.TimelineCursorResponse"
                 }
               }
             }
@@ -10789,6 +10946,78 @@
         }
       }
     },
+    "/api/v1/projects/{id}/history/control-cabinets/{controlCabinetId}/restore": {
+      "post": {
+        "tags": [
+          "history",
+          "projects"
+        ],
+        "summary": "Restore a project-scoped control-cabinet hierarchy asynchronously",
+        "parameters": [
+          {
+            "description": "Project UUID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Control cabinet UUID",
+            "name": "controlCabinetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Stable operation UUID",
+            "name": "Idempotency-Key",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/github_com_besart951_go_infra_link_backend_internal_domain_history.RestoreControlCabinetRequest"
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FacilityJobResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_history.ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_history.ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/projects/{id}/history/timeline": {
       "get": {
         "description": "Returns authoritative audit events for one project. The optional entity, field, action, actor and date filters work like the global timeline.",
@@ -10888,12 +11117,20 @@
             }
           },
           {
-            "description": "Page number",
+            "description": "Legacy page number",
             "name": "page",
             "in": "query",
             "schema": {
               "type": "integer",
               "default": 1
+            }
+          },
+          {
+            "description": "Opaque keyset cursor; omit page to use cursor pagination",
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
             }
           },
           {
@@ -13164,6 +13401,16 @@
         "description": "SPS Controller data",
         "required": true
       },
+      "github_com_besart951_go_infra_link_backend_internal_domain_history.RestoreControlCabinetRequest": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_domain_history.RestoreControlCabinetRequest"
+            }
+          }
+        },
+        "description": "Restore checkpoint"
+      },
       "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateSPSControllerSystemTypeRequest": {
         "content": {
           "application/json": {
@@ -13210,6 +13457,63 @@
       }
     },
     "schemas": {
+      "github_com_besart951_go_infra_link_backend_internal_application_fielddeviceimport.Issue": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "entity": {
+            "type": "string"
+          },
+          "field": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "source_id": {
+            "type": "string"
+          }
+        }
+      },
+      "github_com_besart951_go_infra_link_backend_internal_application_fielddeviceimport.Result": {
+        "type": "object",
+        "properties": {
+          "failed": {
+            "type": "integer"
+          },
+          "import_id": {
+            "type": "string"
+          },
+          "imported": {
+            "type": "integer"
+          },
+          "issues": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_application_fielddeviceimport.Issue"
+            }
+          },
+          "total": {
+            "type": "integer"
+          }
+        }
+      },
+      "github_com_besart951_go_infra_link_backend_internal_domain_history.RestoreControlCabinetRequest": {
+        "type": "object",
+        "properties": {
+          "as_of": {
+            "type": "string"
+          },
+          "event_id": {
+            "type": "string"
+          },
+          "project_id": {
+            "type": "string"
+          }
+        }
+      },
       "github_com_besart951_go_infra_link_backend_internal_domain_project.ProjectStatus": {
         "type": "string",
         "enum": [
@@ -14037,18 +14341,35 @@
           }
         }
       },
-      "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BulkDeleteFieldDeviceRequest": {
+      "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BulkDeleteFieldDeviceItem": {
         "type": "object",
         "required": [
-          "ids"
+          "base_version",
+          "id"
         ],
+        "properties": {
+          "base_version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BulkDeleteFieldDeviceRequest": {
+        "type": "object",
         "properties": {
           "ids": {
             "type": "array",
-            "maxItems": 500,
-            "minItems": 1,
             "items": {
               "type": "string"
+            }
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BulkDeleteFieldDeviceItem"
             }
           }
         }
@@ -14169,7 +14490,6 @@
         "properties": {
           "updates": {
             "type": "array",
-            "maxItems": 500,
             "minItems": 1,
             "items": {
               "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BulkUpdateFieldDeviceItem"
@@ -15231,6 +15551,23 @@
           }
         }
       },
+      "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FieldDeviceCursorResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FieldDeviceResponse"
+            }
+          },
+          "next_cursor": {
+            "type": "string"
+          },
+          "previous_cursor": {
+            "type": "string"
+          }
+        }
+      },
       "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FieldDeviceDetailResponse": {
         "type": "object",
         "properties": {
@@ -15245,26 +15582,6 @@
             "items": {
               "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.DetailRelation"
             }
-          }
-        }
-      },
-      "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FieldDeviceListResponse": {
-        "type": "object",
-        "properties": {
-          "items": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FieldDeviceResponse"
-            }
-          },
-          "page": {
-            "type": "integer"
-          },
-          "total": {
-            "type": "integer"
-          },
-          "total_pages": {
-            "type": "integer"
           }
         }
       },
@@ -15383,7 +15700,6 @@
         "properties": {
           "field_devices": {
             "type": "array",
-            "maxItems": 500,
             "minItems": 1,
             "items": {
               "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateFieldDeviceRequest"
@@ -16731,6 +17047,23 @@
             "type": "string"
           },
           "scope_type": {
+            "type": "string"
+          }
+        }
+      },
+      "github_com_besart951_go_infra_link_backend_internal_handler_dto_history.TimelineCursorResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_history.ChangeEventResponse"
+            }
+          },
+          "next_cursor": {
+            "type": "string"
+          },
+          "previous_cursor": {
             "type": "string"
           }
         }

@@ -145,30 +145,7 @@ func (h *ControlCabinetHandler) CopyControlCabinet(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if startPersistedFacilityCopyJob(c, h.copyJobs, facilityservice.CopyJobKindControlCabinet, id) {
-		return
-	}
-	if startFacilityCopyJob(c, h.copyJobs, facilityservice.CopyJobKindControlCabinet, func(ctx context.Context, actorID uuid.UUID) error {
-		copyEntity, err := h.service.CopyByID(ctx, id)
-		if err == nil {
-			h.broadcastProjectDelta(ctx, &actorID, copyEntity)
-		}
-		return err
-	}) {
-		return
-	}
-
-	copyEntity, err := h.service.CopyByID(c.Request.Context(), id)
-	if err != nil {
-		respondLocalizedDomainError(c, err, "creation_failed", "facility.creation_failed",
-			localizedNotFound("facility.control_cabinet_not_found"),
-			localizedConflict("facility.update_failed"),
-		)
-		return
-	}
-
-	h.broadcastProjectDelta(c.Request.Context(), currentActorID(c), copyEntity)
-	c.JSON(http.StatusCreated, toControlCabinetResponse(*copyEntity))
+	startPersistedFacilityCopyJob(c, h.copyJobs, facilityservice.CopyJobKindControlCabinet, id)
 }
 
 // GetControlCabinetDeleteImpact godoc
@@ -306,7 +283,7 @@ func (h *ControlCabinetHandler) UpdateControlCabinet(c *gin.Context) {
 // @Tags facility-control-cabinets
 // @Produce json
 // @Param id path string true "Control Cabinet ID"
-// @Success 204
+// @Success 202 {object} dto.FacilityJobResponse
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/facility/control-cabinets/{id} [delete]
@@ -316,17 +293,5 @@ func (h *ControlCabinetHandler) DeleteControlCabinet(c *gin.Context) {
 		return
 	}
 
-	ctx := c.Request.Context()
-	projectIDs := captureDeleteAudience(ctx, h.collaboration, "control_cabinet", id)
-	if err := h.service.DeleteByID(ctx, id); err != nil {
-		respondLocalizedDomainError(c, err, "deletion_failed", "facility.deletion_failed",
-			localizedNotFound("facility.control_cabinet_not_found"),
-		)
-		return
-	}
-
-	if !broadcastCapturedDelete(ctx, h.collaboration, currentActorID(c), projectIDs, "control_cabinet", id) {
-		h.broadcastProjectRefresh(ctx, currentActorID(c), id)
-	}
-	c.Status(http.StatusNoContent)
+	startPersistedFacilityDeleteJob(c, h.copyJobs, facilityservice.CopyJobKindControlCabinet, id)
 }

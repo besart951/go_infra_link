@@ -2,19 +2,124 @@ package facilitysql
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/besart951/go_infra_link/backend/internal/cursor"
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
+	domainFieldDevice "github.com/besart951/go_infra_link/backend/internal/domain/facility/fielddevice"
 	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
 	projectsql "github.com/besart951/go_infra_link/backend/internal/repository/projectsql"
 	"github.com/google/uuid"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
+
+func TestFieldDeviceRepo_CursorTraversesBothDirectionsWithoutDuplicates(t *testing.T) {
+	ctx := context.Background()
+	db := newFieldDeviceRepoTestDB(t)
+	repo := NewFieldDeviceRepository(db)
+	reader := repo.(domainFieldDevice.CursorReader)
+	devices := seedCursorFieldDevices(t, db, repo, 5)
+
+	first, err := reader.GetCursorPage(ctx, domainFacility.FieldDeviceCursorQuery{Limit: 2})
+	if err != nil {
+		t.Fatalf("first cursor page: %v", err)
+	}
+	second, err := reader.GetCursorPage(ctx, domainFacility.FieldDeviceCursorQuery{Limit: 2, Cursor: first.NextCursor})
+	if err != nil {
+		t.Fatalf("second cursor page: %v", err)
+	}
+	back, err := reader.GetCursorPage(ctx, domainFacility.FieldDeviceCursorQuery{Limit: 2, Cursor: second.PreviousCursor})
+	if err != nil {
+		t.Fatalf("previous cursor page: %v", err)
+	}
+
+	wantFirst := []uuid.UUID{devices[4].ID, devices[3].ID}
+	assertFieldDeviceIDs(t, first.Items, wantFirst)
+	assertFieldDeviceIDs(t, back.Items, wantFirst)
+	assertFieldDeviceIDs(t, second.Items, []uuid.UUID{devices[2].ID, devices[1].ID})
+	if first.PreviousCursor != "" || first.NextCursor == "" || second.PreviousCursor == "" || second.NextCursor == "" {
+		t.Fatalf("unexpected cursors: first=%+v second=%+v", first, second)
+	}
+}
+
+func TestFieldDeviceRepo_CursorRejectsChangedQuery(t *testing.T) {
+	db := newFieldDeviceRepoTestDB(t)
+	repo := NewFieldDeviceRepository(db)
+	reader := repo.(domainFieldDevice.CursorReader)
+	seedCursorFieldDevices(t, db, repo, 3)
+
+	page, err := reader.GetCursorPage(t.Context(), domainFacility.FieldDeviceCursorQuery{Limit: 1, Search: "FD"})
+	if err != nil {
+		t.Fatalf("first cursor page: %v", err)
+	}
+	_, err = reader.GetCursorPage(t.Context(), domainFacility.FieldDeviceCursorQuery{Limit: 1, Search: "other", Cursor: page.NextCursor})
+	if !errors.Is(err, cursor.ErrInvalid) {
+		t.Fatalf("changed-query error = %v, want %v", err, cursor.ErrInvalid)
+	}
+}
+
+func TestFieldDeviceRepo_DeleteAtVersionIsConditional(t *testing.T) {
+	db := newFieldDeviceRepoTestDB(t)
+	repo := NewFieldDeviceRepository(db)
+	device := seedCursorFieldDevices(t, db, repo, 1)[0]
+	deleter := repo.(interface {
+		DeleteAtVersion(context.Context, domainFacility.FieldDeviceDeleteCommand) error
+	})
+	stale := device.Version + 1
+
+	err := deleter.DeleteAtVersion(t.Context(), domainFacility.FieldDeviceDeleteCommand{ID: device.ID, BaseVersion: &stale})
+	if !errors.Is(err, domain.ErrConflict) {
+		t.Fatalf("stale delete error = %v", err)
+	}
+	if items, _ := repo.GetByIds(t.Context(), []uuid.UUID{device.ID}); len(items) != 1 {
+		t.Fatal("stale delete removed the field device")
+	}
+	if err := deleter.DeleteAtVersion(t.Context(), domainFacility.FieldDeviceDeleteCommand{ID: device.ID, BaseVersion: &device.Version}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func assertFieldDeviceIDs(t *testing.T, items []domainFacility.FieldDevice, want []uuid.UUID) {
+	t.Helper()
+	got := make([]uuid.UUID, len(items))
+	for index := range items {
+		got[index] = items[index].ID
+	}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Fatalf("field device ids = %v, want %v", got, want)
+	}
+}
+
+func seedCursorFieldDevices(t *testing.T, db *gorm.DB, repo domainFieldDevice.FieldDeviceStore, count int) []*domainFacility.FieldDevice {
+	t.Helper()
+	systemType := seedFacilityRecord(t, db, &domainFacility.SystemType{Name: "Cursor", NumberMin: 1, NumberMax: 99})
+	controller := seedFacilityRecord(t, db, &domainFacility.SPSController{ControlCabinetID: uuid.New(), DeviceName: "Cursor-SPS"})
+	number := 1
+	controllerType := seedFacilityRecord(t, db, &domainFacility.SPSControllerSystemType{Number: &number, SPSControllerID: controller.ID, SystemTypeID: systemType.ID})
+	part := seedFacilityRecord(t, db, &domainFacility.SystemPart{ShortName: "CUR", Name: "Cursor Part"})
+	apparat := seedFacilityRecord(t, db, &domainFacility.Apparat{ShortName: "CUR", Name: "Cursor Apparat"})
+	items := make([]*domainFacility.FieldDevice, count)
+	for index := range count {
+		bmk := fmt.Sprintf("FD-%02d", index)
+		item := &domainFacility.FieldDevice{BMK: &bmk, ApparatNr: index + 1, SPSControllerSystemTypeID: controllerType.ID, SystemPartID: part.ID, ApparatID: apparat.ID}
+		if err := repo.Create(t.Context(), item); err != nil {
+			t.Fatalf("create cursor field device: %v", err)
+		}
+		createdAt := time.Date(2026, 1, 1, 0, index, 0, 0, time.UTC)
+		if err := db.Model(&FieldDeviceRecord{}).Where("id = ?", item.ID).Updates(map[string]any{"created_at": createdAt, "updated_at": createdAt}).Error; err != nil {
+			t.Fatalf("set cursor timestamp: %v", err)
+		}
+		item.CreatedAt = createdAt
+		items[index] = item
+	}
+	return items
+}
 
 func TestFieldDeviceRepo_ProjectFilteredListMapsAggregateRelations(t *testing.T) {
 	ctx := context.Background()
@@ -201,6 +306,55 @@ func TestFieldDeviceRepo_ShortSearchFindsBMKSubstring(t *testing.T) {
 	}
 }
 
+func TestFieldDeviceRepoHidesDevicesBelowDeletingController(t *testing.T) {
+	db := newFieldDeviceRepoTestDB(t)
+	controller := seedFacilityRecord(t, db, &domainFacility.SPSController{
+		ControlCabinetID: uuid.New(), DeviceName: "Deleting SPS",
+	})
+	systemType := seedFacilityRecord(t, db, &domainFacility.SPSControllerSystemType{
+		SPSControllerID: controller.ID, SystemTypeID: uuid.New(),
+	})
+	device := seedFacilityRecord(t, db, &FieldDeviceRecord{
+		SPSControllerSystemTypeID: systemType.ID, SystemPartID: uuid.New(),
+		ApparatID: uuid.New(), ApparatNr: 1,
+	})
+	if err := db.Create(&facilityLifecycleTestRecord{
+		Kind: "sps_controller", ResourceID: controller.ID, State: "deleting",
+		OwnerID: uuid.New(), JobID: uuid.New(), CreatedAt: time.Now(), UpdatedAt: time.Now(),
+	}).Error; err != nil {
+		t.Fatalf("create lifecycle lock: %v", err)
+	}
+
+	repo := NewFieldDeviceRepository(db)
+	items, err := repo.GetByIds(t.Context(), []uuid.UUID{device.ID})
+	if err != nil {
+		t.Fatalf("GetByIds() error = %v", err)
+	}
+	if len(items) != 0 {
+		t.Fatalf("visible items = %d, want zero", len(items))
+	}
+	changed := "blocked"
+	lockedDevice := toFieldDeviceDomain(device)
+	lockedDevice.Description = &changed
+	if err := repo.Update(t.Context(), lockedDevice); !errors.Is(err, domainFacility.ErrAggregateLocked) {
+		t.Fatalf("Update() error = %v, want %v", err, domainFacility.ErrAggregateLocked)
+	}
+}
+
+type facilityLifecycleTestRecord struct {
+	Kind       string    `gorm:"primaryKey"`
+	ResourceID uuid.UUID `gorm:"primaryKey"`
+	State      string
+	OwnerID    uuid.UUID
+	JobID      uuid.UUID
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+}
+
+func (facilityLifecycleTestRecord) TableName() string {
+	return lifecycleTable
+}
+
 func newFieldDeviceRepoTestDB(t *testing.T) *gorm.DB {
 	t.Helper()
 
@@ -220,6 +374,7 @@ func newFieldDeviceRepoTestDB(t *testing.T) *gorm.DB {
 	})
 
 	models := []any{
+		&facilityLifecycleTestRecord{},
 		&projectsql.ProjectControlCabinetRecord{},
 		&projectsql.ProjectSPSControllerRecord{},
 		&projectsql.ProjectFieldDeviceRecord{},

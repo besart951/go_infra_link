@@ -468,6 +468,7 @@
     "referenced_entity_in_use": "Der Eintrag wird noch von anderen Elementen referenziert und kann nicht gelöscht werden.",
     "bacnet_reference_delete_blocked": "Der Eintrag wird von BACnet-Objekten verwendet und kann nicht gelöscht werden.",
     "reference_delete_blocked": "Der Eintrag wird noch von Feldgeräten, Systemteilen oder Objektdaten verwendet und kann nicht gelöscht werden.",
+    "aggregate_locked": "Die Anlage wird gerade verarbeitet und kann bis zum Abschluss des Jobs nicht geändert werden.",
     "invalid_delete_impact_resource": "Ungültige Referenz für die Löschvorschau.",
     "invalid_bacnet_reference_resource": "Ungültige BACnet-Referenz.",
     "ids_required": "IDs erforderlich.",

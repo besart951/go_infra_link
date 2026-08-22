@@ -78,7 +78,7 @@ func (r *controlCabinetRepo) findSearchBuildingIDs(ctx context.Context, pattern 
 }
 
 func (r *controlCabinetRepo) GetPaginatedList(ctx context.Context, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.ControlCabinet], error) {
-	query := r.db.WithContext(ctx).Model(&domainFacility.ControlCabinet{})
+	query := activeControlCabinets(r.db.WithContext(ctx).Model(&domainFacility.ControlCabinet{}))
 	if strings.TrimSpace(params.Search) == "" {
 		return r.getUnfilteredPaginatedList(ctx, query, params)
 	}
@@ -132,6 +132,7 @@ func (r *controlCabinetRepo) GetPaginatedListByBuildingID(ctx context.Context, b
 
 	query := r.db.WithContext(ctx).Model(&domainFacility.ControlCabinet{}).
 		Where("building_id = ?", buildingID)
+	query = activeControlCabinets(query)
 
 	if strings.TrimSpace(params.Search) != "" {
 		query = r.applySearch(ctx, query, params.Search)
@@ -153,6 +154,28 @@ func (r *controlCabinetRepo) GetPaginatedListByBuildingID(ctx context.Context, b
 		Page:       page,
 		TotalPages: domain.CalculateTotalPages(total, limit),
 	}, nil
+}
+
+func (r *controlCabinetRepo) GetByIds(ctx context.Context, ids []uuid.UUID) ([]*domainFacility.ControlCabinet, error) {
+	if len(ids) == 0 {
+		return []*domainFacility.ControlCabinet{}, nil
+	}
+	var items []*domainFacility.ControlCabinet
+	err := activeControlCabinets(r.db.WithContext(ctx).Model(&domainFacility.ControlCabinet{})).
+		Where("control_cabinets.id IN ?", ids).Find(&items).Error
+	return items, err
+}
+
+func (r *controlCabinetRepo) Update(ctx context.Context, entity *domainFacility.ControlCabinet) error {
+	mutation := activeMutation{
+		target: activeMutationRequest{table: "control_cabinets", id: entity.ID, query: func(tx *gorm.DB) *gorm.DB {
+			return activeControlCabinets(tx.Model(&domainFacility.ControlCabinet{}))
+		}},
+		mutate: func(tx *gorm.DB) error {
+			return gormbase.NewBaseRepository[*domainFacility.ControlCabinet](tx, nil).Update(ctx, entity)
+		},
+	}
+	return runActiveMutation(ctx, r.db, mutation)
 }
 
 func controlCabinetCreatedAtOrder() clause.OrderByColumn {

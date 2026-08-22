@@ -4,6 +4,7 @@ import (
 	facilityhandler "github.com/besart951/go_infra_link/backend/internal/handler/facility"
 	projecthandler "github.com/besart951/go_infra_link/backend/internal/handler/project"
 	userhandler "github.com/besart951/go_infra_link/backend/internal/handler/user"
+	exportservice "github.com/besart951/go_infra_link/backend/internal/service/exporting"
 	facilityservice "github.com/besart951/go_infra_link/backend/internal/service/facility"
 )
 
@@ -35,7 +36,7 @@ func newProjectHandlers(services *Services, runtime *RuntimeAdapters, copyJobs *
 	})
 }
 
-func newFacilityHandlers(services *Services, collaboration facilityhandler.ProjectRefreshBroadcaster, referenceData facilityhandler.FacilityReferenceDataRealtime, copyJobs *facilityservice.CopyJobManager) *facilityhandler.Handlers {
+func newFacilityHandlers(services *Services, collaboration facilityhandler.ProjectRefreshBroadcaster, referenceData facilityhandler.FacilityReferenceDataRealtime, copyJobs *facilityservice.CopyJobManager, imports facilityhandler.FieldDeviceImportService) *facilityhandler.Handlers {
 	return facilityhandler.NewHandlers(facilityhandler.ServiceDeps{
 		Building:                services.Facility.Building,
 		SystemType:              services.Facility.SystemType,
@@ -51,6 +52,8 @@ func newFacilityHandlers(services *Services, collaboration facilityhandler.Proje
 		ObjectData:              services.Facility.ObjectData,
 		SPSControllerSystemType: services.Facility.SPSControllerSystemType,
 		Export:                  services.Export,
+		Import:                  imports,
+		ExportDownload:          exportservice.NewDownloadPolicy(services.Project.AccessPolicy, services.RBAC),
 		AlarmType:               services.Facility.AlarmType,
 		Unit:                    services.Facility.Unit,
 		AlarmField:              services.Facility.AlarmField,

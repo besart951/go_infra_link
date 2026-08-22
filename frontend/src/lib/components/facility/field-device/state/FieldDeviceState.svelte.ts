@@ -1,4 +1,5 @@
 import { addToast } from '$lib/components/toast.svelte';
+import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 import { useFieldDeviceEditing } from '$lib/hooks/useFieldDeviceEditing.svelte.js';
 import { t as translate } from '$lib/i18n/index.js';
 import { ManageFieldDeviceUseCase } from '$lib/application/useCases/facility/manageFieldDeviceUseCase.js';
@@ -23,6 +24,7 @@ import type {
   Building,
   ControlCabinet,
   FieldDevice,
+  FieldDeviceDeleteCommand,
   SPSController,
   SystemPart
 } from '$lib/domain/facility/index.js';
@@ -39,6 +41,8 @@ import {
 } from './types.js';
 import { FieldDeviceFetchStrategyFactory } from './strategies/FieldDeviceFetchStrategyFactory.js';
 import { FieldDevicePanelState } from './FieldDevicePanelState.svelte.js';
+import { FieldDeviceCursorState } from './FieldDeviceCursorState.svelte.js';
+import { fetchFieldDeviceCursorPage } from './fetchFieldDeviceCursorPage.js';
 import {
   FieldDeviceTableViewState,
   type FieldDeviceGroupKey
@@ -54,10 +58,11 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
 
   allApparats = $state<Apparat[]>([]);
   allSystemParts = $state<SystemPart[]>([]);
-  groupingSPSControllers = $state<Map<string, SPSController>>(new Map());
-  groupingControlCabinets = $state<Map<string, ControlCabinet>>(new Map());
-  groupingBuildings = $state<Map<string, Building>>(new Map());
+  groupingSPSControllers = $state.raw<Map<string, SPSController>>(new SvelteMap());
+  groupingControlCabinets = $state.raw<Map<string, ControlCabinet>>(new SvelteMap());
+  groupingBuildings = $state.raw<Map<string, Building>>(new SvelteMap());
   readonly panels = new FieldDevicePanelState();
+  readonly cursor = new FieldDeviceCursorState();
   loadingSpecifications = $state(false);
   loadingGroupingLookups = $state(false);
 
@@ -83,6 +88,7 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
   );
   private unsubscribeReferenceData: (() => void) | undefined;
   private restoredFilterScope: string | undefined;
+  private cursorAbortController: AbortController | null = null;
 
   constructor(props: FieldDeviceStateProps = {}) {
     const resolveProjectId = toProjectIdResolver(props.projectId);
@@ -242,17 +248,60 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
 
   override async load(): Promise<void> {
     this.restorePersistedFilters();
-    await super.load();
+    if (!(await this.loadCursorPage())) return;
+    await this.loadVisibleDetails();
+  }
 
-    if (this.view.grouping.isGrouped && !this.error && !this.loading) {
+  get hasNextPage(): boolean {
+    return this.cursor.hasNextPage;
+  }
+
+  get hasPreviousPage(): boolean {
+    return this.cursor.hasPreviousPage;
+  }
+
+  override async goToNextPage(): Promise<void> {
+    if (this.cursor.moveNext()) await this.load();
+  }
+
+  override async goToPreviousPage(): Promise<void> {
+    if (this.cursor.movePrevious()) await this.load();
+  }
+
+  private async loadCursorPage(): Promise<boolean> {
+    this.cursorAbortController?.abort();
+    const controller = new AbortController();
+    this.cursorAbortController = controller;
+    this.loading = true;
+    this.error = null;
+    try {
+      const query = this.createQuery();
+      const page = await fetchFieldDeviceCursorPage({
+        query,
+        cursor: this.cursor.cursorFor(query, this.projectId),
+        projectId: this.projectId,
+        signal: controller.signal
+      });
+      if (this.cursorAbortController !== controller) return false;
+      this.items = page.items;
+      this.cursor.apply(page);
+      return true;
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') return false;
+      this.error = error instanceof Error ? error.message : translate('facility.fetch_failed');
+      return false;
+    } finally {
+      if (this.cursorAbortController === controller) this.loading = false;
+    }
+  }
+
+  private async loadVisibleDetails(): Promise<void> {
+    if (this.view.grouping.isGrouped) {
       await this.loadGroupingLookupsForVisibleDevices();
     }
-
-    if (!this.showSpecifications || this.error || this.loading) {
-      return;
+    if (this.showSpecifications) {
+      await this.loadSpecificationDetailsForVisibleDevices();
     }
-
-    await this.loadSpecificationDetailsForVisibleDevices();
   }
 
   private async loadLookups(): Promise<void> {
@@ -266,6 +315,8 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
   }
 
   override dispose(): void {
+    this.cursorAbortController?.abort();
+    this.cursorAbortController = null;
     this.unsubscribeReferenceData?.();
     this.unsubscribeReferenceData = undefined;
     super.dispose();
@@ -357,11 +408,14 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
       if (this.projectId) {
         await this.removeProjectFieldDevice(device.id);
       } else {
-        await this.manageFieldDeviceUseCase.delete(device.id);
+        await this.manageFieldDeviceUseCase.delete({
+          id: device.id,
+          base_version: device.version
+        });
       }
       addToast(translate('field_device.toasts.deleted'), 'success');
 
-      const nextSelectedIds = new Set(this.selectedIds);
+      const nextSelectedIds = new SvelteSet(this.selectedIds);
       nextSelectedIds.delete(device.id);
       this.selectedIds = nextSelectedIds;
       this.onSelectionChanged();
@@ -385,7 +439,7 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
     try {
       const result = this.projectId
         ? await this.removeProjectFieldDevices(ids)
-        : await this.manageFieldDeviceUseCase.bulkDelete(ids);
+        : await this.manageFieldDeviceUseCase.bulkDelete(this.deleteCommands(ids));
 
       if (result.success_count > 0) {
         addToast(
@@ -401,13 +455,22 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
         );
       }
 
-      this.selectedIds = new Set();
+      this.selectedIds = new SvelteSet();
       this.onSelectionChanged();
       await this.reload();
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       addToast(translate('field_device.toasts.bulk_delete_failed_message', { message }), 'error');
     }
+  }
+
+  private deleteCommands(ids: string[]): FieldDeviceDeleteCommand[] {
+    const byID = new SvelteMap(this.items.map((item) => [item.id, item]));
+    return ids.map((id) => {
+      const device = byID.get(id);
+      if (!device) throw new Error(`Selected field device ${id} is no longer visible`);
+      return { id, base_version: device.version };
+    });
   }
 
   async handleMultiCreateSuccess(_createdDevices: FieldDevice[]): Promise<void> {
@@ -555,7 +618,7 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
     try {
       const lookups = await this.groupingLookupService.loadForVisibleDevices({
         items: this.items,
-        activeGroups: new Set(this.view.grouping.activeKeys),
+        activeGroups: new SvelteSet(this.view.grouping.activeKeys),
         spsControllers: this.groupingSPSControllers,
         controlCabinets: this.groupingControlCabinets,
         buildings: this.groupingBuildings

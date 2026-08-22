@@ -86,7 +86,7 @@
     <Input
       class="hidden"
       type="file"
-      accept=".xlsx,.xlsm,.csv"
+      accept=".xlsx,.xlsm,.csv,.zip"
       bind:ref={fileInput}
       onchange={handleInputChange}
       {disabled}

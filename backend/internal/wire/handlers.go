@@ -10,22 +10,21 @@ import (
 	i18nhandler "github.com/besart951/go_infra_link/backend/internal/handler/i18n"
 	notificationhandler "github.com/besart951/go_infra_link/backend/internal/handler/notification"
 	teamhandler "github.com/besart951/go_infra_link/backend/internal/handler/team"
-	facilityservice "github.com/besart951/go_infra_link/backend/internal/service/facility"
 	"github.com/besart951/go_infra_link/backend/pkg/i18n"
 )
 
 // NewHandlers creates all HTTP handler instances from services.
 func NewHandlers(services *Services, runtime *RuntimeAdapters, cookieSettings authhandler.CookieSettings, i18nLoader *i18n.Loader, accessTokenTTL, refreshTokenTTL time.Duration) *handler.Handlers {
 	runtime = runtimeOrDefault(runtime)
-	if runtime.CopyJobs == nil {
-		runtime.CopyJobs = facilityservice.NewCopyJobManager(runtime.FacilityReferenceData)
-	}
 	copyJobs := runtime.CopyJobs
 	registerFacilityCopyTasks(copyJobs, services, runtime)
+	registerProjectCopyTasks(copyJobs, services, runtime)
+	registerHistoryRestoreTasks(copyJobs, runtime, services.History)
 
 	projectHandlers := newProjectHandlers(services, runtime, copyJobs)
 
-	facilityHandlers := newFacilityHandlers(services, projectHandlers.RefreshBroadcaster, runtime.FacilityReferenceData, copyJobs)
+	imports := newFieldDeviceImportService(runtime, services.Facility.FieldDevice)
+	facilityHandlers := newFacilityHandlers(services, projectHandlers.RefreshBroadcaster, runtime.FacilityReferenceData, copyJobs, imports)
 	userHandlers := newUserHandlers(services)
 
 	authHandler := authhandler.NewAuthHandler(
@@ -48,6 +47,6 @@ func NewHandlers(services *Services, runtime *RuntimeAdapters, cookieSettings au
 		Team:             teamhandler.NewTeamHandler(services.Team),
 		User:             userHandlers,
 		Facility:         facilityHandlers,
-		History:          historyhandler.NewHandler(services.History),
+		History:          historyhandler.NewHandler(services.History, copyJobs),
 	}
 }

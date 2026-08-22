@@ -16,12 +16,8 @@ function resetDevices(items: ReturnType<typeof buildFieldDevice>[]) {
   listItems = items;
   mockList.mockImplementation(async () => ({
     items: listItems,
-    metadata: {
-      total: listItems.length,
-      page: 1,
-      pageSize: 300,
-      totalPages: listItems.length > 0 ? 1 : 0
-    }
+    nextCursor: undefined,
+    previousCursor: undefined
   }));
 }
 
@@ -66,6 +62,7 @@ vi.mock('$lib/infrastructure/api/fieldDeviceRepository.js', () => ({
     multiCreate: vi.fn(),
     bulkUpdate: vi.fn(),
     list: (...args: unknown[]) => mockList(...args),
+    listCursor: (...args: unknown[]) => mockList(...args),
     get: (...args: unknown[]) => mockGet(...args),
     create: vi.fn(),
     update: vi.fn(),
@@ -202,7 +199,10 @@ describe('FieldDeviceListView', () => {
 
     await waitFor(() => {
       expect(window.confirm).toHaveBeenCalledTimes(1);
-      expect(mockDelete).toHaveBeenCalledWith(device.id, undefined);
+      expect(mockDelete).toHaveBeenCalledWith(
+        { id: device.id, base_version: device.version },
+        undefined
+      );
       expect(mockList).toHaveBeenCalledTimes(2);
     });
   });
@@ -236,7 +236,10 @@ describe('FieldDeviceListView', () => {
 
     await waitFor(() => {
       expect(window.confirm).toHaveBeenCalledTimes(1);
-      expect(mockBulkDelete).toHaveBeenCalledWith([device.id], undefined);
+      expect(mockBulkDelete).toHaveBeenCalledWith(
+        [{ id: device.id, base_version: device.version }],
+        undefined
+      );
       expect(mockList).toHaveBeenCalledTimes(2);
     });
   });
