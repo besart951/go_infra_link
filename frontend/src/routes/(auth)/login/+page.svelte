@@ -14,6 +14,7 @@
   } from '$lib/components/ui/field/index.js';
   import { dev } from '$app/environment';
   import { createTranslator } from '$lib/i18n/translator';
+  import { userCache } from '$lib/services/userCache.js';
 
   let showPassword = $state(false);
   let email = $state(dev ? 'besart_morina@hotmail.com' : '');
@@ -65,6 +66,10 @@
         method: 'POST',
         body: JSON.stringify({ email, password })
       });
+
+      // Drop any cached user from a previous session so the freshly logged-in
+      // identity is always fetched by the app layout.
+      userCache.clear();
 
       // Navigating to the authenticated layout loads its data with the newly
       // issued cookies. Invalidating the current login route first makes its

@@ -16,6 +16,8 @@ vi.mock('$lib/api/client', () => ({
   apiFetch: vi.fn()
 }));
 
+import { userCache } from '$lib/services/userCache.js';
+
 import { load } from './+layout.js';
 
 function createLoadEvent() {
@@ -28,6 +30,7 @@ function createLoadEvent() {
 describe('(app) layout load', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    userCache.clear();
   });
 
   it('allows a signed-in user with no permissions without preloading protected lists', async () => {

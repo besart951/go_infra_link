@@ -8,6 +8,7 @@ import { hasUserPermission } from '$lib/utils/permissions.js';
 import { redirect } from '@sveltejs/kit';
 import { canAccessProtectedRoute, forbiddenRouteRedirect } from '$lib/navigation/routeGuards.js';
 import { appNavigationDataCache } from '$lib/services/appNavigationDataCache.js';
+import { userCache } from '$lib/services/userCache.js';
 
 // Disable SSR for this layout and children
 export const ssr = false;
@@ -26,11 +27,18 @@ export const load: LayoutLoad = async ({ fetch, url }) => {
 
   try {
     try {
-      const userRes = await api<User>('/auth/me', { customFetch });
+      const userRes = await userCache.getCurrentUser(() =>
+        api<User>('/auth/me', { customFetch })
+      );
       user = userRes;
     } catch (e) {
       if (isNetworkUnavailable(e)) {
         backendAvailable = false;
+      }
+      // An explicit 401 means the session is no longer valid; drop any cached user
+      // so a stale identity is never reused after expiry or logout.
+      if (e instanceof ApiException && e.status === 401) {
+        userCache.clear();
       }
       // 401 or missing session remains an unauthenticated user and is handled by the layout.
     }

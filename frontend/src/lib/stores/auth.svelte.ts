@@ -14,6 +14,7 @@ import {
   type AllowedRole,
   type User
 } from '$lib/infrastructure/api/userRepository.js';
+import { userCache } from '$lib/services/userCache.js';
 
 interface AuthState {
   user: User | null;
@@ -38,7 +39,9 @@ export async function loadAuth(): Promise<void> {
   authState.error = null;
 
   try {
-    const user = await userRepository.getCurrent();
+    // The layout load fetches the same user; this dedupes to a single request
+    // while the cache is warm.
+    const user = await userCache.getCurrentUser(() => userRepository.getCurrent());
     authState.user = user;
 
     try {
@@ -52,6 +55,9 @@ export async function loadAuth(): Promise<void> {
     }
   } catch (error) {
     authState.error = error instanceof Error ? error.message : t('auth.load_failed');
+    if (error instanceof ApiException && error.status === 401) {
+      userCache.clear();
+    }
     if (!(error instanceof ApiException && error.status === 0 && authState.user)) {
       authState.user = null;
       authState.allowedRoles = [];

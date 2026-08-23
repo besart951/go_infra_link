@@ -6,6 +6,7 @@
   import { createTranslator } from '$lib/i18n/translator';
   import { facilityReferenceDataCache } from '$lib/services/facilityReferenceDataCache.js';
   import { facilityDetailCache } from '$lib/services/facilityDetailCache.js';
+  import { userCache } from '$lib/services/userCache.js';
 
   const t = createTranslator();
 
@@ -16,6 +17,7 @@
 
     try {
       await api('/auth/logout', { method: 'POST' });
+      userCache.clear();
       await invalidateAll();
     } catch (e) {
       console.error('Logout failed', e);
