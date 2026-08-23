@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"testing"
+	"time"
 
 	facilityjobs "github.com/besart951/go_infra_link/backend/internal/application/facilityjobs"
 	apptransaction "github.com/besart951/go_infra_link/backend/internal/application/transaction"
+	"github.com/besart951/go_infra_link/backend/internal/postgresjson"
 	"github.com/google/uuid"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -95,6 +97,21 @@ func TestStepStorePreparedPlanResumesWithoutIDMapping(t *testing.T) {
 	}
 	if _, err := store.GetMapping(t.Context(), step); !errors.Is(err, gorm.ErrRecordNotFound) {
 		t.Fatalf("unexpected ID mapping error = %v", err)
+	}
+}
+
+func TestCompletedStepUpdatesStoreResultAsPostgresJSON(t *testing.T) {
+	updates := completedStepUpdates(
+		facilityjobs.StepResult{Result: json.RawMessage(`{"resource_id":"target"}`)},
+		time.Now().UTC(),
+	)
+	document, ok := updates["result"].(postgresjson.Document)
+	if !ok {
+		t.Fatalf("result update type = %T, want postgresjson.Document", updates["result"])
+	}
+	value, err := document.Value()
+	if err != nil || value != `{"resource_id":"target"}` {
+		t.Fatalf("result JSON value = %#v, error = %v", value, err)
 	}
 }
 

@@ -7,6 +7,7 @@ import (
 
 	facilityjobs "github.com/besart951/go_infra_link/backend/internal/application/facilityjobs"
 	apptransaction "github.com/besart951/go_infra_link/backend/internal/application/transaction"
+	"github.com/besart951/go_infra_link/backend/internal/postgresjson"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -151,11 +152,16 @@ func completeStep(tx *gorm.DB, step facilityjobs.Step, result facilityjobs.StepR
 			return err
 		}
 	}
-	updates := map[string]any{
-		"status": facilityjobs.ItemStatusCompleted, "result": []byte(result.Result),
-		"error_message": "", "updated_at": time.Now().UTC(),
+	return tx.Model(&itemRecord{}).
+		Where(itemKeyQuery(step.Key)).
+		Updates(completedStepUpdates(result, time.Now().UTC())).Error
+}
+
+func completedStepUpdates(result facilityjobs.StepResult, now time.Time) map[string]any {
+	return map[string]any{
+		"status": facilityjobs.ItemStatusCompleted, "result": postgresjson.Document(result.Result),
+		"error_message": "", "updated_at": now,
 	}
-	return tx.Model(&itemRecord{}).Where(itemKeyQuery(step.Key)).Updates(updates).Error
 }
 
 func saveMapping(tx *gorm.DB, step facilityjobs.Step, targetID uuid.UUID) error {
