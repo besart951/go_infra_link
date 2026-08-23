@@ -128,6 +128,7 @@ type facilityJobStore interface {
 	Save(context.Context, FacilityJob, string) error
 	Prune(context.Context, time.Time) error
 	Retry(context.Context, uuid.UUID, uuid.UUID, time.Time) (FacilityJob, error)
+	Cancel(context.Context, uuid.UUID, uuid.UUID, time.Time) (FacilityJob, error)
 }
 
 type sqlFacilityJobStore struct {
@@ -422,8 +423,8 @@ func (s *sqlFacilityJobStore) Save(ctx context.Context, job FacilityJob, workerI
 		"stage":         job.Stage,
 		"error_message": job.Error,
 		"updated_at":    job.UpdatedAt,
-		"checkpoint":    []byte(job.Checkpoint),
-		"result":        []byte(job.Result),
+		"checkpoint":    postgresjson.Document(job.Checkpoint),
+		"result":        postgresjson.Document(job.Result),
 		"processed":     job.Processed,
 		"total":         job.Total,
 		"succeeded":     job.Succeeded,
@@ -438,9 +439,16 @@ func (s *sqlFacilityJobStore) Save(ctx context.Context, job FacilityJob, workerI
 	query := s.db.WithContext(ctx).Model(&facilityJobRecord{}).
 		Where("owner_id = ? AND id = ?", job.OwnerID, job.ID)
 	if workerID != "" {
-		query = query.Where("worker_id = ?", workerID)
+		query = query.Where("worker_id = ? AND status = ?", workerID, string(FacilityJobStatusRunning))
 	}
-	return query.Updates(updates).Error
+	result := query.Updates(updates)
+	if result.Error != nil {
+		return result.Error
+	}
+	if workerID != "" && result.RowsAffected == 0 {
+		return ErrFacilityJobNotFound
+	}
+	return nil
 }
 
 func (s *sqlFacilityJobStore) Retry(ctx context.Context, ownerID, jobID uuid.UUID, now time.Time) (FacilityJob, error) {
@@ -473,6 +481,31 @@ func (s *sqlFacilityJobStore) Retry(ctx context.Context, ownerID, jobID uuid.UUI
 			"progress": 0, "error_message": "", "worker_id": nil,
 			"lease_until": nil, "completed_at": nil, "updated_at": now,
 		}).Error
+	})
+	if err != nil {
+		return FacilityJob{}, err
+	}
+	return s.Get(ctx, ownerID, jobID)
+}
+
+func (s *sqlFacilityJobStore) Cancel(ctx context.Context, ownerID, jobID uuid.UUID, now time.Time) (FacilityJob, error) {
+	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var record facilityJobRecord
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			Where("owner_id = ? AND id = ?", ownerID, jobID).
+			First(&record).Error; err != nil {
+			return ErrFacilityJobNotFound
+		}
+		if record.Status != string(FacilityJobStatusQueued) && record.Status != string(FacilityJobStatusRunning) {
+			return ErrFacilityJobNotCancellable
+		}
+		return tx.Model(&facilityJobRecord{}).
+			Where("owner_id = ? AND id = ? AND status IN ?", ownerID, jobID, []string{string(FacilityJobStatusQueued), string(FacilityJobStatusRunning)}).
+			Updates(map[string]any{
+				"status": string(FacilityJobStatusCancelled), "stage": facilityJobStageCancelled,
+				"retryable": false, "worker_id": nil, "lease_until": nil,
+				"completed_at": now, "updated_at": now,
+			}).Error
 	})
 	if err != nil {
 		return FacilityJob{}, err

@@ -4,7 +4,7 @@ export type FacilityJobKind =
   | 'sps_controller_system_type'
   | 'field_device'
   | 'object_data';
-export type FacilityJobStatus = 'queued' | 'running' | 'completed' | 'failed';
+export type FacilityJobStatus = 'queued' | 'running' | 'completed' | 'failed' | 'cancelled';
 export type FacilityJobType = 'copy' | 'export' | 'bulk' | 'delete' | 'restore';
 export type FacilityJobClass = 'mutation' | 'export';
 
@@ -98,7 +98,13 @@ function isKind(value: unknown): value is FacilityJobKind {
 }
 
 function isStatus(value: unknown): value is FacilityJobStatus {
-  return value === 'queued' || value === 'running' || value === 'completed' || value === 'failed';
+  return (
+    value === 'queued' ||
+    value === 'running' ||
+    value === 'completed' ||
+    value === 'failed' ||
+    value === 'cancelled'
+  );
 }
 
 function isType(value: unknown): value is FacilityJobType {

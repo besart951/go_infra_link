@@ -1344,6 +1344,7 @@ definitions:
         - running
         - completed
         - failed
+        - cancelled
         type: string
       success_count:
         type: integer
@@ -6711,6 +6712,36 @@ paths:
           schema:
             $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse'
       summary: Get a facility job
+      tags:
+      - facility-jobs
+  /api/v1/facility/jobs/{id}/cancel:
+    post:
+      parameters:
+      - description: Facility Job ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FacilityJobResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse'
+      summary: Cancel a facility job
       tags:
       - facility-jobs
   /api/v1/facility/notification-classes:

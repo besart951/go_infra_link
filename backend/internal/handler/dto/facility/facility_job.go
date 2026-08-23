@@ -14,7 +14,7 @@ type FacilityJobResponse struct {
 	Kind         string          `json:"kind" enums:"control_cabinet,sps_controller,sps_controller_system_type,field_device,object_data"`
 	Type         string          `json:"type" enums:"copy,export,bulk,delete,restore"`
 	Class        string          `json:"class" enums:"mutation,export"`
-	Status       string          `json:"status" enums:"queued,running,completed,failed"`
+	Status       string          `json:"status" enums:"queued,running,completed,failed,cancelled"`
 	Progress     int             `json:"progress" minimum:"0" maximum:"100"`
 	Stage        string          `json:"stage"`
 	Error        string          `json:"error,omitempty"`

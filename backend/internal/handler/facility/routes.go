@@ -30,6 +30,7 @@ func RegisterRoutes(protectedV1 *gin.RouterGroup, handlers *Handlers, authChecke
 	facility.GET("/jobs", handlers.FacilityJob.ListJobs)
 	facility.GET("/jobs/:id", handlers.FacilityJob.GetJob)
 	facility.POST("/jobs/:id/retry", handlers.FacilityJob.RetryJob)
+	facility.POST("/jobs/:id/cancel", handlers.FacilityJob.CancelJob)
 	facility.GET("/jobs/:id/download", handlers.Export.DownloadExport)
 }
 

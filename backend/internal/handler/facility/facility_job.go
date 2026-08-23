@@ -246,6 +246,37 @@ func (h *FacilityJobHandler) RetryJob(c *gin.Context) {
 	c.JSON(http.StatusAccepted, toFacilityJobResponse(job))
 }
 
+// CancelJob godoc
+// @Summary Cancel a facility job
+// @Tags facility-jobs
+// @Produce json
+// @Param id path string true "Facility Job ID"
+// @Success 200 {object} dto.FacilityJobResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 409 {object} dto.ErrorResponse
+// @Router /api/v1/facility/jobs/{id}/cancel [post]
+func (h *FacilityJobHandler) CancelJob(c *gin.Context) {
+	jobID, ok := parseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		respondLocalizedError(c, http.StatusUnauthorized, "unauthorized", "errors.unauthorized")
+		return
+	}
+	job, err := h.jobs.Cancel(c.Request.Context(), userID, jobID)
+	if err != nil {
+		respondLocalizedDomainError(c, err, "job_cancel_failed", "facility.job_cancel_failed",
+			handlerutil.MapError(facilityservice.ErrFacilityJobNotFound, handlerutil.LocalizedError(http.StatusNotFound, "not_found", "facility.fetch_failed")),
+			handlerutil.MapError(facilityservice.ErrFacilityJobNotCancellable, handlerutil.LocalizedError(http.StatusConflict, "job_not_cancellable", "facility.job_not_cancellable")),
+		)
+		return
+	}
+	c.JSON(http.StatusOK, toFacilityJobResponse(job))
+}
+
 func facilityOperationID(c *gin.Context) (uuid.UUID, bool) {
 	operationID, err := handlerutil.ParseIdempotencyKey(c)
 	if err != nil {

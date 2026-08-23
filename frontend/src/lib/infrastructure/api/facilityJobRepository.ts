@@ -43,5 +43,14 @@ export const facilityJobRepository = {
       skipHttpErrorNavigation: true
     });
     return toFacilityJob(data);
+  },
+
+  async cancel(id: string, signal?: AbortSignal): Promise<FacilityJob> {
+    const data = await api<Parameters<typeof toFacilityJob>[0]>(`/facility/jobs/${id}/cancel`, {
+      method: 'POST',
+      signal,
+      skipHttpErrorNavigation: true
+    });
+    return toFacilityJob(data);
   }
 };

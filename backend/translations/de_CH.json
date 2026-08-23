@@ -303,6 +303,8 @@
     "copy": "Kopieren",
     "duplicate": "Duplizieren",
     "copy_failed": "Kopieren fehlgeschlagen",
+    "job_cancel_failed": "Job konnte nicht abgebrochen werden.",
+    "job_not_cancellable": "Dieser Job kann nicht mehr abgebrochen werden.",
     "view": "Anzeigen",
     "control_cabinets": "Schaltschränke",
     "control_cabinets_title": "Schaltschränke",

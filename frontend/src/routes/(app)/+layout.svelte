@@ -22,7 +22,7 @@
   import { appNavigationDataCache } from '$lib/services/appNavigationDataCache.js';
   import { facilityJobState } from '$lib/state/facilityJobState.svelte.js';
   import { clearActivityCache } from '$lib/activity/activityCache.js';
-  import FacilityJobPanel from '$lib/components/facility/FacilityJobPanel.svelte';
+  import FacilityJobMenu from '$lib/components/facility/FacilityJobMenu.svelte';
 
   const translator = createTranslator();
 
@@ -89,6 +89,7 @@
           </Breadcrumb.Root>
         </div>
         <div class="flex items-center gap-2 px-4">
+          <FacilityJobMenu />
           <NotificationBell />
         </div>
       </header>
@@ -125,7 +126,6 @@
       </div>
     </Sidebar.Inset>
     <Toasts />
-    <FacilityJobPanel />
   </Sidebar.Provider>
 {:else if data.backendAvailable === false}
   <div class="flex h-screen w-full items-center justify-center p-4">

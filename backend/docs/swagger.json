@@ -4384,6 +4384,52 @@
                 }
             }
         },
+        "/api/v1/facility/jobs/{id}/cancel": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "facility-jobs"
+                ],
+                "summary": "Cancel a facility job",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Facility Job ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FacilityJobResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/facility/notification-classes": {
             "get": {
                 "produces": [
@@ -12981,7 +13027,8 @@
                         "queued",
                         "running",
                         "completed",
-                        "failed"
+                        "failed",
+                        "cancelled"
                     ]
                 },
                 "success_count": {

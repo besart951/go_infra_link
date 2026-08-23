@@ -82,6 +82,64 @@ func TestExportConcurrencyLimitAndRetry(t *testing.T) {
 	}
 }
 
+func TestCancelQueuedJob(t *testing.T) {
+	db := openFacilityJobTestDB(t)
+	manager := NewFacilityJobManagerWithDB(nil, db)
+	t.Cleanup(manager.Close)
+	ownerID, jobID := uuid.New(), uuid.New()
+	if _, err := manager.SubmitTask(t.Context(), FacilityJob{
+		ID: jobID, OwnerID: ownerID, Kind: FacilityJobKindFieldDevice,
+		Class: FacilityJobClassExport, Type: FacilityJobTypeExport, Task: "not-started.v1",
+	}); err != nil {
+		t.Fatalf("SubmitTask() error = %v", err)
+	}
+	cancelled, err := manager.Cancel(t.Context(), ownerID, jobID)
+	if err != nil {
+		t.Fatalf("Cancel() error = %v", err)
+	}
+	if cancelled.Status != FacilityJobStatusCancelled || cancelled.Retryable {
+		t.Fatalf("cancelled job = %#v", cancelled)
+	}
+}
+
+func TestCancelRunningJobPreservesCancelledStatus(t *testing.T) {
+	db := openFacilityJobTestDB(t)
+	manager := NewFacilityJobManagerWithDB(nil, db)
+	t.Cleanup(manager.Close)
+	started := make(chan struct{})
+	stopped := make(chan struct{})
+	manager.RegisterTask("wait-for-cancel.v1", FacilityJobHandlerFunc(func(ctx context.Context, _ FacilityJobExecution) (FacilityJobTaskResult, error) {
+		close(started)
+		<-ctx.Done()
+		close(stopped)
+		return FacilityJobTaskResult{}, ctx.Err()
+	}))
+	ownerID, jobID := uuid.New(), uuid.New()
+	if _, err := manager.SubmitTask(t.Context(), FacilityJob{
+		ID: jobID, OwnerID: ownerID, Kind: FacilityJobKindFieldDevice,
+		Class: FacilityJobClassExport, Type: FacilityJobTypeExport, Task: "wait-for-cancel.v1",
+	}); err != nil {
+		t.Fatalf("SubmitTask() error = %v", err)
+	}
+	select {
+	case <-started:
+	case <-time.After(3 * time.Second):
+		t.Fatal("job did not start")
+	}
+	if _, err := manager.Cancel(t.Context(), ownerID, jobID); err != nil {
+		t.Fatalf("Cancel() error = %v", err)
+	}
+	select {
+	case <-stopped:
+	case <-time.After(3 * time.Second):
+		t.Fatal("running job did not receive cancellation")
+	}
+	job := waitForFacilityJobStatus(t, manager, ownerID, jobID, FacilityJobStatusCancelled)
+	if job.Retryable {
+		t.Fatalf("cancelled job unexpectedly retryable: %#v", job)
+	}
+}
+
 func TestMigrateFacilityJobsCreatesChunkAndMappingTables(t *testing.T) {
 	db := openFacilityJobTestDB(t)
 	for _, table := range []any{facilityJobRecord{}, facilityJobItemRecord{}, facilityJobIDMappingRecord{}, facilityAggregateLifecycleRecord{}} {
@@ -116,6 +174,11 @@ func TestFacilityJobJSONFieldsPersistAsJSONBPostgres(t *testing.T) {
 	}
 	manager := NewFacilityJobManagerWithDB(nil, database)
 	t.Cleanup(manager.Close)
+	manager.RegisterTask("test.export.v1", FacilityJobHandlerFunc(func(_ context.Context, execution FacilityJobExecution) (FacilityJobTaskResult, error) {
+		total := int64(1)
+		execution.Reporter.Report(FacilityJobProgress{Progress: 50, Stage: "generating", Processed: 1, Total: &total})
+		return FacilityJobTaskResult{Result: json.RawMessage(`{"done":true}`)}, nil
+	}))
 	job := FacilityJob{
 		OwnerID: uuid.New(), ID: uuid.New(), Kind: FacilityJobKindFieldDevice,
 		Class: FacilityJobClassExport, Type: FacilityJobTypeExport, Task: "test.export.v1",
@@ -123,6 +186,10 @@ func TestFacilityJobJSONFieldsPersistAsJSONBPostgres(t *testing.T) {
 	}
 	if _, err := manager.SubmitTask(t.Context(), job); err != nil {
 		t.Fatalf("persist JSONB job fields: %v", err)
+	}
+	completed := waitForFacilityJobStatus(t, manager, job.OwnerID, job.ID, FacilityJobStatusCompleted)
+	if string(completed.Result) != `{"done":true}` || completed.Processed != 1 {
+		t.Fatalf("completed postgres job = %#v", completed)
 	}
 }
 

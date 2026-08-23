@@ -33,6 +33,7 @@ const (
 	FacilityJobStatusRunning   FacilityJobStatus = "running"
 	FacilityJobStatusCompleted FacilityJobStatus = "completed"
 	FacilityJobStatusFailed    FacilityJobStatus = "failed"
+	FacilityJobStatusCancelled FacilityJobStatus = "cancelled"
 )
 
 type FacilityJobClass string
@@ -62,16 +63,18 @@ const (
 	facilityJobStageFinalizing          = "finalizing"
 	facilityJobStageCompleted           = "completed"
 	facilityJobStageFailed              = "failed"
+	facilityJobStageCancelled           = "cancelled"
 	facilityJobRetention                = 90 * 24 * time.Hour
 	facilityJobLeaseDuration            = 30 * time.Second
 	facilityJobHeartbeatInterval        = 10 * time.Second
 )
 
 var (
-	ErrFacilityJobNotFound      = errors.New("facility job not found")
-	ErrFacilityJobLimit         = errors.New("facility job concurrency limit reached")
-	ErrFacilityJobNotRetryable  = errors.New("facility job is not retryable")
-	errFacilityJobManagerClosed = errors.New("facility job manager is closed")
+	ErrFacilityJobNotFound       = errors.New("facility job not found")
+	ErrFacilityJobLimit          = errors.New("facility job concurrency limit reached")
+	ErrFacilityJobNotRetryable   = errors.New("facility job is not retryable")
+	ErrFacilityJobNotCancellable = errors.New("facility job is not cancellable")
+	errFacilityJobManagerClosed  = errors.New("facility job manager is closed")
 )
 
 // FacilityJob is a durable, user-scoped asynchronous facility operation. The
@@ -108,7 +111,7 @@ type facilityJobKey struct {
 }
 
 func (j FacilityJob) IsTerminal() bool {
-	return j.Status == FacilityJobStatusCompleted || j.Status == FacilityJobStatusFailed
+	return j.Status == FacilityJobStatusCompleted || j.Status == FacilityJobStatusFailed || j.Status == FacilityJobStatusCancelled
 }
 
 type FacilityJobProgress struct {
@@ -190,6 +193,7 @@ type FacilityJobManager struct {
 	closeOnce sync.Once
 	closed    bool
 	tasks     map[string]FacilityJobHandler
+	cancels   map[facilityJobKey]context.CancelFunc
 	wake      chan struct{}
 }
 
@@ -211,6 +215,7 @@ func newFacilityJobManager(publisher apprealtime.FacilityJobProgressPublisher, s
 		ctx:       ctx,
 		cancel:    cancel,
 		tasks:     make(map[string]FacilityJobHandler),
+		cancels:   make(map[facilityJobKey]context.CancelFunc),
 		wake:      make(chan struct{}, 1),
 	}
 	if store != nil {
@@ -444,7 +449,9 @@ func (m *FacilityJobManager) update(key facilityJobKey, status FacilityJobStatus
 	job.UpdatedAt = time.Now().UTC()
 	m.jobs[key] = job
 	m.mu.Unlock()
-	m.persistAndPublish(job)
+	if err := m.persistAndPublish(job); err != nil {
+		return
+	}
 	if job.IsTerminal() {
 		m.mu.Lock()
 		delete(m.jobs, key)
@@ -452,13 +459,14 @@ func (m *FacilityJobManager) update(key facilityJobKey, status FacilityJobStatus
 	}
 }
 
-func (m *FacilityJobManager) persistAndPublish(job FacilityJob) {
+func (m *FacilityJobManager) persistAndPublish(job FacilityJob) error {
 	if m.store != nil {
 		if err := m.store.Save(context.Background(), job, m.workerID); err != nil {
-			return
+			return err
 		}
 	}
 	m.publish(job)
+	return nil
 }
 
 func (m *FacilityJobManager) dispatch(class FacilityJobClass) {
@@ -512,16 +520,29 @@ func (m *FacilityJobManager) runPersistedTask(job FacilityJob) {
 	if handler == nil {
 		return
 	}
-	m.persistAndPublish(job)
+	if err := m.persistAndPublish(job); err != nil {
+		m.fail(key, err)
+		return
+	}
 	stopHeartbeat := m.startHeartbeat(key)
 	defer stopHeartbeat()
+	taskCtx, cancel := context.WithCancel(m.ctx)
+	m.mu.Lock()
+	m.cancels[key] = cancel
+	m.mu.Unlock()
+	defer func() {
+		m.mu.Lock()
+		delete(m.cancels, key)
+		m.mu.Unlock()
+		cancel()
+	}()
 
 	execution := FacilityJobExecution{Job: job, Reporter: facilityJobReporter{report: func(progress FacilityJobProgress) {
 		m.reportTask(key, progress)
 	}}}
-	result, err := handler.Execute(m.ctx, execution)
+	result, err := handler.Execute(taskCtx, execution)
 	if err != nil {
-		if errors.Is(err, context.Canceled) && m.ctx.Err() != nil {
+		if errors.Is(err, context.Canceled) && taskCtx.Err() != nil {
 			return
 		}
 		m.fail(key, err)
@@ -558,7 +579,9 @@ func (m *FacilityJobManager) reportTask(key facilityJobKey, progress FacilityJob
 	job.UpdatedAt = time.Now().UTC()
 	m.jobs[key] = job
 	m.mu.Unlock()
-	m.persistAndPublish(job)
+	if err := m.persistAndPublish(job); err != nil {
+		m.fail(key, err)
+	}
 }
 
 // Retry requeues a failed, retryable job while preserving its checkpoint.
@@ -571,6 +594,28 @@ func (m *FacilityJobManager) Retry(ctx context.Context, ownerID, jobID uuid.UUID
 		return FacilityJob{}, err
 	}
 	m.signalWorkers()
+	m.publish(job)
+	return job, nil
+}
+
+// Cancel marks an owned queued or running job as cancelled. A local worker is
+// signalled through its task context; workers in other processes cannot write
+// a later terminal state because the durable store only accepts running jobs.
+func (m *FacilityJobManager) Cancel(ctx context.Context, ownerID, jobID uuid.UUID) (FacilityJob, error) {
+	if m == nil || m.store == nil {
+		return FacilityJob{}, ErrFacilityJobNotFound
+	}
+	job, err := m.store.Cancel(ctx, ownerID, jobID, time.Now().UTC())
+	if err != nil {
+		return FacilityJob{}, err
+	}
+	key := facilityJobKey{ownerID: ownerID, jobID: jobID}
+	m.mu.Lock()
+	if cancel := m.cancels[key]; cancel != nil {
+		cancel()
+	}
+	delete(m.jobs, key)
+	m.mu.Unlock()
 	m.publish(job)
 	return job, nil
 }

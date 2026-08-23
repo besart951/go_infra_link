@@ -22,12 +22,13 @@ const realtime = vi.hoisted(() => {
 
 const getJob = vi.hoisted(() => vi.fn());
 const listJobs = vi.hoisted(() => vi.fn());
+const cancelJob = vi.hoisted(() => vi.fn());
 
 vi.mock('$lib/services/facilityReferenceDataCache.js', () => ({
   facilityReferenceDataCache: realtime.cache
 }));
 vi.mock('$lib/infrastructure/api/facilityJobRepository.js', () => ({
-  facilityJobRepository: { get: getJob, list: listJobs, retry: vi.fn() }
+  facilityJobRepository: { get: getJob, list: listJobs, retry: vi.fn(), cancel: cancelJob }
 }));
 
 import { FacilityJobState } from './facilityJobState.svelte.js';
@@ -87,5 +88,31 @@ describe('FacilityJobState', () => {
     });
     await vi.waitFor(() => expect(state.isPending).toBe(false));
     expect(start).toHaveBeenCalledOnce();
+  });
+
+  it('keeps a cancelled job in the central job list', async () => {
+    cancelJob.mockResolvedValue({
+      jobId,
+      kind: 'field_device',
+      type: 'export',
+      status: 'cancelled',
+      progress: 42,
+      stage: 'cancelled',
+      retryable: false
+    });
+    const state = new FacilityJobState();
+    state.track({
+      jobId,
+      kind: 'field_device',
+      type: 'export',
+      status: 'running',
+      progress: 42,
+      stage: 'generating'
+    });
+
+    await state.cancel(jobId);
+
+    expect(cancelJob).toHaveBeenCalledWith(jobId);
+    expect(state.jobs[0]).toMatchObject({ status: 'cancelled', retryable: false });
   });
 });

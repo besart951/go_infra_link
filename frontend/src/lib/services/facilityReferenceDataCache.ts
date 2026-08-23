@@ -127,7 +127,7 @@ const facilityJobProgressEventSchema = z.object({
   ]),
   job_type: z.enum(['copy', 'export', 'bulk', 'delete', 'restore']).optional(),
   class: z.enum(['mutation', 'export']).optional(),
-  status: z.enum(['queued', 'running', 'completed', 'failed']),
+  status: z.enum(['queued', 'running', 'completed', 'failed', 'cancelled']),
   progress: z.number().int().min(0).max(100),
   stage: z.string(),
   processed: z.number().int().nonnegative().optional(),

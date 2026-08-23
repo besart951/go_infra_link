@@ -82,6 +82,12 @@ export class FacilityJobState {
     this.track(job);
   }
 
+  async cancel(jobId: string): Promise<void> {
+    const job = await facilityJobRepository.cancel(jobId);
+    this.track(job);
+    if (jobId === this.jobId) this.reset();
+  }
+
   async submit(start: FacilityJobStarter): Promise<FacilityJobSubmissionResult> {
     this.initialize();
     if (this.isPending) return { started: false };
@@ -131,7 +137,7 @@ export class FacilityJobState {
     if (existing && sameFacilityJobProgress(existing, next)) return;
     this.jobs = reconcileFacilityJob(this.jobs, next);
     if (event.job_id === this.jobId) this.applyJob(next);
-    if (event.status === 'completed' || event.status === 'failed') {
+    if (event.status === 'completed' || event.status === 'failed' || event.status === 'cancelled') {
       void this.refreshJob(event.job_id);
     }
   }
@@ -187,9 +193,7 @@ export class FacilityJobState {
     this.progress = job.progress;
     this.stage = job.stage;
     this.connectionInterrupted = false;
-    if (job.status === 'completed') {
-      this.reset();
-    } else if (job.status === 'failed') {
+    if (job.status === 'completed' || job.status === 'failed' || job.status === 'cancelled') {
       this.reset();
     }
   }
