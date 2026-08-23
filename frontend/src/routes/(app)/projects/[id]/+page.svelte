@@ -328,16 +328,13 @@
       case 'field_device':
         requestFieldDeviceRefresh([change.aggregate_id]);
         break;
-      case 'bacnet_object': {
-        const fieldDeviceId = change.parent_refs?.field_device_id;
-        if (typeof fieldDeviceId === 'string') requestFieldDeviceRefresh([fieldDeviceId]);
-        else bumpFieldDeviceRefresh();
+      case 'bacnet_object':
+        bumpFieldDeviceRefresh();
         break;
-      }
       case 'project':
         void loadProject();
         break;
-      case 'project_users':
+      case 'project_user':
         void loadProject();
         void loadProjectUsers();
         break;
@@ -472,7 +469,7 @@
         {/if}
         <span>{onlineCollaborators.length}</span>
         <div class="flex -space-x-2">
-          {#each onlineCollaborators.slice(0, 4) as collaborator}
+          {#each onlineCollaborators.slice(0, 4) as collaborator (collaborator.presence.user_id)}
             {#if collaborator.user}
               <Tooltip.Root>
                 <Tooltip.Trigger>
@@ -542,7 +539,7 @@
   {#if loading}
     <div class="min-w-0 rounded-lg border bg-card p-6">
       <div class="grid gap-4 md:grid-cols-2">
-        {#each Array(6) as _}
+        {#each Array.from({ length: 6 }, (_, index) => index) as row (row)}
           <Skeleton class="h-6 w-full" />
         {/each}
       </div>

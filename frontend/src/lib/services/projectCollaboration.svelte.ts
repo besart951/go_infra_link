@@ -46,7 +46,6 @@ export interface ProjectChange {
   action: string;
   actor_id?: string;
   changed_fields: string[];
-  parent_refs?: Record<string, unknown>;
   occurred_at: string;
 }
 
@@ -191,8 +190,6 @@ const collaboratorDraftSchema = z
   })
   .strip();
 
-const parentRefsSchema = z.record(z.string().max(180), z.unknown());
-
 const projectChangeFields = {
   revision: revisionSchema,
   event_id: uuidSchema,
@@ -201,7 +198,6 @@ const projectChangeFields = {
   action: boundedStringSchema,
   actor_id: uuidSchema.optional(),
   changed_fields: z.array(z.string().min(1).max(180)).max(128),
-  parent_refs: parentRefsSchema.optional(),
   occurred_at: dateTimeSchema
 } as const;
 

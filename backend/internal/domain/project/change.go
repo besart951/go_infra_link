@@ -19,6 +19,20 @@ const (
 	ChangeRemoved ChangeAction = "removed"
 )
 
+// AggregateKind identifies the project-owned aggregate changed by an event.
+// It is deliberately separate from database table names.
+type AggregateKind string
+
+const (
+	AggregateProject                 AggregateKind = "project"
+	AggregateControlCabinet          AggregateKind = "control_cabinet"
+	AggregateSPSController           AggregateKind = "sps_controller"
+	AggregateSPSControllerSystemType AggregateKind = "sps_controller_system_type"
+	AggregateFieldDevice             AggregateKind = "field_device"
+	AggregateObjectData              AggregateKind = "object_data"
+	AggregateProjectUser             AggregateKind = "project_user"
+)
+
 // Change is a durable, client-facing project event. It intentionally contains
 // semantic data only; audit snapshots and database table names never cross this
 // boundary.
@@ -26,24 +40,22 @@ type Change struct {
 	EventID       uuid.UUID
 	ProjectID     uuid.UUID
 	Revision      uint64
-	AggregateType string
+	AggregateType AggregateKind
 	AggregateID   *uuid.UUID
 	Action        ChangeAction
 	ActorID       *uuid.UUID
 	ChangedFields []string
-	ParentRefs    map[string]uuid.UUID
 	OccurredAt    time.Time
 }
 
 // NewChange describes an event before its event ID and revision are allocated.
 type NewChange struct {
 	ProjectID     uuid.UUID
-	AggregateType string
+	AggregateType AggregateKind
 	AggregateID   *uuid.UUID
 	Action        ChangeAction
 	ActorID       *uuid.UUID
 	ChangedFields []string
-	ParentRefs    map[string]uuid.UUID
 	OccurredAt    time.Time
 }
 

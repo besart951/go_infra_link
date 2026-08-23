@@ -53,15 +53,15 @@ type fieldDeviceUpdateGroupExecution struct {
 	group   facilityservice.FieldDeviceBulkUpdateGroup
 }
 
-func registerFieldDeviceBulkTasks(jobs *facilityservice.FacilityJobManager, runtime *RuntimeAdapters, services *Services) {
+func registerFieldDeviceBulkTasks(tasks *facilityservice.TaskRegistry, runtime *RuntimeAdapters, services *Services) {
 	registrar := fieldDeviceBulkTaskRegistrar{services: services}
 	if runtime != nil {
 		registrar.steps = runtime.FacilityJobSteps
 		registrar.plans = runtime.FieldDeviceUpdatePlans
 	}
-	jobs.RegisterTask(facilityservice.FacilityJobTaskMultiCreateFieldDevices, facilityservice.FacilityJobHandlerFunc(registrar.multiCreate))
-	jobs.RegisterTask(facilityservice.FacilityJobTaskBulkUpdateFieldDevices, facilityservice.FacilityJobHandlerFunc(registrar.bulkUpdate))
-	jobs.RegisterTask(facilityservice.FacilityJobTaskBulkDeleteFieldDevices, facilityservice.FacilityJobHandlerFunc(registrar.bulkDelete))
+	tasks.Register(facilityservice.FacilityJobTaskMultiCreateFieldDevices, facilityservice.FacilityJobHandlerFunc(registrar.multiCreate))
+	tasks.Register(facilityservice.FacilityJobTaskBulkUpdateFieldDevices, facilityservice.FacilityJobHandlerFunc(registrar.bulkUpdate))
+	tasks.Register(facilityservice.FacilityJobTaskBulkDeleteFieldDevices, facilityservice.FacilityJobHandlerFunc(registrar.bulkDelete))
 }
 
 func (r fieldDeviceBulkTaskRegistrar) multiCreate(ctx context.Context, execution facilityservice.FacilityJobExecution) (facilityservice.FacilityJobTaskResult, error) {

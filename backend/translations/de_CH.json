@@ -305,6 +305,8 @@
     "copy_failed": "Kopieren fehlgeschlagen",
     "job_cancel_failed": "Job konnte nicht abgebrochen werden.",
     "job_not_cancellable": "Dieser Job kann nicht mehr abgebrochen werden.",
+    "job_remove_failed": "Job konnte nicht entfernt werden.",
+    "job_not_removable": "Nur abgeschlossene, fehlgeschlagene oder abgebrochene Jobs können entfernt werden.",
     "view": "Anzeigen",
     "control_cabinets": "Schaltschränke",
     "control_cabinets_title": "Schaltschränke",

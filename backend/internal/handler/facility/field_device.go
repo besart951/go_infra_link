@@ -18,10 +18,10 @@ import (
 type FieldDeviceHandler struct {
 	service       FieldDeviceService
 	collaboration ProjectFieldDeviceChangeBroadcaster
-	facilityJobs  *facilityservice.FacilityJobManager
+	facilityJobs  *facilityservice.JobService
 }
 
-func NewFieldDeviceHandlerWithFacilityJobs(service FieldDeviceService, broadcaster ProjectRefreshBroadcaster, facilityJobs *facilityservice.FacilityJobManager) *FieldDeviceHandler {
+func NewFieldDeviceHandlerWithFacilityJobs(service FieldDeviceService, broadcaster ProjectRefreshBroadcaster, facilityJobs *facilityservice.JobService) *FieldDeviceHandler {
 	handler := NewFieldDeviceHandler(service, broadcaster)
 	handler.facilityJobs = facilityJobs
 	return handler

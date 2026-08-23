@@ -37,6 +37,22 @@ type FieldDeviceService struct {
 	tx                          txCoordinator
 }
 
+// FieldDeviceDependencies groups collaborators owned by the field-device
+// module. Keeping this boundary explicit makes construction readable and
+// prevents callers from coupling to service field order.
+type FieldDeviceDependencies struct {
+	Devices               domainFieldDevice.FieldDeviceStore
+	ControllerSystemTypes domainHierarchy.SPSControllerSystemTypeStore
+	SystemTypes           domainFacility.SystemTypeRepository
+	Apparats              domainFacility.ApparatRepository
+	SystemParts           domainFacility.SystemPartRepository
+	Specifications        domainFieldDevice.SpecificationStore
+	BacnetObjects         domainObjectData.BacnetObjectStore
+	ObjectData            domainObjectData.ObjectDataStore
+	AlarmTypes            domainFacility.AlarmTypeRepository
+	BacnetAlarmValues     domainFacility.BacnetObjectAlarmValueRepository
+}
+
 func normalizeFieldDeviceListPagination(page, limit int) (int, int) {
 	page, limit = domain.NormalizePagination(page, limit, fieldDeviceListDefaultLimit)
 	if limit > fieldDeviceListMaxLimit {
@@ -45,29 +61,18 @@ func normalizeFieldDeviceListPagination(page, limit int) (int, int) {
 	return page, limit
 }
 
-func NewFieldDeviceService(
-	repo domainFieldDevice.FieldDeviceStore,
-	spsControllerSystemTypeRepo domainHierarchy.SPSControllerSystemTypeStore,
-	systemTypeRepo domainFacility.SystemTypeRepository,
-	apparatRepo domainFacility.ApparatRepository,
-	systemPartRepo domainFacility.SystemPartRepository,
-	specificationRepo domainFieldDevice.SpecificationStore,
-	bacnetObjectRepo domainObjectData.BacnetObjectStore,
-	objectDataRepo domainObjectData.ObjectDataStore,
-	alarmTypeRepo domainFacility.AlarmTypeRepository,
-	bacnetAlarmValueRepo domainFacility.BacnetObjectAlarmValueRepository,
-) *FieldDeviceService {
+func NewFieldDeviceService(deps FieldDeviceDependencies) *FieldDeviceService {
 	return &FieldDeviceService{
-		repo:                        repo,
-		spsControllerSystemTypeRepo: spsControllerSystemTypeRepo,
-		systemTypeRepo:              systemTypeRepo,
-		apparatRepo:                 apparatRepo,
-		systemPartRepo:              systemPartRepo,
-		specificationRepo:           specificationRepo,
-		bacnetObjectRepo:            bacnetObjectRepo,
-		objectDataRepo:              objectDataRepo,
-		alarmTypeRepo:               alarmTypeRepo,
-		bacnetAlarmValueRepo:        bacnetAlarmValueRepo,
+		repo:                        deps.Devices,
+		spsControllerSystemTypeRepo: deps.ControllerSystemTypes,
+		systemTypeRepo:              deps.SystemTypes,
+		apparatRepo:                 deps.Apparats,
+		systemPartRepo:              deps.SystemParts,
+		specificationRepo:           deps.Specifications,
+		bacnetObjectRepo:            deps.BacnetObjects,
+		objectDataRepo:              deps.ObjectData,
+		alarmTypeRepo:               deps.AlarmTypes,
+		bacnetAlarmValueRepo:        deps.BacnetAlarmValues,
 		fieldDeviceOptionsCache:     newFieldDeviceOptionsCache(),
 		changeRecorder:              changecapture.NoopRecorder{},
 	}

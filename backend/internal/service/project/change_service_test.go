@@ -2,6 +2,7 @@ package project
 
 import (
 	"context"
+	"errors"
 	"reflect"
 	"testing"
 
@@ -11,6 +12,38 @@ import (
 
 type changeStoreFake struct {
 	changes []domainProject.NewChange
+}
+
+func TestChangeSemanticsUsesClosedVocabulary(t *testing.T) {
+	tests := []struct {
+		event     string
+		aggregate domainProject.AggregateKind
+		action    domainProject.ChangeAction
+	}{
+		{"project.user.invited", domainProject.AggregateProjectUser, domainProject.ChangeInvited},
+		{"project.phase.changed", domainProject.AggregateProject, domainProject.ChangeUpdated},
+		{"project.field_device.multi_created", domainProject.AggregateFieldDevice, domainProject.ChangeCreated},
+		{"project.sps_controller.ip_address.changed", domainProject.AggregateSPSController, domainProject.ChangeUpdated},
+	}
+	for _, tt := range tests {
+		t.Run(tt.event, func(t *testing.T) {
+			got, err := changeSemantics(tt.event)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got.aggregate != tt.aggregate || got.action != tt.action {
+				t.Fatalf("semantics = %q/%q, want %q/%q", got.aggregate, got.action, tt.aggregate, tt.action)
+			}
+		})
+	}
+}
+
+func TestChangeServiceRejectsUnknownEvent(t *testing.T) {
+	service := NewChangeService(&changeStoreFake{})
+	err := service.RecordEvent(t.Context(), uuid.New(), "project.user.promoted", nil)
+	if !errors.Is(err, ErrUnknownProjectEvent) {
+		t.Fatalf("error = %v, want %v", err, ErrUnknownProjectEvent)
+	}
 }
 
 func (f *changeStoreFake) Append(_ context.Context, change domainProject.NewChange) (*domainProject.Change, error) {
@@ -37,9 +70,6 @@ func TestChangeServiceRecordsOneSemanticEventPerAggregate(t *testing.T) {
 	for _, change := range store.changes {
 		if change.AggregateType != "field_device" || change.Action != domainProject.ChangeCreated {
 			t.Fatalf("unexpected semantic change: %+v", change)
-		}
-		if change.ParentRefs["project_id"] != projectID {
-			t.Fatalf("missing project parent ref: %+v", change.ParentRefs)
 		}
 	}
 }

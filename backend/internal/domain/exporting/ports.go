@@ -17,12 +17,22 @@ type SnapshotDataProvider interface {
 	WithinSnapshot(ctx context.Context, consume func(DataProvider) error) error
 }
 
+// WorkbookBuild groups generator inputs so callers do not depend on a long
+// positional parameter list.
+type WorkbookBuild struct {
+	OutputPath  string
+	Controllers []Controller
+	Source      DataProvider
+	Request     Request
+	PageSize    int
+}
+
 type WorkbookGenerator interface {
-	GenerateWorkbook(ctx context.Context, outputPath string, controllers []Controller, source DataProvider, req Request, pageSize int) (int64, error)
+	GenerateWorkbook(ctx context.Context, build WorkbookBuild) (int64, error)
 }
 
 type ZipGenerator interface {
-	GenerateZipByCabinet(ctx context.Context, outputPath string, controllers []Controller, source DataProvider, req Request, pageSize int) (int64, error)
+	GenerateZipByCabinet(ctx context.Context, build WorkbookBuild) (int64, error)
 }
 
 type FileStore interface {

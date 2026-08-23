@@ -16,10 +16,10 @@ import (
 // NewHandlers creates all HTTP handler instances from services.
 func NewHandlers(services *Services, runtime *RuntimeAdapters, cookieSettings authhandler.CookieSettings, i18nLoader *i18n.Loader, accessTokenTTL, refreshTokenTTL time.Duration) *handler.Handlers {
 	runtime = runtimeOrDefault(runtime)
-	facilityJobs := runtime.FacilityJobs
-	registerFacilityCopyTasks(facilityJobs, services, runtime)
-	registerProjectCopyTasks(facilityJobs, services, runtime)
-	registerHistoryRestoreTasks(facilityJobs, runtime, services.History)
+	facilityJobs := runtime.FacilityJobs.Service
+	registerFacilityCopyTasks(runtime.FacilityJobs.Tasks, services, runtime)
+	registerProjectCopyTasks(runtime.FacilityJobs.Tasks, services, runtime)
+	registerHistoryRestoreTasks(runtime.FacilityJobs.Tasks, runtime, services.History)
 
 	projectHandlers := newProjectHandlers(services, runtime, facilityJobs)
 
@@ -42,11 +42,15 @@ func NewHandlers(services *Services, runtime *RuntimeAdapters, cookieSettings au
 		AuthRegistration: authhandler.NewRegistrationHandler(services.UserRegistration),
 		Dashboard:        dashboardhandler.NewDashboardHandler(services.Dashboard),
 		I18n:             i18nhandler.NewI18nHandler(i18nLoader),
-		Notification:     notificationhandler.NewNotificationSettingsHandler(services.Notification, runtime.SystemNotificationStream),
-		Project:          projectHandlers,
-		Team:             teamhandler.NewTeamHandler(services.Team),
-		User:             userHandlers,
-		Facility:         facilityHandlers,
-		History:          historyhandler.NewHandler(services.History, facilityJobs),
+		Notification: notificationhandler.NewNotificationSettingsHandler(notificationhandler.HandlerDependencies{
+			SMTP: services.Notification.Settings, Preferences: services.Notification.Preferences,
+			Inbox: services.Notification.Inbox, Rules: services.Notification.Rules,
+			Streamer: runtime.SystemNotificationStream,
+		}),
+		Project:  projectHandlers,
+		Team:     teamhandler.NewTeamHandler(services.Team),
+		User:     userHandlers,
+		Facility: facilityHandlers,
+		History:  historyhandler.NewHandler(services.History, facilityJobs),
 	}
 }

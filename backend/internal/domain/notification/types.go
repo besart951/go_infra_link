@@ -63,10 +63,10 @@ type DispatchNotificationInput struct {
 	RecipientIDs []uuid.UUID
 	ActorID      *uuid.UUID
 	Locale       string
-	EventKey     string
+	EventKey     EventKey
 	Title        string
 	Body         string
-	ResourceType string
+	ResourceType ResourceKind
 	ResourceID   *uuid.UUID
 	Metadata     map[string]string
 }
@@ -74,11 +74,11 @@ type DispatchNotificationInput struct {
 type DispatchEventInput struct {
 	ActorID      *uuid.UUID
 	Locale       string
-	EventKey     string
+	EventKey     EventKey
 	Title        string
 	Body         string
 	ProjectID    *uuid.UUID
-	ResourceType string
+	ResourceType ResourceKind
 	ResourceID   *uuid.UUID
 	Metadata     map[string]string
 }
@@ -106,9 +106,9 @@ type UpsertNotificationRuleInput struct {
 	ActorID          uuid.UUID
 	Name             string
 	Enabled          bool
-	EventKey         string
+	EventKey         EventKey
 	ProjectID        *uuid.UUID
-	ResourceType     string
+	ResourceType     ResourceKind
 	ResourceID       *uuid.UUID
 	RecipientType    RuleRecipientType
 	RecipientUserIDs []uuid.UUID
@@ -117,7 +117,7 @@ type UpsertNotificationRuleInput struct {
 }
 
 type NotificationRuleFilter struct {
-	EventKey  string
+	EventKey  EventKey
 	ProjectID *uuid.UUID
 	Enabled   *bool
 }
@@ -160,7 +160,7 @@ type NotificationRuleRepository interface {
 	DeleteByID(ctx context.Context, id uuid.UUID) error
 	GetByID(ctx context.Context, id uuid.UUID) (*NotificationRule, error)
 	List(ctx context.Context, filter NotificationRuleFilter) ([]NotificationRule, error)
-	ListMatching(ctx context.Context, eventKey string, projectID *uuid.UUID, resourceType string, resourceID *uuid.UUID) ([]NotificationRule, error)
+	ListMatching(ctx context.Context, eventKey EventKey, projectID *uuid.UUID, resourceType ResourceKind, resourceID *uuid.UUID) ([]NotificationRule, error)
 }
 
 type ProjectMembershipReader interface {

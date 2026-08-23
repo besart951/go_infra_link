@@ -89,9 +89,9 @@ func (h *ProjectHandler) notifyProjectMutationForActor(ctx context.Context, acto
 		go func() {
 			_ = h.notifications.DispatchEvent(dispatchCtx, domainNotification.DispatchEventInput{
 				ActorID:      actorID,
-				EventKey:     eventType,
+				EventKey:     domainNotification.EventKey(eventType),
 				ProjectID:    &projectID,
-				ResourceType: resourceType,
+				ResourceType: domainNotification.ResourceKind(resourceType),
 				ResourceID:   resourceID,
 				Metadata:     metadata,
 			})

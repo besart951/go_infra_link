@@ -48,7 +48,18 @@ func TestFieldDeviceDeleteChecksVersionInsideAggregateTransaction(t *testing.T) 
 	repo := &versionedFieldDeviceStore{fakeFieldDeviceStore: &fakeFieldDeviceStore{items: map[uuid.UUID]*domainFacility.FieldDevice{
 		id: {Base: domain.Base{ID: id, Version: 4}},
 	}}}
-	service := facility.NewFieldDeviceService(repo, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	service := facility.NewFieldDeviceService(facility.FieldDeviceDependencies{
+		Devices:               repo,
+		ControllerSystemTypes: nil,
+		SystemTypes:           nil,
+		Apparats:              nil,
+		SystemParts:           nil,
+		Specifications:        nil,
+		BacnetObjects:         nil,
+		ObjectData:            nil,
+		AlarmTypes:            nil,
+		BacnetAlarmValues:     nil,
+	})
 	staleVersion := uint64(3)
 
 	if err := service.Delete(context.Background(), domainFacility.FieldDeviceDeleteCommand{ID: id, BaseVersion: domain.AggregateVersion(staleVersion)}); !errors.Is(err, domain.ErrConflict) {
@@ -836,18 +847,18 @@ func TestFieldDeviceService_DeleteByIDs_UsesSingleRepositoryDelete(t *testing.T)
 		},
 	}
 
-	svc := facility.NewFieldDeviceService(
-		fieldDeviceRepo,
-		nil,
-		nil,
-		nil,
-		nil,
-		nil,
-		nil,
-		nil,
-		nil,
-		nil,
-	)
+	svc := facility.NewFieldDeviceService(facility.FieldDeviceDependencies{
+		Devices:               fieldDeviceRepo,
+		ControllerSystemTypes: nil,
+		SystemTypes:           nil,
+		Apparats:              nil,
+		SystemParts:           nil,
+		Specifications:        nil,
+		BacnetObjects:         nil,
+		ObjectData:            nil,
+		AlarmTypes:            nil,
+		BacnetAlarmValues:     nil,
+	})
 
 	if err := svc.DeleteByIDs(context.Background(), []uuid.UUID{fdID1, fdID2}); err != nil {
 		t.Fatalf("expected delete to succeed, got %v", err)
@@ -887,18 +898,18 @@ func TestFieldDeviceService_DeleteByIDs_DeletesOwnedBacnetObjectsAndSpecificatio
 		},
 	}}
 
-	svc := facility.NewFieldDeviceService(
-		fieldDeviceRepo,
-		nil,
-		nil,
-		nil,
-		nil,
-		specificationRepo,
-		bacnetObjectRepo,
-		nil,
-		nil,
-		nil,
-	)
+	svc := facility.NewFieldDeviceService(facility.FieldDeviceDependencies{
+		Devices:               fieldDeviceRepo,
+		ControllerSystemTypes: nil,
+		SystemTypes:           nil,
+		Apparats:              nil,
+		SystemParts:           nil,
+		Specifications:        specificationRepo,
+		BacnetObjects:         bacnetObjectRepo,
+		ObjectData:            nil,
+		AlarmTypes:            nil,
+		BacnetAlarmValues:     nil,
+	})
 
 	if err := svc.DeleteByIDs(context.Background(), []uuid.UUID{fieldDeviceID}); err != nil {
 		t.Fatalf("expected delete to succeed, got %v", err)
@@ -1050,18 +1061,18 @@ func TestFieldDeviceService_GetFieldDeviceOptions_PreservesRepositoryOrdering(t 
 		},
 	}
 
-	svc := facility.NewFieldDeviceService(
-		nil,
-		nil,
-		nil,
-		apparatRepo,
-		systemPartRepo,
-		nil,
-		nil,
-		objectDataRepo,
-		nil,
-		nil,
-	)
+	svc := facility.NewFieldDeviceService(facility.FieldDeviceDependencies{
+		Devices:               nil,
+		ControllerSystemTypes: nil,
+		SystemTypes:           nil,
+		Apparats:              apparatRepo,
+		SystemParts:           systemPartRepo,
+		Specifications:        nil,
+		BacnetObjects:         nil,
+		ObjectData:            objectDataRepo,
+		AlarmTypes:            nil,
+		BacnetAlarmValues:     nil,
+	})
 
 	options, err := svc.GetFieldDeviceOptions(context.Background())
 	if err != nil {
@@ -1147,18 +1158,18 @@ func TestFieldDeviceService_MultiCreate_CharacterizesPartialSuccessAndBatchConfl
 		},
 	}
 
-	svc := facility.NewFieldDeviceService(
-		fieldDeviceRepo,
-		spsSystemTypeRepo,
-		systemTypeRepo,
-		apparatRepo,
-		systemPartRepo,
-		nil,
-		nil,
-		nil,
-		nil,
-		nil,
-	)
+	svc := facility.NewFieldDeviceService(facility.FieldDeviceDependencies{
+		Devices:               fieldDeviceRepo,
+		ControllerSystemTypes: spsSystemTypeRepo,
+		SystemTypes:           systemTypeRepo,
+		Apparats:              apparatRepo,
+		SystemParts:           systemPartRepo,
+		Specifications:        nil,
+		BacnetObjects:         nil,
+		ObjectData:            nil,
+		AlarmTypes:            nil,
+		BacnetAlarmValues:     nil,
+	})
 
 	result := svc.MultiCreate(context.Background(), []domainFacility.FieldDeviceCreateItem{
 		{FieldDevice: newFieldDevice(fd1ID, spsSystemTypeID, apparatID, systemPartID, 11)},
@@ -1221,18 +1232,18 @@ func TestFieldDeviceService_BulkUpdate_AllowsSwapApparatNr(t *testing.T) {
 		},
 	}
 
-	svc := facility.NewFieldDeviceService(
-		fieldDeviceRepo,
-		spsSystemTypeRepo,
-		systemTypeRepo,
-		apparatRepo,
-		systemPartRepo,
-		nil,
-		nil,
-		nil,
-		nil,
-		nil,
-	)
+	svc := facility.NewFieldDeviceService(facility.FieldDeviceDependencies{
+		Devices:               fieldDeviceRepo,
+		ControllerSystemTypes: spsSystemTypeRepo,
+		SystemTypes:           systemTypeRepo,
+		Apparats:              apparatRepo,
+		SystemParts:           systemPartRepo,
+		Specifications:        nil,
+		BacnetObjects:         nil,
+		ObjectData:            nil,
+		AlarmTypes:            nil,
+		BacnetAlarmValues:     nil,
+	})
 
 	updates := []domainFacility.BulkFieldDeviceUpdate{
 		{ID: fd1ID, BaseVersion: testBaseVersion(), ApparatNr: new(2)},
@@ -1293,18 +1304,18 @@ func TestFieldDeviceService_BulkUpdate_DetectsApparatNrConflict(t *testing.T) {
 		},
 	}
 
-	svc := facility.NewFieldDeviceService(
-		fieldDeviceRepo,
-		spsSystemTypeRepo,
-		systemTypeRepo,
-		apparatRepo,
-		systemPartRepo,
-		nil,
-		nil,
-		nil,
-		nil,
-		nil,
-	)
+	svc := facility.NewFieldDeviceService(facility.FieldDeviceDependencies{
+		Devices:               fieldDeviceRepo,
+		ControllerSystemTypes: spsSystemTypeRepo,
+		SystemTypes:           systemTypeRepo,
+		Apparats:              apparatRepo,
+		SystemParts:           systemPartRepo,
+		Specifications:        nil,
+		BacnetObjects:         nil,
+		ObjectData:            nil,
+		AlarmTypes:            nil,
+		BacnetAlarmValues:     nil,
+	})
 
 	updates := []domainFacility.BulkFieldDeviceUpdate{
 		{ID: fd1ID, BaseVersion: testBaseVersion(), ApparatNr: new(3)},
@@ -1366,18 +1377,18 @@ func TestFieldDeviceService_BulkUpdate_PartialUpdate_ApparatNr_Succeeds(t *testi
 		},
 	}
 
-	svc := facility.NewFieldDeviceService(
-		fieldDeviceRepo,
-		spsSystemTypeRepo,
-		systemTypeRepo,
-		apparatRepo,
-		systemPartRepo,
-		nil,
-		nil,
-		nil,
-		nil,
-		nil,
-	)
+	svc := facility.NewFieldDeviceService(facility.FieldDeviceDependencies{
+		Devices:               fieldDeviceRepo,
+		ControllerSystemTypes: spsSystemTypeRepo,
+		SystemTypes:           systemTypeRepo,
+		Apparats:              apparatRepo,
+		SystemParts:           systemPartRepo,
+		Specifications:        nil,
+		BacnetObjects:         nil,
+		ObjectData:            nil,
+		AlarmTypes:            nil,
+		BacnetAlarmValues:     nil,
+	})
 
 	updates := []domainFacility.BulkFieldDeviceUpdate{
 		{ID: fd1ID, BaseVersion: testBaseVersion(), ApparatNr: new(2)},
@@ -1434,18 +1445,18 @@ func TestFieldDeviceService_BulkUpdate_PartialUpdate_ApparatNr_Conflict(t *testi
 		},
 	}
 
-	svc := facility.NewFieldDeviceService(
-		fieldDeviceRepo,
-		spsSystemTypeRepo,
-		systemTypeRepo,
-		apparatRepo,
-		systemPartRepo,
-		nil,
-		nil,
-		nil,
-		nil,
-		nil,
-	)
+	svc := facility.NewFieldDeviceService(facility.FieldDeviceDependencies{
+		Devices:               fieldDeviceRepo,
+		ControllerSystemTypes: spsSystemTypeRepo,
+		SystemTypes:           systemTypeRepo,
+		Apparats:              apparatRepo,
+		SystemParts:           systemPartRepo,
+		Specifications:        nil,
+		BacnetObjects:         nil,
+		ObjectData:            nil,
+		AlarmTypes:            nil,
+		BacnetAlarmValues:     nil,
+	})
 
 	updates := []domainFacility.BulkFieldDeviceUpdate{
 		{ID: fd1ID, BaseVersion: testBaseVersion(), ApparatNr: new(2)},
@@ -1513,18 +1524,18 @@ func TestFieldDeviceService_BulkUpdate_PartialUpdate_ApparatNr_DifferentSystemPa
 		},
 	}
 
-	svc := facility.NewFieldDeviceService(
-		fieldDeviceRepo,
-		spsSystemTypeRepo,
-		systemTypeRepo,
-		apparatRepo,
-		systemPartRepo,
-		nil,
-		nil,
-		nil,
-		nil,
-		nil,
-	)
+	svc := facility.NewFieldDeviceService(facility.FieldDeviceDependencies{
+		Devices:               fieldDeviceRepo,
+		ControllerSystemTypes: spsSystemTypeRepo,
+		SystemTypes:           systemTypeRepo,
+		Apparats:              apparatRepo,
+		SystemParts:           systemPartRepo,
+		Specifications:        nil,
+		BacnetObjects:         nil,
+		ObjectData:            nil,
+		AlarmTypes:            nil,
+		BacnetAlarmValues:     nil,
+	})
 
 	updates := []domainFacility.BulkFieldDeviceUpdate{
 		{ID: fd1ID, BaseVersion: testBaseVersion(), ApparatNr: new(2)},
@@ -1580,18 +1591,18 @@ func TestFieldDeviceService_BulkUpdate_TextIndividuellOnly_Succeeds(t *testing.T
 		},
 	}
 
-	svc := facility.NewFieldDeviceService(
-		fieldDeviceRepo,
-		spsSystemTypeRepo,
-		systemTypeRepo,
-		apparatRepo,
-		systemPartRepo,
-		nil,
-		nil,
-		nil,
-		nil,
-		nil,
-	)
+	svc := facility.NewFieldDeviceService(facility.FieldDeviceDependencies{
+		Devices:               fieldDeviceRepo,
+		ControllerSystemTypes: spsSystemTypeRepo,
+		SystemTypes:           systemTypeRepo,
+		Apparats:              apparatRepo,
+		SystemParts:           systemPartRepo,
+		Specifications:        nil,
+		BacnetObjects:         nil,
+		ObjectData:            nil,
+		AlarmTypes:            nil,
+		BacnetAlarmValues:     nil,
+	})
 
 	updates := []domainFacility.BulkFieldDeviceUpdate{
 		{ID: fd1ID, BaseVersion: testBaseVersion(), TextIndividuell: new("klj")},
@@ -1656,18 +1667,18 @@ func TestFieldDeviceService_BulkUpdate_AllowsClearingOptionalTextFields(t *testi
 		},
 	}
 
-	svc := facility.NewFieldDeviceService(
-		fieldDeviceRepo,
-		spsSystemTypeRepo,
-		systemTypeRepo,
-		apparatRepo,
-		systemPartRepo,
-		nil,
-		nil,
-		nil,
-		nil,
-		nil,
-	)
+	svc := facility.NewFieldDeviceService(facility.FieldDeviceDependencies{
+		Devices:               fieldDeviceRepo,
+		ControllerSystemTypes: spsSystemTypeRepo,
+		SystemTypes:           systemTypeRepo,
+		Apparats:              apparatRepo,
+		SystemParts:           systemPartRepo,
+		Specifications:        nil,
+		BacnetObjects:         nil,
+		ObjectData:            nil,
+		AlarmTypes:            nil,
+		BacnetAlarmValues:     nil,
+	})
 
 	result := svc.BulkUpdate(context.Background(), []domainFacility.BulkFieldDeviceUpdate{
 		{
@@ -1746,18 +1757,18 @@ func TestFieldDeviceService_BulkUpdate_ClearsExistingSpecificationFields(t *test
 		},
 	}
 
-	svc := facility.NewFieldDeviceService(
-		fieldDeviceRepo,
-		spsSystemTypeRepo,
-		systemTypeRepo,
-		apparatRepo,
-		systemPartRepo,
-		specStore,
-		nil,
-		nil,
-		nil,
-		nil,
-	)
+	svc := facility.NewFieldDeviceService(facility.FieldDeviceDependencies{
+		Devices:               fieldDeviceRepo,
+		ControllerSystemTypes: spsSystemTypeRepo,
+		SystemTypes:           systemTypeRepo,
+		Apparats:              apparatRepo,
+		SystemParts:           systemPartRepo,
+		Specifications:        specStore,
+		BacnetObjects:         nil,
+		ObjectData:            nil,
+		AlarmTypes:            nil,
+		BacnetAlarmValues:     nil,
+	})
 
 	result := svc.BulkUpdate(context.Background(), []domainFacility.BulkFieldDeviceUpdate{
 		{
@@ -1807,7 +1818,18 @@ func TestFieldDeviceService_UpdateSpecificationPatchClearsExplicitNullFields(t *
 			ElectricalConnectionACDC: &acdc,
 		},
 	}}
-	svc := facility.NewFieldDeviceService(fieldDevices, nil, nil, nil, nil, specStore, nil, nil, nil, nil)
+	svc := facility.NewFieldDeviceService(facility.FieldDeviceDependencies{
+		Devices:               fieldDevices,
+		ControllerSystemTypes: nil,
+		SystemTypes:           nil,
+		Apparats:              nil,
+		SystemParts:           nil,
+		Specifications:        specStore,
+		BacnetObjects:         nil,
+		ObjectData:            nil,
+		AlarmTypes:            nil,
+		BacnetAlarmValues:     nil,
+	})
 
 	updated, err := svc.UpdateSpecificationPatch(ctx, fdID, &domainFacility.SpecificationPatch{
 		HasSpecificationSupplier:    true,
@@ -1867,18 +1889,18 @@ func TestFieldDeviceService_BulkUpdate_ClearOnlyPatchDoesNotCreateEmptySpecifica
 	}
 	specStore := &fakeSpecificationStore{items: map[uuid.UUID]*domainFacility.Specification{}}
 
-	svc := facility.NewFieldDeviceService(
-		fieldDeviceRepo,
-		spsSystemTypeRepo,
-		systemTypeRepo,
-		apparatRepo,
-		systemPartRepo,
-		specStore,
-		nil,
-		nil,
-		nil,
-		nil,
-	)
+	svc := facility.NewFieldDeviceService(facility.FieldDeviceDependencies{
+		Devices:               fieldDeviceRepo,
+		ControllerSystemTypes: spsSystemTypeRepo,
+		SystemTypes:           systemTypeRepo,
+		Apparats:              apparatRepo,
+		SystemParts:           systemPartRepo,
+		Specifications:        specStore,
+		BacnetObjects:         nil,
+		ObjectData:            nil,
+		AlarmTypes:            nil,
+		BacnetAlarmValues:     nil,
+	})
 
 	result := svc.BulkUpdate(context.Background(), []domainFacility.BulkFieldDeviceUpdate{
 		{

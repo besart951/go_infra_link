@@ -19,7 +19,7 @@ func Run() error {
 		return err
 	}
 	defer cleanup()
-	stopNotificationWorker := runtimeDeps.services.Notification.StartEmailOutboxWorker(time.Minute, 100)
+	stopNotificationWorker := runtimeDeps.services.Notification.Outbox.StartEmailOutboxWorker(time.Minute, 100)
 	defer stopNotificationWorker()
 	stopRegistrationCleanup := runtimeDeps.services.UserRegistration.StartCleanupWorker(24 * time.Hour)
 	defer stopRegistrationCleanup()

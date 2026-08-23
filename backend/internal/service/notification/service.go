@@ -19,19 +19,53 @@ import (
 	"github.com/google/uuid"
 )
 
-type Service struct {
+type SettingsService struct {
 	smtpSettingsRepo domainNotification.SMTPSettingsRepository
-	preferenceRepo   domainNotification.UserPreferenceRepository
-	systemRepo       domainNotification.SystemNotificationRepository
-	emailOutboxRepo  domainNotification.EmailOutboxRepository
-	ruleRepo         domainNotification.NotificationRuleRepository
+	cipher           SecretCipher
+	strategies       map[domainNotification.Provider]EmailStrategy
+}
+
+type PreferencesService struct {
+	preferenceRepo  domainNotification.UserPreferenceRepository
+	settings        *SettingsService
+	verificationKey []byte
+}
+
+type InboxService struct {
+	systemRepo      domainNotification.SystemNotificationRepository
+	systemPublisher domainNotification.SystemNotificationPublisher
+}
+
+type notificationRecipientResolver struct {
 	projectReader    domainNotification.ProjectMembershipReader
 	teamMemberReader domainNotification.TeamMemberReader
-	userRepo         domainUser.UserRepository
-	systemPublisher  domainNotification.SystemNotificationPublisher
-	cipher           SecretCipher
-	verificationKey  []byte
-	strategies       map[domainNotification.Provider]EmailStrategy
+}
+
+type RuleDispatcher struct {
+	emailOutboxRepo domainNotification.EmailOutboxRepository
+	ruleRepo        domainNotification.NotificationRuleRepository
+	userRepo        domainUser.UserRepository
+	preferences     *PreferencesService
+	inbox           *InboxService
+	settings        *SettingsService
+	recipients      notificationRecipientResolver
+	renderer        *TemplateRenderer
+}
+
+type OutboxProcessor struct {
+	emailOutboxRepo domainNotification.EmailOutboxRepository
+	settings        *SettingsService
+}
+
+type TemplateRenderer struct{}
+
+type Services struct {
+	Settings    *SettingsService
+	Preferences *PreferencesService
+	Inbox       *InboxService
+	Rules       *RuleDispatcher
+	Outbox      *OutboxProcessor
+	Templates   *TemplateRenderer
 }
 
 type Dependencies struct {
@@ -52,34 +86,7 @@ type Config struct {
 	SystemPublisher    domainNotification.SystemNotificationPublisher
 }
 
-func New(
-	smtpSettingsRepo domainNotification.SMTPSettingsRepository,
-	preferenceRepo domainNotification.UserPreferenceRepository,
-	systemRepo domainNotification.SystemNotificationRepository,
-	emailOutboxRepo domainNotification.EmailOutboxRepository,
-	ruleRepo domainNotification.NotificationRuleRepository,
-	projectReader domainNotification.ProjectMembershipReader,
-	teamMemberReader domainNotification.TeamMemberReader,
-	userRepo domainUser.UserRepository,
-	cipher SecretCipher,
-	verificationSecret string,
-	strategies ...EmailStrategy,
-) *Service {
-	return NewFromDependencies(Dependencies{
-		SMTPSettings:    smtpSettingsRepo,
-		Preferences:     preferenceRepo,
-		SystemInbox:     systemRepo,
-		EmailOutbox:     emailOutboxRepo,
-		Rules:           ruleRepo,
-		Projects:        projectReader,
-		TeamMembers:     teamMemberReader,
-		Users:           userRepo,
-		Cipher:          cipher,
-		EmailStrategies: strategies,
-	}, Config{VerificationSecret: verificationSecret})
-}
-
-func NewFromDependencies(deps Dependencies, cfg Config) *Service {
+func NewServices(deps Dependencies, cfg Config) *Services {
 	registry := make(map[domainNotification.Provider]EmailStrategy, len(deps.EmailStrategies))
 	for _, strategy := range deps.EmailStrategies {
 		if strategy == nil {
@@ -91,31 +98,46 @@ func NewFromDependencies(deps Dependencies, cfg Config) *Service {
 	keySeed := "notification-email-verification:" + cfg.VerificationSecret
 	key := sha256.Sum256([]byte(keySeed))
 
-	return &Service{
+	settings := &SettingsService{
 		smtpSettingsRepo: deps.SMTPSettings,
-		preferenceRepo:   deps.Preferences,
-		systemRepo:       deps.SystemInbox,
-		emailOutboxRepo:  deps.EmailOutbox,
-		ruleRepo:         deps.Rules,
-		projectReader:    deps.Projects,
-		teamMemberReader: deps.TeamMembers,
-		userRepo:         deps.Users,
-		systemPublisher:  cfg.SystemPublisher,
 		cipher:           deps.Cipher,
-		verificationKey:  key[:],
 		strategies:       registry,
+	}
+	preferences := &PreferencesService{
+		preferenceRepo:  deps.Preferences,
+		settings:        settings,
+		verificationKey: key[:],
+	}
+	inbox := &InboxService{systemRepo: deps.SystemInbox, systemPublisher: cfg.SystemPublisher}
+	renderer := &TemplateRenderer{}
+	rules := &RuleDispatcher{
+		emailOutboxRepo: deps.EmailOutbox,
+		ruleRepo:        deps.Rules,
+		userRepo:        deps.Users,
+		preferences:     preferences,
+		inbox:           inbox,
+		settings:        settings,
+		recipients: notificationRecipientResolver{
+			projectReader: deps.Projects, teamMemberReader: deps.TeamMembers,
+		},
+		renderer: renderer,
+	}
+	return &Services{
+		Settings: settings, Preferences: preferences, Inbox: inbox, Rules: rules,
+		Outbox:    &OutboxProcessor{emailOutboxRepo: deps.EmailOutbox, settings: settings},
+		Templates: renderer,
 	}
 }
 
-func (s *Service) SetSystemNotificationPublisher(publisher domainNotification.SystemNotificationPublisher) {
+func (s *InboxService) SetSystemNotificationPublisher(publisher domainNotification.SystemNotificationPublisher) {
 	s.systemPublisher = publisher
 }
 
-func (s *Service) GetSMTPSettings(ctx context.Context) (*domainNotification.SMTPSettings, error) {
+func (s *SettingsService) GetSMTPSettings(ctx context.Context) (*domainNotification.SMTPSettings, error) {
 	return s.smtpSettingsRepo.GetByProvider(ctx, domainNotification.ProviderSMTP)
 }
 
-func (s *Service) UpsertSMTPSettings(ctx context.Context, input domainNotification.UpsertSMTPSettingsInput) (*domainNotification.SMTPSettings, error) {
+func (s *SettingsService) UpsertSMTPSettings(ctx context.Context, input domainNotification.UpsertSMTPSettingsInput) (*domainNotification.SMTPSettings, error) {
 	existing, err := s.smtpSettingsRepo.GetByProvider(ctx, domainNotification.ProviderSMTP)
 	if err != nil && !errors.Is(err, domain.ErrNotFound) {
 		return nil, err
@@ -165,7 +187,7 @@ func (s *Service) UpsertSMTPSettings(ctx context.Context, input domainNotificati
 	return settings, nil
 }
 
-func (s *Service) GetUserPreference(ctx context.Context, userID uuid.UUID) (*domainNotification.UserPreference, error) {
+func (s *PreferencesService) GetUserPreference(ctx context.Context, userID uuid.UUID) (*domainNotification.UserPreference, error) {
 	if userID == uuid.Nil {
 		return nil, domain.ErrInvalidArgument
 	}
@@ -176,7 +198,7 @@ func (s *Service) GetUserPreference(ctx context.Context, userID uuid.UUID) (*dom
 	return preference, err
 }
 
-func (s *Service) UpsertUserPreference(ctx context.Context, input domainNotification.UpsertUserPreferenceInput) (*domainNotification.UserPreference, error) {
+func (s *PreferencesService) UpsertUserPreference(ctx context.Context, input domainNotification.UpsertUserPreferenceInput) (*domainNotification.UserPreference, error) {
 	if input.UserID == uuid.Nil {
 		return nil, domain.ErrInvalidArgument
 	}
@@ -225,7 +247,7 @@ func (s *Service) UpsertUserPreference(ctx context.Context, input domainNotifica
 	return preference, nil
 }
 
-func (s *Service) SendUserPreferenceVerificationCode(ctx context.Context, input domainNotification.SendUserPreferenceVerificationCodeInput) (*domainNotification.UserPreference, error) {
+func (s *PreferencesService) SendUserPreferenceVerificationCode(ctx context.Context, input domainNotification.SendUserPreferenceVerificationCodeInput) (*domainNotification.UserPreference, error) {
 	if input.UserID == uuid.Nil {
 		return nil, domain.ErrInvalidArgument
 	}
@@ -256,7 +278,7 @@ func (s *Service) SendUserPreferenceVerificationCode(ctx context.Context, input 
 		return nil, err
 	}
 
-	settings, strategy, password, err := s.resolveSMTPStrategy(ctx, false)
+	settings, strategy, password, err := s.settings.resolveSMTPStrategy(ctx, false)
 	if err != nil {
 		return nil, err
 	}
@@ -271,7 +293,7 @@ func (s *Service) SendUserPreferenceVerificationCode(ctx context.Context, input 
 	return preference, nil
 }
 
-func (s *Service) VerifyUserPreferenceEmail(ctx context.Context, input domainNotification.VerifyUserPreferenceEmailInput) (*domainNotification.UserPreference, error) {
+func (s *PreferencesService) VerifyUserPreferenceEmail(ctx context.Context, input domainNotification.VerifyUserPreferenceEmailInput) (*domainNotification.UserPreference, error) {
 	if input.UserID == uuid.Nil {
 		return nil, domain.ErrInvalidArgument
 	}
@@ -308,7 +330,7 @@ func (s *Service) VerifyUserPreferenceEmail(ctx context.Context, input domainNot
 	return preference, nil
 }
 
-func (s *Service) ListSystemNotifications(ctx context.Context, userID uuid.UUID, page, limit int, unreadOnly bool) (*domain.PaginatedList[domainNotification.SystemNotification], error) {
+func (s *InboxService) ListSystemNotifications(ctx context.Context, userID uuid.UUID, page, limit int, unreadOnly bool) (*domain.PaginatedList[domainNotification.SystemNotification], error) {
 	if userID == uuid.Nil {
 		return nil, domain.ErrInvalidArgument
 	}
@@ -318,14 +340,14 @@ func (s *Service) ListSystemNotifications(ctx context.Context, userID uuid.UUID,
 	}, unreadOnly)
 }
 
-func (s *Service) CountUnreadSystemNotifications(ctx context.Context, userID uuid.UUID) (int64, error) {
+func (s *InboxService) CountUnreadSystemNotifications(ctx context.Context, userID uuid.UUID) (int64, error) {
 	if userID == uuid.Nil {
 		return 0, domain.ErrInvalidArgument
 	}
 	return s.systemRepo.CountUnreadForUser(ctx, userID)
 }
 
-func (s *Service) MarkSystemNotificationRead(ctx context.Context, notificationID, userID uuid.UUID) (*domainNotification.SystemNotification, error) {
+func (s *InboxService) MarkSystemNotificationRead(ctx context.Context, notificationID, userID uuid.UUID) (*domainNotification.SystemNotification, error) {
 	if notificationID == uuid.Nil || userID == uuid.Nil {
 		return nil, domain.ErrInvalidArgument
 	}
@@ -337,7 +359,7 @@ func (s *Service) MarkSystemNotificationRead(ctx context.Context, notificationID
 	return notification, nil
 }
 
-func (s *Service) MarkAllSystemNotificationsRead(ctx context.Context, userID uuid.UUID) error {
+func (s *InboxService) MarkAllSystemNotificationsRead(ctx context.Context, userID uuid.UUID) error {
 	if userID == uuid.Nil {
 		return domain.ErrInvalidArgument
 	}
@@ -348,7 +370,7 @@ func (s *Service) MarkAllSystemNotificationsRead(ctx context.Context, userID uui
 	return nil
 }
 
-func (s *Service) ToggleSystemNotificationRead(ctx context.Context, notificationID, userID uuid.UUID) (*domainNotification.SystemNotification, error) {
+func (s *InboxService) ToggleSystemNotificationRead(ctx context.Context, notificationID, userID uuid.UUID) (*domainNotification.SystemNotification, error) {
 	if notificationID == uuid.Nil || userID == uuid.Nil {
 		return nil, domain.ErrInvalidArgument
 	}
@@ -360,7 +382,7 @@ func (s *Service) ToggleSystemNotificationRead(ctx context.Context, notification
 	return notification, nil
 }
 
-func (s *Service) ToggleSystemNotificationImportant(ctx context.Context, notificationID, userID uuid.UUID) (*domainNotification.SystemNotification, error) {
+func (s *InboxService) ToggleSystemNotificationImportant(ctx context.Context, notificationID, userID uuid.UUID) (*domainNotification.SystemNotification, error) {
 	if notificationID == uuid.Nil || userID == uuid.Nil {
 		return nil, domain.ErrInvalidArgument
 	}
@@ -372,7 +394,7 @@ func (s *Service) ToggleSystemNotificationImportant(ctx context.Context, notific
 	return notification, nil
 }
 
-func (s *Service) DeleteSystemNotification(ctx context.Context, notificationID, userID uuid.UUID) error {
+func (s *InboxService) DeleteSystemNotification(ctx context.Context, notificationID, userID uuid.UUID) error {
 	if notificationID == uuid.Nil || userID == uuid.Nil {
 		return domain.ErrInvalidArgument
 	}
@@ -383,7 +405,7 @@ func (s *Service) DeleteSystemNotification(ctx context.Context, notificationID, 
 	return nil
 }
 
-func (s *Service) publishSystemNotificationCreated(ctx context.Context, notification *domainNotification.SystemNotification) {
+func (s *InboxService) publishSystemNotificationCreated(ctx context.Context, notification *domainNotification.SystemNotification) {
 	if notification == nil {
 		return
 	}
@@ -394,7 +416,7 @@ func (s *Service) publishSystemNotificationCreated(ctx context.Context, notifica
 	})
 }
 
-func (s *Service) publishSystemNotificationUpdated(ctx context.Context, notification *domainNotification.SystemNotification) {
+func (s *InboxService) publishSystemNotificationUpdated(ctx context.Context, notification *domainNotification.SystemNotification) {
 	if notification == nil {
 		return
 	}
@@ -405,7 +427,7 @@ func (s *Service) publishSystemNotificationUpdated(ctx context.Context, notifica
 	})
 }
 
-func (s *Service) publishSystemNotificationDeleted(ctx context.Context, recipientID, notificationID uuid.UUID) {
+func (s *InboxService) publishSystemNotificationDeleted(ctx context.Context, recipientID, notificationID uuid.UUID) {
 	s.publishSystemNotificationChange(ctx, domainNotification.SystemNotificationChange{
 		Type:           domainNotification.SystemNotificationChangeDeleted,
 		RecipientID:    recipientID,
@@ -413,7 +435,7 @@ func (s *Service) publishSystemNotificationDeleted(ctx context.Context, recipien
 	})
 }
 
-func (s *Service) publishSystemNotificationsReadAll(ctx context.Context, recipientID uuid.UUID) {
+func (s *InboxService) publishSystemNotificationsReadAll(ctx context.Context, recipientID uuid.UUID) {
 	s.publishSystemNotificationChange(ctx, domainNotification.SystemNotificationChange{
 		Type:        domainNotification.SystemNotificationChangeReadAll,
 		RecipientID: recipientID,
@@ -421,7 +443,7 @@ func (s *Service) publishSystemNotificationsReadAll(ctx context.Context, recipie
 	})
 }
 
-func (s *Service) publishSystemNotificationChange(ctx context.Context, change domainNotification.SystemNotificationChange) {
+func (s *InboxService) publishSystemNotificationChange(ctx context.Context, change domainNotification.SystemNotificationChange) {
 	if s.systemPublisher == nil || change.Type == "" {
 		return
 	}
@@ -445,21 +467,26 @@ func (s *Service) publishSystemNotificationChange(ctx context.Context, change do
 	s.systemPublisher.PublishSystemNotificationChange(ctx, change)
 }
 
-func (s *Service) ListNotificationRules(ctx context.Context, filter domainNotification.NotificationRuleFilter) ([]domainNotification.NotificationRule, error) {
+func (s *RuleDispatcher) ListNotificationRules(ctx context.Context, filter domainNotification.NotificationRuleFilter) ([]domainNotification.NotificationRule, error) {
 	if s.ruleRepo == nil {
 		return []domainNotification.NotificationRule{}, nil
 	}
 	return s.ruleRepo.List(ctx, filter)
 }
 
-func (s *Service) UpsertNotificationRule(ctx context.Context, input domainNotification.UpsertNotificationRuleInput) (*domainNotification.NotificationRule, error) {
+func (s *RuleDispatcher) UpsertNotificationRule(ctx context.Context, input domainNotification.UpsertNotificationRuleInput) (*domainNotification.NotificationRule, error) {
+	eventKey, err := input.EventKey.Normalize()
+	if err != nil {
+		return nil, domain.NewValidationError().Add("event_key", "is required")
+	}
+	resourceType := domainNotification.ResourceKind(strings.TrimSpace(input.ResourceType.String()))
 	rule := &domainNotification.NotificationRule{
 		Base:             domain.Base{ID: input.ID},
 		Name:             strings.TrimSpace(input.Name),
 		Enabled:          input.Enabled,
-		EventKey:         strings.TrimSpace(input.EventKey),
+		EventKey:         eventKey,
 		ProjectID:        input.ProjectID,
-		ResourceType:     strings.TrimSpace(input.ResourceType),
+		ResourceType:     resourceType,
 		ResourceID:       input.ResourceID,
 		RecipientType:    domainNotification.NormalizeRuleRecipientType(input.RecipientType),
 		RecipientUserIDs: dedupeUUIDs(input.RecipientUserIDs),
@@ -498,7 +525,7 @@ func (s *Service) UpsertNotificationRule(ctx context.Context, input domainNotifi
 	return rule, nil
 }
 
-func (s *Service) DeleteNotificationRule(ctx context.Context, id uuid.UUID) error {
+func (s *RuleDispatcher) DeleteNotificationRule(ctx context.Context, id uuid.UUID) error {
 	if id == uuid.Nil {
 		return domain.ErrInvalidArgument
 	}
@@ -508,12 +535,12 @@ func (s *Service) DeleteNotificationRule(ctx context.Context, id uuid.UUID) erro
 	return s.ruleRepo.DeleteByID(ctx, id)
 }
 
-func (s *Service) DispatchEvent(ctx context.Context, input domainNotification.DispatchEventInput) error {
+func (s *RuleDispatcher) DispatchEvent(ctx context.Context, input domainNotification.DispatchEventInput) error {
 	if s.ruleRepo == nil {
 		return nil
 	}
-	eventKey := strings.TrimSpace(input.EventKey)
-	if eventKey == "" {
+	eventKey, err := input.EventKey.Normalize()
+	if err != nil {
 		return domain.NewValidationError().Add("event_key", "is required")
 	}
 
@@ -533,7 +560,7 @@ func (s *Service) DispatchEvent(ctx context.Context, input domainNotification.Di
 		return nil
 	}
 
-	title, body := renderNotificationTemplate(input.Locale, eventKey, input.Title, input.Body, input.Metadata)
+	title, body := s.renderer.Render(input.Locale, eventKey, input.Title, input.Body, input.Metadata)
 	return s.Dispatch(ctx, domainNotification.DispatchNotificationInput{
 		RecipientIDs: recipientIDs,
 		ActorID:      input.ActorID,
@@ -547,93 +574,118 @@ func (s *Service) DispatchEvent(ctx context.Context, input domainNotification.Di
 	})
 }
 
-func (s *Service) Dispatch(ctx context.Context, input domainNotification.DispatchNotificationInput) error {
-	recipientIDs := dedupeUUIDs(input.RecipientIDs)
-	if len(recipientIDs) == 0 {
-		return domain.NewValidationError().Add("recipient_ids", "is required")
-	}
-	if strings.TrimSpace(input.EventKey) == "" {
-		return domain.NewValidationError().Add("event_key", "is required")
-	}
-	title, body := renderNotificationTemplate(input.Locale, input.EventKey, input.Title, input.Body, input.Metadata)
-	if strings.TrimSpace(title) == "" {
-		return domain.NewValidationError().Add("title", "is required")
-	}
-	now := time.Now().UTC()
-
-	users, err := s.userRepo.GetByIds(ctx, recipientIDs)
+func (s *RuleDispatcher) Dispatch(ctx context.Context, input domainNotification.DispatchNotificationInput) error {
+	message, err := s.prepareDispatch(input)
 	if err != nil {
 		return err
 	}
-	usersByID := make(map[uuid.UUID]*domainUser.User, len(users))
-	for _, user := range users {
-		usersByID[user.ID] = user
+	users, err := s.userRepo.GetByIds(ctx, message.recipientIDs)
+	if err != nil {
+		return err
 	}
-
-	emailRecipients := make([]string, 0, len(users))
-	for _, recipientID := range recipientIDs {
+	emailRecipients := make([]string, 0, len(message.recipientIDs))
+	usersByID := notificationUsersByID(users)
+	for _, recipientID := range message.recipientIDs {
 		user := usersByID[recipientID]
 		if user == nil {
 			continue
 		}
-
-		preference, err := s.GetUserPreference(ctx, recipientID)
+		email, err := s.dispatchToRecipient(ctx, recipientID, message)
 		if err != nil {
 			return err
 		}
-
-		if preference.Channel.AllowsSystem() {
-			notification := &domainNotification.SystemNotification{
-				RecipientID:  recipientID,
-				ActorID:      input.ActorID,
-				EventKey:     strings.TrimSpace(input.EventKey),
-				Title:        title,
-				Body:         body,
-				ResourceType: strings.TrimSpace(input.ResourceType),
-				ResourceID:   input.ResourceID,
-				Metadata:     input.Metadata,
-			}
-			if err := s.systemRepo.Create(ctx, notification); err != nil {
-				return err
-			}
-			s.publishSystemNotificationCreated(ctx, notification)
-		}
-
-		if preference.Channel.AllowsEmail() && preference.NotificationEmailVerified() {
-			emailRecipients = append(emailRecipients, preference.NotificationEmail)
-			if s.emailOutboxRepo != nil {
-				if err := s.emailOutboxRepo.Create(ctx, &domainNotification.EmailOutbox{
-					RecipientID:    recipientID,
-					RecipientEmail: strings.TrimSpace(preference.NotificationEmail),
-					EventKey:       strings.TrimSpace(input.EventKey),
-					Subject:        title,
-					Body:           body,
-					Frequency:      preference.Frequency,
-					ResourceType:   strings.TrimSpace(input.ResourceType),
-					ResourceID:     input.ResourceID,
-					Metadata:       input.Metadata,
-					Status:         domainNotification.EmailOutboxStatusPending,
-					NextAttemptAt:  nextDeliveryAttemptAt(now, preference.Frequency),
-				}); err != nil {
-					return err
-				}
-			}
+		if email != "" {
+			emailRecipients = append(emailRecipients, email)
 		}
 	}
-
 	if s.emailOutboxRepo != nil || len(emailRecipients) == 0 {
 		return nil
 	}
-
-	// Fallback for tests or legacy wiring without an outbox repository.
-	return s.SendNotification(ctx, domainNotification.SendNotificationInput{
-		To:      emailRecipients,
-		Subject: title,
-		Body:    body,
+	return s.settings.SendNotification(ctx, domainNotification.SendNotificationInput{
+		To: emailRecipients, Subject: message.title, Body: message.body,
 	})
 }
 
-func (s *Service) ProcessDueEmailOutbox(ctx context.Context, now time.Time, limit int) error {
+type preparedDispatch struct {
+	recipientIDs []uuid.UUID
+	input        domainNotification.DispatchNotificationInput
+	eventKey     domainNotification.EventKey
+	resourceType domainNotification.ResourceKind
+	title        string
+	body         string
+	now          time.Time
+}
+
+func (s *RuleDispatcher) prepareDispatch(input domainNotification.DispatchNotificationInput) (preparedDispatch, error) {
+	recipients := dedupeUUIDs(input.RecipientIDs)
+	if len(recipients) == 0 {
+		return preparedDispatch{}, domain.NewValidationError().Add("recipient_ids", "is required")
+	}
+	eventKey, err := input.EventKey.Normalize()
+	if err != nil {
+		return preparedDispatch{}, domain.NewValidationError().Add("event_key", "is required")
+	}
+	title, body := s.renderer.Render(input.Locale, eventKey, input.Title, input.Body, input.Metadata)
+	if strings.TrimSpace(title) == "" {
+		return preparedDispatch{}, domain.NewValidationError().Add("title", "is required")
+	}
+	return preparedDispatch{recipientIDs: recipients, input: input, eventKey: eventKey,
+		resourceType: domainNotification.ResourceKind(strings.TrimSpace(input.ResourceType.String())),
+		title:        title, body: body, now: time.Now().UTC()}, nil
+}
+
+func notificationUsersByID(users []*domainUser.User) map[uuid.UUID]*domainUser.User {
+	indexed := make(map[uuid.UUID]*domainUser.User, len(users))
+	for _, user := range users {
+		indexed[user.ID] = user
+	}
+	return indexed
+}
+
+func (s *RuleDispatcher) dispatchToRecipient(ctx context.Context, recipientID uuid.UUID, message preparedDispatch) (string, error) {
+	preference, err := s.preferences.GetUserPreference(ctx, recipientID)
+	if err != nil {
+		return "", err
+	}
+	if preference.Channel.AllowsSystem() {
+		if err := s.createInboxNotification(ctx, recipientID, message); err != nil {
+			return "", err
+		}
+	}
+	if !preference.Channel.AllowsEmail() || !preference.NotificationEmailVerified() {
+		return "", nil
+	}
+	if s.emailOutboxRepo != nil {
+		if err := s.createEmailOutbox(ctx, recipientID, preference, message); err != nil {
+			return "", err
+		}
+	}
+	return preference.NotificationEmail, nil
+}
+
+func (s *RuleDispatcher) createInboxNotification(ctx context.Context, recipientID uuid.UUID, message preparedDispatch) error {
+	notification := &domainNotification.SystemNotification{
+		RecipientID: recipientID, ActorID: message.input.ActorID, EventKey: message.eventKey,
+		Title: message.title, Body: message.body, ResourceType: message.resourceType,
+		ResourceID: message.input.ResourceID, Metadata: message.input.Metadata,
+	}
+	if err := s.inbox.systemRepo.Create(ctx, notification); err != nil {
+		return err
+	}
+	s.inbox.publishSystemNotificationCreated(ctx, notification)
+	return nil
+}
+
+func (s *RuleDispatcher) createEmailOutbox(ctx context.Context, recipientID uuid.UUID, preference *domainNotification.UserPreference, message preparedDispatch) error {
+	return s.emailOutboxRepo.Create(ctx, &domainNotification.EmailOutbox{
+		RecipientID: recipientID, RecipientEmail: strings.TrimSpace(preference.NotificationEmail),
+		EventKey: message.eventKey, Subject: message.title, Body: message.body, Frequency: preference.Frequency,
+		ResourceType: message.resourceType, ResourceID: message.input.ResourceID, Metadata: message.input.Metadata,
+		Status: domainNotification.EmailOutboxStatusPending, NextAttemptAt: nextDeliveryAttemptAt(message.now, preference.Frequency),
+	})
+}
+
+func (s *OutboxProcessor) ProcessDueEmailOutbox(ctx context.Context, now time.Time, limit int) error {
 	if s.emailOutboxRepo == nil {
 		return nil
 	}
@@ -662,7 +714,7 @@ func (s *Service) ProcessDueEmailOutbox(ctx context.Context, now time.Time, limi
 	return nil
 }
 
-func (s *Service) StartEmailOutboxWorker(interval time.Duration, batchSize int) func() {
+func (s *OutboxProcessor) StartEmailOutboxWorker(interval time.Duration, batchSize int) func() {
 	if interval <= 0 {
 		interval = time.Minute
 	}
@@ -686,7 +738,7 @@ func (s *Service) StartEmailOutboxWorker(interval time.Duration, batchSize int) 
 	return cancel
 }
 
-func (s *Service) SendTestEmail(ctx context.Context, input domainNotification.SendTestEmailInput) error {
+func (s *SettingsService) SendTestEmail(ctx context.Context, input domainNotification.SendTestEmailInput) error {
 	if _, err := mail.ParseAddress(strings.TrimSpace(input.To)); err != nil {
 		return domain.NewValidationError().Add("to", "must be a valid email")
 	}
@@ -712,7 +764,7 @@ func (s *Service) SendTestEmail(ctx context.Context, input domainNotification.Se
 	})
 }
 
-func (s *Service) SendNotification(ctx context.Context, input domainNotification.SendNotificationInput) error {
+func (s *SettingsService) SendNotification(ctx context.Context, input domainNotification.SendNotificationInput) error {
 	settings, strategy, password, err := s.resolveSMTPStrategy(ctx, true)
 	if err != nil {
 		return err
@@ -724,7 +776,7 @@ func (s *Service) SendNotification(ctx context.Context, input domainNotification
 	})
 }
 
-func (s *Service) resolveSMTPStrategy(ctx context.Context, requireEnabled bool) (*domainNotification.SMTPSettings, EmailStrategy, string, error) {
+func (s *SettingsService) resolveSMTPStrategy(ctx context.Context, requireEnabled bool) (*domainNotification.SMTPSettings, EmailStrategy, string, error) {
 	settings, err := s.smtpSettingsRepo.GetByProvider(ctx, domainNotification.ProviderSMTP)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
@@ -749,17 +801,17 @@ func (s *Service) resolveSMTPStrategy(ctx context.Context, requireEnabled bool) 
 	return settings, strategy, password, nil
 }
 
-func (s *Service) resolveRuleRecipients(ctx context.Context, rules []domainNotification.NotificationRule, projectID *uuid.UUID) ([]uuid.UUID, error) {
+func (s *RuleDispatcher) resolveRuleRecipients(ctx context.Context, rules []domainNotification.NotificationRule, projectID *uuid.UUID) ([]uuid.UUID, error) {
 	recipientIDs := make([]uuid.UUID, 0)
 	for _, rule := range rules {
 		switch rule.RecipientType {
 		case domainNotification.RuleRecipientUsers:
 			recipientIDs = append(recipientIDs, rule.RecipientUserIDs...)
 		case domainNotification.RuleRecipientTeam:
-			if rule.RecipientTeamID == nil || s.teamMemberReader == nil {
+			if rule.RecipientTeamID == nil || s.recipients.teamMemberReader == nil {
 				continue
 			}
-			members, err := s.teamMemberReader.ListByTeam(ctx, *rule.RecipientTeamID, domain.PaginationParams{Page: 1, Limit: 1000})
+			members, err := s.recipients.teamMemberReader.ListByTeam(ctx, *rule.RecipientTeamID, domain.PaginationParams{Page: 1, Limit: 1000})
 			if err != nil {
 				return nil, err
 			}
@@ -771,10 +823,10 @@ func (s *Service) resolveRuleRecipients(ctx context.Context, rules []domainNotif
 			if rule.ProjectID != nil {
 				scopedProjectID = rule.ProjectID
 			}
-			if scopedProjectID == nil || s.projectReader == nil {
+			if scopedProjectID == nil || s.recipients.projectReader == nil {
 				continue
 			}
-			users, err := s.projectReader.ListUsers(ctx, *scopedProjectID)
+			users, err := s.recipients.projectReader.ListUsers(ctx, *scopedProjectID)
 			if err != nil {
 				return nil, err
 			}
@@ -786,10 +838,10 @@ func (s *Service) resolveRuleRecipients(ctx context.Context, rules []domainNotif
 			if rule.ProjectID != nil {
 				scopedProjectID = rule.ProjectID
 			}
-			if scopedProjectID == nil || s.projectReader == nil || rule.RecipientRole == "" {
+			if scopedProjectID == nil || s.recipients.projectReader == nil || rule.RecipientRole == "" {
 				continue
 			}
-			users, err := s.projectReader.ListUsers(ctx, *scopedProjectID)
+			users, err := s.recipients.projectReader.ListUsers(ctx, *scopedProjectID)
 			if err != nil {
 				return nil, err
 			}
@@ -808,7 +860,7 @@ func validateNotificationRule(rule *domainNotification.NotificationRule) error {
 	if strings.TrimSpace(rule.Name) == "" {
 		ve = ve.Add("name", "is required")
 	}
-	if strings.TrimSpace(rule.EventKey) == "" {
+	if _, err := rule.EventKey.Normalize(); err != nil {
 		ve = ve.Add("event_key", "is required")
 	}
 	if !rule.RecipientType.Valid() {
@@ -918,10 +970,11 @@ var localizedNotificationTemplates = map[string]map[string]notificationTemplate{
 	},
 }
 
-func renderNotificationTemplate(locale, eventKey, title, body string, metadata map[string]string) (string, string) {
+func (*TemplateRenderer) Render(locale string, eventKey domainNotification.EventKey, title, body string, metadata map[string]string) (string, string) {
 	title = strings.TrimSpace(title)
 	body = strings.TrimSpace(body)
-	if template, ok := notificationTemplateFor(strings.TrimSpace(locale), strings.TrimSpace(eventKey)); ok {
+	normalizedEventKey := strings.TrimSpace(eventKey.String())
+	if template, ok := notificationTemplateFor(strings.TrimSpace(locale), normalizedEventKey); ok {
 		if title == "" {
 			title = template.Title
 		}
@@ -930,7 +983,7 @@ func renderNotificationTemplate(locale, eventKey, title, body string, metadata m
 		}
 	}
 	if title == "" {
-		title = strings.TrimSpace(eventKey)
+		title = normalizedEventKey
 	}
 	return applyTemplateValues(title, metadata), applyTemplateValues(body, metadata)
 }
@@ -1020,13 +1073,13 @@ func groupEmailOutboxItems(items []domainNotification.EmailOutbox) []emailOutbox
 	return groups
 }
 
-func (s *Service) sendEmailOutboxGroup(ctx context.Context, group emailOutboxGroup) error {
+func (s *OutboxProcessor) sendEmailOutboxGroup(ctx context.Context, group emailOutboxGroup) error {
 	if len(group.items) == 0 {
 		return nil
 	}
 	first := group.items[0]
 	if first.Frequency == domainNotification.DeliveryFrequencyImmediate && len(group.items) == 1 {
-		return s.SendNotification(ctx, domainNotification.SendNotificationInput{
+		return s.settings.SendNotification(ctx, domainNotification.SendNotificationInput{
 			To:      []string{first.RecipientEmail},
 			Subject: first.Subject,
 			Body:    first.Body,
@@ -1035,7 +1088,7 @@ func (s *Service) sendEmailOutboxGroup(ctx context.Context, group emailOutboxGro
 
 	subject := fmt.Sprintf("Infra Link: %d Benachrichtigungen", len(group.items))
 	body := renderDigestBody(group.items)
-	return s.SendNotification(ctx, domainNotification.SendNotificationInput{
+	return s.settings.SendNotification(ctx, domainNotification.SendNotificationInput{
 		To:      []string{first.RecipientEmail},
 		Subject: subject,
 		Body:    body,
@@ -1121,7 +1174,7 @@ func generateVerificationCode() (string, error) {
 	return fmt.Sprintf("%06d", value.Int64()), nil
 }
 
-func (s *Service) hashVerificationCode(userID uuid.UUID, email, code string) string {
+func (s *PreferencesService) hashVerificationCode(userID uuid.UUID, email, code string) string {
 	mac := hmac.New(sha256.New, s.verificationKey)
 	_, _ = mac.Write([]byte(userID.String()))
 	_, _ = mac.Write([]byte(":"))
@@ -1131,7 +1184,7 @@ func (s *Service) hashVerificationCode(userID uuid.UUID, email, code string) str
 	return hex.EncodeToString(mac.Sum(nil))
 }
 
-func (s *Service) resolveEncryptedPassword(existing *domainNotification.SMTPSettings, rawPassword string, authMode domainNotification.AuthMode) (string, error) {
+func (s *SettingsService) resolveEncryptedPassword(existing *domainNotification.SMTPSettings, rawPassword string, authMode domainNotification.AuthMode) (string, error) {
 	if authMode == domainNotification.AuthModeNone {
 		return "", nil
 	}

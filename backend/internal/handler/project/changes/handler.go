@@ -65,10 +65,10 @@ func toResponse(page *domainProject.ChangePage) dto.ProjectChangesResponse {
 	for i, event := range page.Events {
 		events[i] = dto.ProjectChangeResponse{
 			EventID: event.EventID, Revision: event.Revision,
-			AggregateType: event.AggregateType, AggregateID: event.AggregateID,
+			AggregateType: string(event.AggregateType), AggregateID: event.AggregateID,
 			Action: string(event.Action), ActorID: event.ActorID,
-			ChangedFields: event.ChangedFields, ParentRefs: event.ParentRefs,
-			OccurredAt: event.OccurredAt,
+			ChangedFields: event.ChangedFields,
+			OccurredAt:    event.OccurredAt,
 		}
 	}
 	return dto.ProjectChangesResponse{

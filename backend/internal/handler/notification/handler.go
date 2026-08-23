@@ -14,12 +14,18 @@ import (
 )
 
 type NotificationSettingsHandler struct {
-	service  NotificationSettingsService
-	streamer SystemNotificationStreamer
+	smtp        SMTPSettingsService
+	preferences UserNotificationPreferenceService
+	inbox       SystemNotificationInboxService
+	rules       NotificationRuleService
+	streamer    SystemNotificationStreamer
 }
 
-func NewNotificationSettingsHandler(service NotificationSettingsService, streamer SystemNotificationStreamer) *NotificationSettingsHandler {
-	return &NotificationSettingsHandler{service: service, streamer: streamer}
+func NewNotificationSettingsHandler(deps HandlerDependencies) *NotificationSettingsHandler {
+	return &NotificationSettingsHandler{
+		smtp: deps.SMTP, preferences: deps.Preferences, inbox: deps.Inbox,
+		rules: deps.Rules, streamer: deps.Streamer,
+	}
 }
 
 // GetSMTPSettings godoc
@@ -31,7 +37,7 @@ func NewNotificationSettingsHandler(service NotificationSettingsService, streame
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/admin/notifications/smtp [get]
 func (h *NotificationSettingsHandler) GetSMTPSettings(c *gin.Context) {
-	settings, err := h.service.GetSMTPSettings(c.Request.Context())
+	settings, err := h.smtp.GetSMTPSettings(c.Request.Context())
 	if err != nil {
 		handlerutil.RespondDomainError(
 			c,
@@ -68,7 +74,7 @@ func (h *NotificationSettingsHandler) UpsertSMTPSettings(c *gin.Context) {
 		return
 	}
 
-	settings, err := h.service.UpsertSMTPSettings(c.Request.Context(), domainNotification.UpsertSMTPSettingsInput{
+	settings, err := h.smtp.UpsertSMTPSettings(c.Request.Context(), domainNotification.UpsertSMTPSettingsInput{
 		ActorID:          userID,
 		Enabled:          *req.Enabled,
 		Host:             req.Host,
@@ -110,7 +116,7 @@ func (h *NotificationSettingsHandler) SendSMTPTestEmail(c *gin.Context) {
 		return
 	}
 
-	err := h.service.SendTestEmail(c.Request.Context(), domainNotification.SendTestEmailInput{
+	err := h.smtp.SendTestEmail(c.Request.Context(), domainNotification.SendTestEmailInput{
 		To:      req.To,
 		Subject: req.Subject,
 		Body:    req.Body,
@@ -144,7 +150,7 @@ func (h *NotificationSettingsHandler) GetUserPreference(c *gin.Context) {
 		return
 	}
 
-	preference, err := h.service.GetUserPreference(c.Request.Context(), userID)
+	preference, err := h.preferences.GetUserPreference(c.Request.Context(), userID)
 	if err != nil {
 		handlerutil.RespondDomainError(
 			c,
@@ -180,7 +186,7 @@ func (h *NotificationSettingsHandler) UpsertUserPreference(c *gin.Context) {
 		return
 	}
 
-	preference, err := h.service.UpsertUserPreference(c.Request.Context(), domainNotification.UpsertUserPreferenceInput{
+	preference, err := h.preferences.UpsertUserPreference(c.Request.Context(), domainNotification.UpsertUserPreferenceInput{
 		UserID:            userID,
 		NotificationEmail: req.NotificationEmail,
 		Channel:           domainNotification.DeliveryChannel(req.Channel),
@@ -215,7 +221,7 @@ func (h *NotificationSettingsHandler) SendUserPreferenceVerificationCode(c *gin.
 		return
 	}
 
-	preference, err := h.service.SendUserPreferenceVerificationCode(c.Request.Context(), domainNotification.SendUserPreferenceVerificationCodeInput{
+	preference, err := h.preferences.SendUserPreferenceVerificationCode(c.Request.Context(), domainNotification.SendUserPreferenceVerificationCodeInput{
 		UserID: userID,
 	})
 	if err != nil {
@@ -255,7 +261,7 @@ func (h *NotificationSettingsHandler) VerifyUserPreferenceEmail(c *gin.Context) 
 		return
 	}
 
-	preference, err := h.service.VerifyUserPreferenceEmail(c.Request.Context(), domainNotification.VerifyUserPreferenceEmailInput{
+	preference, err := h.preferences.VerifyUserPreferenceEmail(c.Request.Context(), domainNotification.VerifyUserPreferenceEmailInput{
 		UserID: userID,
 		Code:   req.Code,
 	})
@@ -298,7 +304,7 @@ func (h *NotificationSettingsHandler) ListSystemNotifications(c *gin.Context) {
 		return
 	}
 
-	result, err := h.service.ListSystemNotifications(c.Request.Context(), userID, query.Page, query.Limit, query.UnreadOnly)
+	result, err := h.inbox.ListSystemNotifications(c.Request.Context(), userID, query.Page, query.Limit, query.UnreadOnly)
 	if err != nil {
 		handlerutil.RespondDomainError(
 			c,
@@ -308,7 +314,7 @@ func (h *NotificationSettingsHandler) ListSystemNotifications(c *gin.Context) {
 		return
 	}
 
-	unreadCount, err := h.service.CountUnreadSystemNotifications(c.Request.Context(), userID)
+	unreadCount, err := h.inbox.CountUnreadSystemNotifications(c.Request.Context(), userID)
 	if err != nil {
 		handlerutil.RespondDomainError(
 			c,
@@ -364,7 +370,7 @@ func (h *NotificationSettingsHandler) MarkSystemNotificationRead(c *gin.Context)
 		return
 	}
 
-	notification, err := h.service.MarkSystemNotificationRead(c.Request.Context(), notificationID, userID)
+	notification, err := h.inbox.MarkSystemNotificationRead(c.Request.Context(), notificationID, userID)
 	if err != nil {
 		handlerutil.RespondDomainError(
 			c,
@@ -392,7 +398,7 @@ func (h *NotificationSettingsHandler) MarkAllSystemNotificationsRead(c *gin.Cont
 		return
 	}
 
-	if err := h.service.MarkAllSystemNotificationsRead(c.Request.Context(), userID); err != nil {
+	if err := h.inbox.MarkAllSystemNotificationsRead(c.Request.Context(), userID); err != nil {
 		handlerutil.RespondDomainError(
 			c,
 			err,
@@ -427,7 +433,7 @@ func (h *NotificationSettingsHandler) ToggleSystemNotificationRead(c *gin.Contex
 		return
 	}
 
-	notification, err := h.service.ToggleSystemNotificationRead(c.Request.Context(), notificationID, userID)
+	notification, err := h.inbox.ToggleSystemNotificationRead(c.Request.Context(), notificationID, userID)
 	if err != nil {
 		handlerutil.RespondDomainError(
 			c,
@@ -464,7 +470,7 @@ func (h *NotificationSettingsHandler) ToggleSystemNotificationImportant(c *gin.C
 		return
 	}
 
-	notification, err := h.service.ToggleSystemNotificationImportant(c.Request.Context(), notificationID, userID)
+	notification, err := h.inbox.ToggleSystemNotificationImportant(c.Request.Context(), notificationID, userID)
 	if err != nil {
 		handlerutil.RespondDomainError(
 			c,
@@ -500,7 +506,7 @@ func (h *NotificationSettingsHandler) DeleteSystemNotification(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.DeleteSystemNotification(c.Request.Context(), notificationID, userID); err != nil {
+	if err := h.inbox.DeleteSystemNotification(c.Request.Context(), notificationID, userID); err != nil {
 		handlerutil.RespondDomainError(
 			c,
 			err,
@@ -522,8 +528,8 @@ func (h *NotificationSettingsHandler) ListNotificationRules(c *gin.Context) {
 		return
 	}
 
-	rules, err := h.service.ListNotificationRules(c.Request.Context(), domainNotification.NotificationRuleFilter{
-		EventKey: query.EventKey,
+	rules, err := h.rules.ListNotificationRules(c.Request.Context(), domainNotification.NotificationRuleFilter{
+		EventKey: domainNotification.EventKey(query.EventKey),
 		Enabled:  query.Enabled,
 	})
 	if err != nil {
@@ -567,14 +573,14 @@ func (h *NotificationSettingsHandler) upsertNotificationRule(c *gin.Context, exi
 		id = parsed
 	}
 
-	rule, err := h.service.UpsertNotificationRule(c.Request.Context(), domainNotification.UpsertNotificationRuleInput{
+	rule, err := h.rules.UpsertNotificationRule(c.Request.Context(), domainNotification.UpsertNotificationRuleInput{
 		ID:               id,
 		ActorID:          userID,
 		Name:             req.Name,
 		Enabled:          *req.Enabled,
-		EventKey:         req.EventKey,
+		EventKey:         domainNotification.EventKey(req.EventKey),
 		ProjectID:        req.ProjectID,
-		ResourceType:     req.ResourceType,
+		ResourceType:     domainNotification.ResourceKind(req.ResourceType),
 		ResourceID:       req.ResourceID,
 		RecipientType:    domainNotification.RuleRecipientType(req.RecipientType),
 		RecipientUserIDs: req.RecipientUserIDs,
@@ -600,7 +606,7 @@ func (h *NotificationSettingsHandler) DeleteNotificationRule(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.DeleteNotificationRule(c.Request.Context(), id); err != nil {
+	if err := h.rules.DeleteNotificationRule(c.Request.Context(), id); err != nil {
 		handlerutil.RespondDomainError(
 			c,
 			err,
@@ -661,10 +667,10 @@ func mapSystemNotificationResponse(notification *domainNotification.SystemNotifi
 		ID:           notification.ID,
 		RecipientID:  notification.RecipientID,
 		ActorID:      notification.ActorID,
-		EventKey:     notification.EventKey,
+		EventKey:     notification.EventKey.String(),
 		Title:        notification.Title,
 		Body:         notification.Body,
-		ResourceType: notification.ResourceType,
+		ResourceType: notification.ResourceType.String(),
 		ResourceID:   notification.ResourceID,
 		Metadata:     notification.Metadata,
 		ReadAt:       notification.ReadAt,
@@ -687,9 +693,9 @@ func mapNotificationRuleResponse(rule *domainNotification.NotificationRule) dto.
 		ID:               rule.ID,
 		Name:             rule.Name,
 		Enabled:          rule.Enabled,
-		EventKey:         rule.EventKey,
+		EventKey:         rule.EventKey.String(),
 		ProjectID:        rule.ProjectID,
-		ResourceType:     rule.ResourceType,
+		ResourceType:     rule.ResourceType.String(),
 		ResourceID:       rule.ResourceID,
 		RecipientType:    string(rule.RecipientType),
 		RecipientUserIDs: rule.RecipientUserIDs,

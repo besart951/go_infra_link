@@ -17,7 +17,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func enqueueFacilityCopy(c *gin.Context, jobs *facilityservice.FacilityJobManager, kind facilityservice.FacilityJobKind, sourceID uuid.UUID) bool {
+func enqueueFacilityCopy(c *gin.Context, jobs *facilityservice.JobService, kind facilityservice.FacilityJobKind, sourceID uuid.UUID) bool {
 	if jobs == nil || !jobs.SupportsDurableTasks() {
 		respondLocalizedError(c, http.StatusServiceUnavailable, "durable_jobs_unavailable", "errors.service_unavailable")
 		return true
@@ -49,7 +49,7 @@ func enqueueFacilityCopy(c *gin.Context, jobs *facilityservice.FacilityJobManage
 	return true
 }
 
-func submitFieldDeviceBulkJob(c *gin.Context, jobs *facilityservice.FacilityJobManager, task string, payload any, total int) bool {
+func submitFieldDeviceBulkJob(c *gin.Context, jobs *facilityservice.JobService, task facilityservice.FacilityJobTaskID, payload any, total int) bool {
 	if jobs == nil || !jobs.SupportsDurableTasks() {
 		respondLocalizedError(c, http.StatusServiceUnavailable, "durable_jobs_unavailable", "errors.service_unavailable")
 		return true
@@ -82,13 +82,13 @@ func submitFieldDeviceBulkJob(c *gin.Context, jobs *facilityservice.FacilityJobM
 	return true
 }
 
-var facilityDeleteTasks = map[facilityservice.FacilityJobKind]string{
+var facilityDeleteTasks = map[facilityservice.FacilityJobKind]facilityservice.FacilityJobTaskID{
 	facilityservice.FacilityJobKindControlCabinet:          facilityservice.FacilityJobTaskDeleteControlCabinet,
 	facilityservice.FacilityJobKindSPSController:           facilityservice.FacilityJobTaskDeleteSPSController,
 	facilityservice.FacilityJobKindSPSControllerSystemType: facilityservice.FacilityJobTaskDeleteSPSControllerSystemType,
 }
 
-func startPersistedFacilityDeleteJob(c *gin.Context, jobs *facilityservice.FacilityJobManager, kind facilityservice.FacilityJobKind, sourceID uuid.UUID, baseVersion uint64) {
+func startPersistedFacilityDeleteJob(c *gin.Context, jobs *facilityservice.JobService, kind facilityservice.FacilityJobKind, sourceID uuid.UUID, baseVersion uint64) {
 	if jobs == nil || !jobs.SupportsDurableTasks() {
 		respondLocalizedError(c, http.StatusServiceUnavailable, "durable_jobs_unavailable", "errors.service_unavailable")
 		return
@@ -134,7 +134,7 @@ func startPersistedFacilityDeleteJob(c *gin.Context, jobs *facilityservice.Facil
 	c.JSON(http.StatusAccepted, sharedpresenter.ToFacilityJobResponse(job))
 }
 
-var facilityCopyTasks = map[facilityservice.FacilityJobKind]string{
+var facilityCopyTasks = map[facilityservice.FacilityJobKind]facilityservice.FacilityJobTaskID{
 	facilityservice.FacilityJobKindControlCabinet:          facilityservice.FacilityJobTaskCopyControlCabinet,
 	facilityservice.FacilityJobKindSPSController:           facilityservice.FacilityJobTaskCopySPSController,
 	facilityservice.FacilityJobKindSPSControllerSystemType: facilityservice.FacilityJobTaskCopySPSControllerSystemType,
@@ -142,15 +142,15 @@ var facilityCopyTasks = map[facilityservice.FacilityJobKind]string{
 	facilityservice.FacilityJobKindObjectData:              facilityservice.FacilityJobTaskCopyObjectData,
 }
 
-func facilityCopyTaskName(kind facilityservice.FacilityJobKind) string {
+func facilityCopyTaskName(kind facilityservice.FacilityJobKind) facilityservice.FacilityJobTaskID {
 	return facilityCopyTasks[kind]
 }
 
 type FacilityJobHandler struct {
-	jobs *facilityservice.FacilityJobManager
+	jobs *facilityservice.JobService
 }
 
-func NewFacilityJobHandler(jobs *facilityservice.FacilityJobManager) *FacilityJobHandler {
+func NewFacilityJobHandler(jobs *facilityservice.JobService) *FacilityJobHandler {
 	return &FacilityJobHandler{jobs: jobs}
 }
 
@@ -228,6 +228,16 @@ func (h *FacilityJobHandler) ListJobs(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.FacilityJobListResponse{Items: items, NextCursor: page.NextCursor, PreviousCursor: page.PreviousCursor})
 }
 
+// RetryJob godoc
+// @Summary Retry a failed facility job
+// @Tags facility-jobs
+// @Produce json
+// @Param id path string true "Facility Job ID"
+// @Success 202 {object} dto.FacilityJobResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 409 {object} dto.ErrorResponse
+// @Router /api/v1/facility/jobs/{id}/retry [post]
 func (h *FacilityJobHandler) RetryJob(c *gin.Context) {
 	jobID, ok := parseUUIDParam(c, "id")
 	if !ok {
@@ -275,6 +285,35 @@ func (h *FacilityJobHandler) CancelJob(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, toFacilityJobResponse(job))
+}
+
+// DeleteJob godoc
+// @Summary Permanently remove a terminal facility job
+// @Tags facility-jobs
+// @Param id path string true "Facility Job ID"
+// @Success 204
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 409 {object} dto.ErrorResponse
+// @Router /api/v1/facility/jobs/{id} [delete]
+func (h *FacilityJobHandler) DeleteJob(c *gin.Context) {
+	jobID, ok := parseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		respondLocalizedError(c, http.StatusUnauthorized, "unauthorized", "errors.unauthorized")
+		return
+	}
+	if err := h.jobs.Remove(c.Request.Context(), userID, jobID); err != nil {
+		respondLocalizedDomainError(c, err, "job_remove_failed", "facility.job_remove_failed",
+			handlerutil.MapError(facilityservice.ErrFacilityJobNotFound, handlerutil.LocalizedError(http.StatusNotFound, "not_found", "facility.fetch_failed")),
+			handlerutil.MapError(facilityservice.ErrFacilityJobNotRemovable, handlerutil.LocalizedError(http.StatusConflict, "job_not_removable", "facility.job_not_removable")),
+		)
+		return
+	}
+	c.Status(http.StatusNoContent)
 }
 
 func facilityOperationID(c *gin.Context) (uuid.UUID, bool) {

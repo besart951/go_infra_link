@@ -7,13 +7,13 @@ import (
 	notificationservice "github.com/besart951/go_infra_link/backend/internal/service/notification"
 )
 
-func newNotificationService(repos *Repositories, cfg ServiceConfig) (*notificationservice.Service, error) {
+func newNotificationServices(repos *Repositories, cfg ServiceConfig) (*notificationservice.Services, error) {
 	secretCipher, err := notificationservice.NewAESCipher(cfg.JWTSecret)
 	if err != nil {
 		return nil, fmt.Errorf("notification secret cipher: %w", err)
 	}
 
-	return notificationservice.NewFromDependencies(notificationservice.Dependencies{
+	return notificationservice.NewServices(notificationservice.Dependencies{
 		SMTPSettings:    repos.NotificationSMTPSettings,
 		Preferences:     repos.NotificationPreferences,
 		SystemInbox:     repos.SystemNotifications,

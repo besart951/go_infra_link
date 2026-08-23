@@ -15,7 +15,7 @@ import (
 )
 
 type projectCopyOperation struct {
-	task       string
+	task       facilityservice.FacilityJobTaskID
 	eventType  string
 	entityType string
 	copy       func(context.Context, *projectservice.Services, projectCopyCommand) (uuid.UUID, error)
@@ -51,17 +51,17 @@ type projectCopyState struct {
 }
 
 type projectCopyTaskRegistrar struct {
-	jobs          *facilityservice.FacilityJobManager
+	tasks         *facilityservice.TaskRegistry
 	project       *projectservice.Services
 	collaboration *infrarealtime.ProjectCollaborationHub
 	steps         facilityjobs.StepStore
 }
 
-func registerProjectCopyTasks(jobs *facilityservice.FacilityJobManager, services *Services, runtime *RuntimeAdapters) {
-	if jobs == nil || services == nil || services.Project == nil {
+func registerProjectCopyTasks(tasks *facilityservice.TaskRegistry, services *Services, runtime *RuntimeAdapters) {
+	if tasks == nil || services == nil || services.Project == nil {
 		return
 	}
-	registrar := projectCopyTaskRegistrar{jobs: jobs, project: services.Project}
+	registrar := projectCopyTaskRegistrar{tasks: tasks, project: services.Project}
 	if runtime != nil {
 		registrar.collaboration = runtime.ProjectCollaboration
 		registrar.steps = runtime.FacilityJobSteps
@@ -76,7 +76,7 @@ func (r projectCopyTaskRegistrar) registerOperations() {
 		{domainproject.TaskCopyProjectSPSControllerSystemType, "project.sps_controller_system_type.copied", "sps_controller_system_type", copyProjectSPSControllerSystemType},
 	}
 	for _, operation := range operations {
-		r.jobs.RegisterTask(operation.task, r.taskHandler(operation))
+		r.tasks.Register(operation.task, r.taskHandler(operation))
 	}
 }
 

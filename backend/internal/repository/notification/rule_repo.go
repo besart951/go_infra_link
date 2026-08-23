@@ -67,8 +67,8 @@ func (r *ruleRepo) GetByID(ctx context.Context, id uuid.UUID) (*domainNotificati
 
 func (r *ruleRepo) List(ctx context.Context, filter domainNotification.NotificationRuleFilter) ([]domainNotification.NotificationRule, error) {
 	query := r.db.WithContext(ctx).Model(&domainNotification.NotificationRule{})
-	if strings.TrimSpace(filter.EventKey) != "" {
-		query = query.Where("event_key = ?", strings.TrimSpace(filter.EventKey))
+	if eventKey := strings.TrimSpace(filter.EventKey.String()); eventKey != "" {
+		query = query.Where("event_key = ?", eventKey)
 	}
 	if filter.ProjectID != nil {
 		query = query.Where("project_id = ?", *filter.ProjectID)
@@ -82,9 +82,9 @@ func (r *ruleRepo) List(ctx context.Context, filter domainNotification.Notificat
 	return rules, err
 }
 
-func (r *ruleRepo) ListMatching(ctx context.Context, eventKey string, projectID *uuid.UUID, resourceType string, resourceID *uuid.UUID) ([]domainNotification.NotificationRule, error) {
+func (r *ruleRepo) ListMatching(ctx context.Context, eventKey domainNotification.EventKey, projectID *uuid.UUID, resourceType domainNotification.ResourceKind, resourceID *uuid.UUID) ([]domainNotification.NotificationRule, error) {
 	query := r.db.WithContext(ctx).Model(&domainNotification.NotificationRule{}).
-		Where("enabled = ? AND event_key = ?", true, strings.TrimSpace(eventKey))
+		Where("enabled = ? AND event_key = ?", true, strings.TrimSpace(eventKey.String()))
 
 	if projectID != nil {
 		query = query.Where("(project_id IS NULL OR project_id = ?)", *projectID)
@@ -92,9 +92,9 @@ func (r *ruleRepo) ListMatching(ctx context.Context, eventKey string, projectID 
 		query = query.Where("project_id IS NULL")
 	}
 
-	resourceType = strings.TrimSpace(resourceType)
-	if resourceType != "" {
-		query = query.Where("(resource_type = '' OR resource_type = ?)", resourceType)
+	normalizedResourceType := strings.TrimSpace(resourceType.String())
+	if normalizedResourceType != "" {
+		query = query.Where("(resource_type = '' OR resource_type = ?)", normalizedResourceType)
 	} else {
 		query = query.Where("resource_type = ''")
 	}

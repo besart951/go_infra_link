@@ -204,10 +204,12 @@ func TestUpsertSMTPSettingsPreservesExistingPassword(t *testing.T) {
 		},
 	}
 	strategy := &strategyStub{}
-	service := New(repo, nil, nil, nil, nil, nil, nil, nil, secretCipherStub{}, "test-secret", strategy)
+	services := NewServices(Dependencies{
+		SMTPSettings: repo, Cipher: secretCipherStub{}, EmailStrategies: []EmailStrategy{strategy},
+	}, Config{VerificationSecret: "test-secret"})
 
 	actorID := uuid.Must(uuid.NewV7())
-	settings, err := service.UpsertSMTPSettings(context.Background(), domainNotification.UpsertSMTPSettingsInput{
+	settings, err := services.Settings.UpsertSMTPSettings(context.Background(), domainNotification.UpsertSMTPSettingsInput{
 		ActorID:          actorID,
 		Enabled:          true,
 		Host:             "smtp.example.com",
@@ -245,9 +247,11 @@ func TestSendNotificationUsesDecryptedPassword(t *testing.T) {
 		},
 	}
 	strategy := &strategyStub{}
-	service := New(repo, nil, nil, nil, nil, nil, nil, nil, secretCipherStub{}, "test-secret", strategy)
+	services := NewServices(Dependencies{
+		SMTPSettings: repo, Cipher: secretCipherStub{}, EmailStrategies: []EmailStrategy{strategy},
+	}, Config{VerificationSecret: "test-secret"})
 
-	err := service.SendNotification(context.Background(), domainNotification.SendNotificationInput{
+	err := services.Settings.SendNotification(context.Background(), domainNotification.SendNotificationInput{
 		To:      []string{"person@example.com"},
 		Subject: "Hello",
 		Body:    "World",
@@ -276,9 +280,11 @@ func TestSendNotificationFailsWhenDisabled(t *testing.T) {
 			AuthMode:  domainNotification.AuthModeNone,
 		},
 	}
-	service := New(repo, nil, nil, nil, nil, nil, nil, nil, secretCipherStub{}, "test-secret", &strategyStub{})
+	services := NewServices(Dependencies{
+		SMTPSettings: repo, Cipher: secretCipherStub{}, EmailStrategies: []EmailStrategy{&strategyStub{}},
+	}, Config{VerificationSecret: "test-secret"})
 
-	err := service.SendNotification(context.Background(), domainNotification.SendNotificationInput{
+	err := services.Settings.SendNotification(context.Background(), domainNotification.SendNotificationInput{
 		To:      []string{"person@example.com"},
 		Subject: "Hello",
 		Body:    "World",
@@ -290,9 +296,11 @@ func TestSendNotificationFailsWhenDisabled(t *testing.T) {
 
 func TestGetUserPreferenceReturnsDefaultWhenMissing(t *testing.T) {
 	userID := uuid.Must(uuid.NewV7())
-	service := New(nil, &userPreferenceRepoStub{}, nil, nil, nil, nil, nil, nil, secretCipherStub{}, "test-secret")
+	services := NewServices(Dependencies{
+		Preferences: &userPreferenceRepoStub{}, Cipher: secretCipherStub{},
+	}, Config{VerificationSecret: "test-secret"})
 
-	preference, err := service.GetUserPreference(context.Background(), userID)
+	preference, err := services.Preferences.GetUserPreference(context.Background(), userID)
 	if err != nil {
 		t.Fatalf("GetUserPreference returned error: %v", err)
 	}
@@ -311,9 +319,11 @@ func TestGetUserPreferenceReturnsDefaultWhenMissing(t *testing.T) {
 func TestUpsertUserPreferenceNormalizesAndSaves(t *testing.T) {
 	userID := uuid.Must(uuid.NewV7())
 	repo := &userPreferenceRepoStub{}
-	service := New(nil, repo, nil, nil, nil, nil, nil, nil, secretCipherStub{}, "test-secret")
+	services := NewServices(Dependencies{
+		Preferences: repo, Cipher: secretCipherStub{},
+	}, Config{VerificationSecret: "test-secret"})
 
-	preference, err := service.UpsertUserPreference(context.Background(), domainNotification.UpsertUserPreferenceInput{
+	preference, err := services.Preferences.UpsertUserPreference(context.Background(), domainNotification.UpsertUserPreferenceInput{
 		UserID:            userID,
 		NotificationEmail: "person@example.com",
 		Channel:           domainNotification.DeliveryChannel(" EMAIL "),
@@ -354,10 +364,13 @@ func TestDispatchQueuesSystemNotificationAndEmailOutbox(t *testing.T) {
 			userID: {Base: domain.Base{ID: userID}, Email: domainUser.EmailPtr("login@example.com")},
 		},
 	}
-	service := New(nil, preferenceRepo, systemRepo, outboxRepo, nil, nil, nil, userRepo, secretCipherStub{}, "test-secret")
-	service.SetSystemNotificationPublisher(publisher)
+	services := NewServices(Dependencies{
+		Preferences: preferenceRepo, SystemInbox: systemRepo, EmailOutbox: outboxRepo,
+		Users: userRepo, Cipher: secretCipherStub{},
+	}, Config{VerificationSecret: "test-secret"})
+	services.Inbox.SetSystemNotificationPublisher(publisher)
 
-	err := service.Dispatch(context.Background(), domainNotification.DispatchNotificationInput{
+	err := services.Rules.Dispatch(context.Background(), domainNotification.DispatchNotificationInput{
 		RecipientIDs: []uuid.UUID{userID},
 		EventKey:     "project.phase.changed",
 		Metadata: map[string]string{
@@ -434,9 +447,12 @@ func TestProcessDueEmailOutboxGroupsDigestItems(t *testing.T) {
 			AuthMode:          domainNotification.AuthModeNone,
 		},
 	}
-	service := New(smtpRepo, nil, nil, outboxRepo, nil, nil, nil, nil, secretCipherStub{}, "test-secret", strategy)
+	services := NewServices(Dependencies{
+		SMTPSettings: smtpRepo, EmailOutbox: outboxRepo, Cipher: secretCipherStub{},
+		EmailStrategies: []EmailStrategy{strategy},
+	}, Config{VerificationSecret: "test-secret"})
 
-	if err := service.ProcessDueEmailOutbox(context.Background(), time.Now().UTC(), 100); err != nil {
+	if err := services.Outbox.ProcessDueEmailOutbox(context.Background(), time.Now().UTC(), 100); err != nil {
 		t.Fatalf("ProcessDueEmailOutbox returned error: %v", err)
 	}
 

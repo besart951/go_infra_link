@@ -21,9 +21,9 @@ type NotificationRule struct {
 	domain.Base
 	Name             string            `gorm:"not null"`
 	Enabled          bool              `gorm:"not null;default:true;index"`
-	EventKey         string            `gorm:"type:varchar(128);not null;index"`
+	EventKey         EventKey          `gorm:"type:varchar(128);not null;index"`
 	ProjectID        *uuid.UUID        `gorm:"type:uuid;index"`
-	ResourceType     string            `gorm:"type:varchar(64);index"`
+	ResourceType     ResourceKind      `gorm:"column:resource_type;type:varchar(64);index"`
 	ResourceID       *uuid.UUID        `gorm:"type:uuid;index"`
 	RecipientType    RuleRecipientType `gorm:"type:varchar(32);not null"`
 	RecipientUserIDs []uuid.UUID       `gorm:"serializer:json;type:text"`

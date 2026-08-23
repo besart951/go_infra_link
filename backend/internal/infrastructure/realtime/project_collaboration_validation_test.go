@@ -40,7 +40,7 @@ func TestParseProjectCollaborationDraftStateValidatesAllAggregatePaths(t *testin
 				t.Fatalf("parsed = %+v", parsed)
 			}
 			entry := parsed.Entries[0]
-			if entry.AggregateType != tt.aggregate || entry.AggregateID != aggregateID || entry.Fields[0].Path != tt.path {
+			if entry.AggregateType != tt.aggregate || entry.AggregateID == nil || entry.AggregateID.String() != aggregateID || entry.Fields[0].Path != tt.path {
 				t.Fatalf("entry = %+v", entry)
 			}
 		})
@@ -79,7 +79,7 @@ func TestParseProjectCollaborationDraftClearValidatesSelector(t *testing.T) {
 		"aggregate_type": "bacnet_object",
 		"aggregate_id":   id,
 	})
-	if parsed.Clear == nil || parsed.Clear.AggregateType != "bacnet_object" || parsed.Clear.AggregateID != id {
+	if parsed.Clear == nil || parsed.Clear.AggregateType != "bacnet_object" || parsed.Clear.AggregateID == nil || parsed.Clear.AggregateID.String() != id {
 		t.Fatalf("clear = %+v", parsed.Clear)
 	}
 }

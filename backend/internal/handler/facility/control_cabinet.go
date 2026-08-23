@@ -15,10 +15,10 @@ import (
 type ControlCabinetHandler struct {
 	service       ControlCabinetService
 	collaboration ProjectRefreshBroadcaster
-	facilityJobs  *facilityservice.FacilityJobManager
+	facilityJobs  *facilityservice.JobService
 }
 
-func NewControlCabinetHandler(service ControlCabinetService, collaboration ProjectRefreshBroadcaster, facilityJobs ...*facilityservice.FacilityJobManager) *ControlCabinetHandler {
+func NewControlCabinetHandler(service ControlCabinetService, collaboration ProjectRefreshBroadcaster, facilityJobs ...*facilityservice.JobService) *ControlCabinetHandler {
 	handler := &ControlCabinetHandler{service: service, collaboration: collaboration}
 	if len(facilityJobs) > 0 {
 		handler.facilityJobs = facilityJobs[0]

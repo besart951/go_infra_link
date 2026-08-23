@@ -12,15 +12,14 @@ type ListProjectChangesQuery struct {
 }
 
 type ProjectChangeResponse struct {
-	EventID       uuid.UUID            `json:"event_id"`
-	Revision      uint64               `json:"revision"`
-	AggregateType string               `json:"aggregate_type"`
-	AggregateID   *uuid.UUID           `json:"aggregate_id"`
-	Action        string               `json:"action"`
-	ActorID       *uuid.UUID           `json:"actor_id"`
-	ChangedFields []string             `json:"changed_fields"`
-	ParentRefs    map[string]uuid.UUID `json:"parent_refs"`
-	OccurredAt    time.Time            `json:"occurred_at"`
+	EventID       uuid.UUID  `json:"event_id"`
+	Revision      uint64     `json:"revision"`
+	AggregateType string     `json:"aggregate_type"`
+	AggregateID   *uuid.UUID `json:"aggregate_id"`
+	Action        string     `json:"action"`
+	ActorID       *uuid.UUID `json:"actor_id"`
+	ChangedFields []string   `json:"changed_fields"`
+	OccurredAt    time.Time  `json:"occurred_at"`
 }
 
 type ProjectChangesResponse struct {

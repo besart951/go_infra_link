@@ -2910,10 +2910,6 @@ definitions:
         type: string
       occurred_at:
         type: string
-      parent_refs:
-        additionalProperties:
-          type: string
-        type: object
       revision:
         type: integer
     type: object
@@ -6685,6 +6681,31 @@ paths:
       tags:
       - facility-jobs
   /api/v1/facility/jobs/{id}:
+    delete:
+      parameters:
+      - description: Facility Job ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse'
+      summary: Permanently remove a terminal facility job
+      tags:
+      - facility-jobs
     get:
       parameters:
       - description: Copy Job ID
@@ -6742,6 +6763,36 @@ paths:
           schema:
             $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse'
       summary: Cancel a facility job
+      tags:
+      - facility-jobs
+  /api/v1/facility/jobs/{id}/retry:
+    post:
+      parameters:
+      - description: Facility Job ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FacilityJobResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse'
+      summary: Retry a failed facility job
       tags:
       - facility-jobs
   /api/v1/facility/notification-classes:

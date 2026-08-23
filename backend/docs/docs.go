@@ -4393,6 +4393,44 @@ const docTemplate = `{
                         }
                     }
                 }
+            },
+            "delete": {
+                "tags": [
+                    "facility-jobs"
+                ],
+                "summary": "Permanently remove a terminal facility job",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Facility Job ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                        }
+                    }
+                }
             }
         },
         "/api/v1/facility/jobs/{id}/cancel": {
@@ -4416,6 +4454,52 @@ const docTemplate = `{
                 "responses": {
                     "200": {
                         "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FacilityJobResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/facility/jobs/{id}/retry": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "facility-jobs"
+                ],
+                "summary": "Retry a failed facility job",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Facility Job ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Accepted",
                         "schema": {
                             "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FacilityJobResponse"
                         }
@@ -15367,12 +15451,6 @@ const docTemplate = `{
                 },
                 "occurred_at": {
                     "type": "string"
-                },
-                "parent_refs": {
-                    "type": "object",
-                    "additionalProperties": {
-                        "type": "string"
-                    }
                 },
                 "revision": {
                     "type": "integer"

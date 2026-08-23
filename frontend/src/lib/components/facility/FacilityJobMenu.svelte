@@ -1,13 +1,17 @@
 <script lang="ts">
   import { Button } from '$lib/components/ui/button/index.js';
   import * as Popover from '$lib/components/ui/popover/index.js';
+  import type { FacilityJob } from '$lib/domain/facility/facility-job.js';
   import { createTranslator } from '$lib/i18n/translator.js';
   import { facilityJobState } from '$lib/state/facilityJobState.svelte.js';
   import BanIcon from '@lucide/svelte/icons/ban';
+  import CheckCircle2Icon from '@lucide/svelte/icons/circle-check-big';
+  import CircleXIcon from '@lucide/svelte/icons/circle-x';
   import DownloadIcon from '@lucide/svelte/icons/download';
   import ListChecksIcon from '@lucide/svelte/icons/list-checks';
   import LoaderCircleIcon from '@lucide/svelte/icons/loader-circle';
   import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
+  import XIcon from '@lucide/svelte/icons/x';
 
   const t = createTranslator();
 
@@ -46,6 +50,19 @@
   function typeLabel(type: string): string {
     return $t(`facility.jobs.${type}`);
   }
+
+  function isActive(job: FacilityJob): boolean {
+    return job.status === 'queued' || job.status === 'running';
+  }
+
+  function isTerminal(job: FacilityJob): boolean {
+    return job.status === 'completed' || job.status === 'failed' || job.status === 'cancelled';
+  }
+
+  function downloadURL(job: FacilityJob): string {
+    return job.result?.download_url ?? '';
+  }
+
 </script>
 
 <Popover.Root>
@@ -57,6 +74,7 @@
         size="icon"
         class="relative"
         aria-label={$t('facility.jobs.open')}
+        title={$t('facility.jobs.open')}
       >
         <ListChecksIcon class="size-5" />
         {#if activeCount > 0}
@@ -69,71 +87,105 @@
     {/snippet}
   </Popover.Trigger>
 
-  <Popover.Content class="w-[min(28rem,calc(100vw-2rem))] p-0" align="end">
-    <div class="border-b px-3 py-2">
+  <Popover.Content class="w-[min(25rem,calc(100vw-2rem))] p-0" align="end">
+    <div class="flex items-center justify-between border-b px-3 py-2.5">
       <h2 class="text-sm font-semibold">{$t('facility.jobs.title')}</h2>
+      {#if activeCount > 0}
+        <span class="text-xs text-muted-foreground tabular-nums">{activeCount}</span>
+      {/if}
     </div>
     {#if jobs.length === 0}
       <p class="px-4 py-8 text-center text-sm text-muted-foreground">{$t('facility.jobs.empty')}</p>
     {:else}
-      <div class="max-h-[min(32rem,calc(100vh-8rem))] overflow-y-auto">
+      <div class="max-h-[min(32rem,calc(100vh-8rem))] divide-y overflow-y-auto">
         {#each jobs as job (job.jobId)}
-          <section class="border-b p-3 last:border-b-0">
-            <div class="flex items-start gap-2">
-              {#if job.status === 'queued' || job.status === 'running'}
+          <section class="px-3 py-2.5">
+            <div class="flex items-start gap-2.5">
+              {#if isActive(job)}
                 <LoaderCircleIcon class="mt-0.5 size-4 shrink-0 animate-spin text-primary" />
+              {:else if job.status === 'failed'}
+                <CircleXIcon class="mt-0.5 size-4 shrink-0 text-destructive" />
+              {:else if job.status === 'cancelled'}
+                <BanIcon class="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+              {:else}
+                <CheckCircle2Icon class="mt-0.5 size-4 shrink-0 text-primary" />
               {/if}
+
               <div class="min-w-0 flex-1">
-                <div class="flex items-center justify-between gap-2">
-                  <p class="truncate text-sm font-medium">
-                    {typeLabel(job.type)} · {stageLabel(job.stage)}
-                  </p>
-                  <span class="shrink-0 text-sm text-muted-foreground tabular-nums"
-                    >{job.progress}%</span
-                  >
+                <div class="flex items-start justify-between gap-2">
+                  <div class="min-w-0">
+                    <p class="truncate text-sm font-medium">{typeLabel(job.type)}</p>
+                    <p class="truncate text-xs text-muted-foreground">{stageLabel(job.stage)}</p>
+                  </div>
+                  <div class="flex shrink-0 items-center gap-0.5">
+                    {#if job.result?.download_url}
+                      <Button
+                        size="icon-sm"
+                        variant="ghost"
+                        href={downloadURL(job)}
+                        aria-label={$t('facility.jobs.download')}
+                        title={$t('facility.jobs.download')}><DownloadIcon class="size-4" /></Button
+                      >
+                    {/if}
+                    {#if job.status === 'failed' && job.retryable}
+                      <Button
+                        size="icon-sm"
+                        variant="ghost"
+                        aria-label={$t('facility.jobs.retry')}
+                        title={$t('facility.jobs.retry')}
+                        onclick={() => facilityJobState.retry(job.jobId)}
+                        ><RefreshCwIcon class="size-4" /></Button
+                      >
+                    {/if}
+                    {#if isActive(job)}
+                      <Button
+                        size="icon-sm"
+                        variant="ghost"
+                        aria-label={$t('facility.jobs.cancel')}
+                        title={$t('facility.jobs.cancel')}
+                        onclick={() => facilityJobState.cancel(job.jobId)}
+                        ><BanIcon class="size-4" /></Button
+                      >
+                    {/if}
+                    {#if isTerminal(job)}
+                      <Button
+                        size="icon-sm"
+                        variant="ghost"
+                        class="text-muted-foreground hover:text-foreground"
+                        aria-label={$t('facility.jobs.remove')}
+                        title={$t('facility.jobs.remove')}
+                        onclick={() => facilityJobState.remove(job.jobId)}
+                        ><XIcon class="size-4" /></Button
+                      >
+                    {/if}
+                  </div>
                 </div>
-                <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
-                  <div
-                    class="h-full rounded-full bg-primary transition-[width] duration-300"
-                    style:width={`${job.progress}%`}
-                  ></div>
-                </div>
-                <div class="mt-1 flex flex-wrap gap-x-2 text-xs text-muted-foreground">
+
+                {#if isActive(job)}
+                  <div class="mt-2 h-1 overflow-hidden rounded-full bg-muted">
+                    <div
+                      class="h-full rounded-full bg-primary transition-[width] duration-300"
+                      style:width={`${job.progress}%`}
+                    ></div>
+                  </div>
+                {/if}
+
+                <div class="mt-1.5 flex flex-wrap gap-x-2 text-xs text-muted-foreground">
+                  {#if isActive(job)}<span class="tabular-nums">{job.progress}%</span>{/if}
                   {#if job.total !== undefined}<span>{job.processed} / {job.total}</span>{/if}
                   <span>{$t('facility.jobs.attempts', { count: job.attempts })}</span>
                   {#if job.failureCount > 0}<span
                       >{$t('facility.jobs.failed_count', { count: job.failureCount })}</span
                     >{/if}
                 </div>
-                {#if job.error}<p class="mt-1 text-xs text-destructive">{job.error}</p>{/if}
-                {#if facilityJobState.connectionInterrupted && (job.status === 'queued' || job.status === 'running')}
-                  <p class="mt-1 text-xs text-muted-foreground">
+                {#if job.status === 'failed' && job.error}
+                  <p class="mt-1.5 text-xs wrap-break-word text-destructive">{job.error}</p>
+                {/if}
+                {#if facilityJobState.connectionInterrupted && isActive(job)}
+                  <p class="mt-1.5 text-xs text-muted-foreground">
                     {$t('facility.copy_progress.connection_interrupted')}
                   </p>
                 {/if}
-                <div class="mt-2 flex gap-2">
-                  {#if job.result?.download_url}
-                    <Button size="sm" variant="outline" href={job.result.download_url}
-                      ><DownloadIcon class="size-4" />{$t('facility.jobs.download')}</Button
-                    >
-                  {/if}
-                  {#if job.status === 'failed' && job.retryable}
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onclick={() => facilityJobState.retry(job.jobId)}
-                      ><RefreshCwIcon class="size-4" />{$t('facility.jobs.retry')}</Button
-                    >
-                  {/if}
-                  {#if job.status === 'queued' || job.status === 'running'}
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onclick={() => facilityJobState.cancel(job.jobId)}
-                      ><BanIcon class="size-4" />{$t('facility.jobs.cancel')}</Button
-                    >
-                  {/if}
-                </div>
               </div>
             </div>
           </section>

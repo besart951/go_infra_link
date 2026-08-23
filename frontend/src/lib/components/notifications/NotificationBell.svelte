@@ -1,5 +1,6 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
+  import { resolve } from '$app/paths';
   import NotificationPreviewItem from '$lib/components/notifications/NotificationPreviewItem.svelte';
   import { systemNotificationState } from '$lib/components/notifications/SystemNotificationState.svelte.js';
   import { Button } from '$lib/components/ui/button/index.js';
@@ -35,6 +36,7 @@
         size="icon"
         class="relative"
         aria-label={$t('notifications.inbox.open')}
+        title={$t('notifications.inbox.open')}
       >
         <BellIcon class="size-5" />
         {#if notifications.unreadCount > 0}
@@ -106,7 +108,7 @@
         class="w-full justify-center"
         onclick={() => {
           open = false;
-          goto('/notifications/inbox');
+          goto(resolve('/notifications/inbox'));
         }}
       >
         {$t('notifications.inbox.view_all')}

@@ -7,9 +7,9 @@ import (
 )
 
 const (
-	FacilityJobTaskDeleteControlCabinet          = "controlcabinet.delete.v1"
-	FacilityJobTaskDeleteSPSController           = "spscontroller.delete.v1"
-	FacilityJobTaskDeleteSPSControllerSystemType = "spscontrollersystemtype.delete.v1"
+	FacilityJobTaskDeleteControlCabinet          FacilityJobTaskID = "controlcabinet.delete.v1"
+	FacilityJobTaskDeleteSPSController           FacilityJobTaskID = "spscontroller.delete.v1"
+	FacilityJobTaskDeleteSPSControllerSystemType FacilityJobTaskID = "spscontrollersystemtype.delete.v1"
 )
 
 type FacilityDeleteTaskPayload struct {

@@ -11,10 +11,10 @@ type SystemNotification struct {
 	domain.Base
 	RecipientID  uuid.UUID         `gorm:"type:uuid;not null;index"`
 	ActorID      *uuid.UUID        `gorm:"type:uuid"`
-	EventKey     string            `gorm:"type:varchar(128);not null;index"`
+	EventKey     EventKey          `gorm:"type:varchar(128);not null;index"`
 	Title        string            `gorm:"not null"`
 	Body         string            `gorm:"type:text"`
-	ResourceType string            `gorm:"type:varchar(64)"`
+	ResourceType ResourceKind      `gorm:"column:resource_type;type:varchar(64)"`
 	ResourceID   *uuid.UUID        `gorm:"type:uuid;index"`
 	Metadata     map[string]string `gorm:"serializer:json;type:text"`
 	ReadAt       *time.Time        `gorm:"index"`

@@ -221,18 +221,18 @@ func NewServices(repos Repositories, cfgs ...Config) *Services {
 		hierarchyRepos.SPSControllers,
 	)
 
-	fieldDeviceService := NewFieldDeviceService(
-		fieldDeviceRepos.FieldDevices,
-		fieldDeviceRepos.SPSControllerSystemTypes,
-		fieldDeviceRepos.SystemTypes,
-		fieldDeviceRepos.Apparats,
-		fieldDeviceRepos.SystemParts,
-		fieldDeviceRepos.Specifications,
-		fieldDeviceRepos.BacnetObjects,
-		fieldDeviceRepos.ObjectData,
-		fieldDeviceRepos.AlarmTypes,
-		fieldDeviceRepos.BacnetObjectAlarmValues,
-	)
+	fieldDeviceService := NewFieldDeviceService(FieldDeviceDependencies{
+		Devices:               fieldDeviceRepos.FieldDevices,
+		ControllerSystemTypes: fieldDeviceRepos.SPSControllerSystemTypes,
+		SystemTypes:           fieldDeviceRepos.SystemTypes,
+		Apparats:              fieldDeviceRepos.Apparats,
+		SystemParts:           fieldDeviceRepos.SystemParts,
+		Specifications:        fieldDeviceRepos.Specifications,
+		BacnetObjects:         fieldDeviceRepos.BacnetObjects,
+		ObjectData:            fieldDeviceRepos.ObjectData,
+		AlarmTypes:            fieldDeviceRepos.AlarmTypes,
+		BacnetAlarmValues:     fieldDeviceRepos.BacnetObjectAlarmValues,
+	})
 	fieldDeviceService.bindTransactions(tx)
 	fieldDeviceService.bindChangeRecorder(cfg.ChangeRecorder)
 	objectDataService := NewObjectDataService(

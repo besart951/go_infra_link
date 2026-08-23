@@ -16,7 +16,7 @@ func ToFacilityJobResponse(job facilityservice.FacilityJob) dto.FacilityJobRespo
 		Class:        string(job.Class),
 		Status:       string(job.Status),
 		Progress:     job.Progress,
-		Stage:        job.Stage,
+		Stage:        string(job.Stage),
 		Error:        job.Error,
 		Attempts:     job.Attempts,
 		Processed:    job.Processed,

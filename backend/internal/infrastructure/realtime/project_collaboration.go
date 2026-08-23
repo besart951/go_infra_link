@@ -52,13 +52,20 @@ type ProjectCollaboratorPresence struct {
 }
 
 type ProjectDraftSelector struct {
-	AggregateType string `json:"aggregate_type"`
-	AggregateID   string `json:"aggregate_id,omitempty"`
-	DraftID       string `json:"draft_id,omitempty"`
+	AggregateType string     `json:"aggregate_type"`
+	AggregateID   *uuid.UUID `json:"aggregate_id,omitempty"`
+	DraftID       *uuid.UUID `json:"draft_id,omitempty"`
 }
 
 func (s ProjectDraftSelector) selectorKey() string {
-	return s.AggregateType + ":" + s.AggregateID + ":" + s.DraftID
+	aggregateID, draftID := "", ""
+	if s.AggregateID != nil {
+		aggregateID = s.AggregateID.String()
+	}
+	if s.DraftID != nil {
+		draftID = s.DraftID.String()
+	}
+	return s.AggregateType + ":" + aggregateID + ":" + draftID
 }
 
 type ProjectDraftField struct {
@@ -103,16 +110,15 @@ type projectCollaborationDraftStatesMessage struct {
 }
 
 type ProjectChange struct {
-	ProjectID     uuid.UUID         `json:"project_id"`
-	Revision      int64             `json:"revision"`
-	EventID       uuid.UUID         `json:"event_id"`
-	AggregateType string            `json:"aggregate_type"`
-	AggregateID   uuid.UUID         `json:"aggregate_id"`
-	Action        string            `json:"action"`
-	ActorID       *uuid.UUID        `json:"actor_id"`
-	ChangedFields []string          `json:"changed_fields"`
-	ParentRefs    map[string]string `json:"parent_refs"`
-	OccurredAt    time.Time         `json:"occurred_at"`
+	ProjectID     uuid.UUID                   `json:"project_id"`
+	Revision      int64                       `json:"revision"`
+	EventID       uuid.UUID                   `json:"event_id"`
+	AggregateType domainProject.AggregateKind `json:"aggregate_type"`
+	AggregateID   uuid.UUID                   `json:"aggregate_id"`
+	Action        string                      `json:"action"`
+	ActorID       *uuid.UUID                  `json:"actor_id"`
+	ChangedFields []string                    `json:"changed_fields"`
+	OccurredAt    time.Time                   `json:"occurred_at"`
 }
 
 // ProjectChangeFromDomain is the single adapter from the durable project
@@ -121,15 +127,11 @@ func ProjectChangeFromDomain(change domainProject.Change) (ProjectChange, bool) 
 	if change.AggregateID == nil {
 		return ProjectChange{}, false
 	}
-	parentRefs := make(map[string]string, len(change.ParentRefs))
-	for key, value := range change.ParentRefs {
-		parentRefs[key] = value.String()
-	}
 	return ProjectChange{
 		ProjectID: change.ProjectID, Revision: int64(change.Revision), EventID: change.EventID,
 		AggregateType: change.AggregateType, AggregateID: *change.AggregateID,
 		Action: string(change.Action), ActorID: change.ActorID, ChangedFields: change.ChangedFields,
-		ParentRefs: parentRefs, OccurredAt: change.OccurredAt,
+		OccurredAt: change.OccurredAt,
 	}, true
 }
 
@@ -193,61 +195,80 @@ type projectCollaborationRoom struct {
 	revision       int64
 }
 
-type ProjectCollaborationHub struct {
-	mu             sync.RWMutex
-	rooms          map[uuid.UUID]*projectCollaborationRoom
-	bus            apprealtime.Bus
-	revisions      ProjectRevisionSource
-	drafts         ProjectDraftStore
-	presenceStore  ProjectPresenceStore
-	nodeID         string
+type CollaborationRoomState struct {
+	mu    sync.RWMutex
+	rooms map[uuid.UUID]*projectCollaborationRoom
+}
+
+type CollaborationPresenceState struct{ store ProjectPresenceStore }
+
+type CollaborationDraftState struct{ store ProjectDraftStore }
+
+type CollaborationRevisionState struct{ source ProjectRevisionSource }
+
+type CollaborationBusTransport struct {
+	bus    apprealtime.Bus
+	nodeID string
+}
+
+type WebSocketSessionTransport struct {
 	publishTimeout time.Duration
 	ctx            context.Context
 	cancel         context.CancelFunc
 	closeOnce      sync.Once
 }
 
+type ProjectCollaborationHub struct {
+	rooms     *CollaborationRoomState
+	presence  *CollaborationPresenceState
+	drafts    *CollaborationDraftState
+	revisions *CollaborationRevisionState
+	bus       *CollaborationBusTransport
+	sessions  *WebSocketSessionTransport
+}
+
 type ProjectCollaborationHubOption func(*ProjectCollaborationHub)
 
 func WithProjectCollaborationBus(bus apprealtime.Bus, nodeID string) ProjectCollaborationHubOption {
 	return func(h *ProjectCollaborationHub) {
-		h.bus = bus
-		h.nodeID = strings.TrimSpace(nodeID)
+		h.bus.bus = bus
+		h.bus.nodeID = strings.TrimSpace(nodeID)
 	}
 }
 
 func WithProjectRevisionSource(source ProjectRevisionSource) ProjectCollaborationHubOption {
 	return func(h *ProjectCollaborationHub) {
-		h.revisions = source
+		h.revisions.source = source
 	}
 }
 
 func WithProjectDraftStore(store ProjectDraftStore) ProjectCollaborationHubOption {
 	return func(h *ProjectCollaborationHub) {
-		h.drafts = store
+		h.drafts.store = store
 	}
 }
 
 func WithProjectPresenceStore(store ProjectPresenceStore) ProjectCollaborationHubOption {
-	return func(h *ProjectCollaborationHub) { h.presenceStore = store }
+	return func(h *ProjectCollaborationHub) { h.presence.store = store }
 }
 
 func NewProjectCollaborationHub(options ...ProjectCollaborationHubOption) *ProjectCollaborationHub {
 	ctx, cancel := context.WithCancel(context.Background())
 	h := &ProjectCollaborationHub{
-		rooms:          make(map[uuid.UUID]*projectCollaborationRoom),
-		nodeID:         uuid.NewString(),
-		publishTimeout: projectCollaborationPublishWait,
-		ctx:            ctx,
-		cancel:         cancel,
+		rooms:     &CollaborationRoomState{rooms: make(map[uuid.UUID]*projectCollaborationRoom)},
+		presence:  &CollaborationPresenceState{},
+		drafts:    &CollaborationDraftState{},
+		revisions: &CollaborationRevisionState{},
+		bus:       &CollaborationBusTransport{nodeID: uuid.NewString()},
+		sessions:  &WebSocketSessionTransport{publishTimeout: projectCollaborationPublishWait, ctx: ctx, cancel: cancel},
 	}
 	for _, option := range options {
 		if option != nil {
 			option(h)
 		}
 	}
-	if h.nodeID == "" {
-		h.nodeID = uuid.NewString()
+	if h.bus.nodeID == "" {
+		h.bus.nodeID = uuid.NewString()
 	}
 	h.startBusSubscription()
 	h.startRevisionWatermarks()
@@ -260,23 +281,23 @@ func (h *ProjectCollaborationHub) startRevisionWatermarks() {
 		defer ticker.Stop()
 		for {
 			select {
-			case <-h.ctx.Done():
+			case <-h.sessions.ctx.Done():
 				return
 			case <-ticker.C:
-				h.mu.RLock()
-				projectIDs := make([]uuid.UUID, 0, len(h.rooms))
-				for projectID := range h.rooms {
+				h.rooms.mu.RLock()
+				projectIDs := make([]uuid.UUID, 0, len(h.rooms.rooms))
+				for projectID := range h.rooms.rooms {
 					projectIDs = append(projectIDs, projectID)
 				}
-				h.mu.RUnlock()
+				h.rooms.mu.RUnlock()
 				for _, projectID := range projectIDs {
-					ctx, cancel := context.WithTimeout(h.ctx, h.publishTimeout)
+					ctx, cancel := context.WithTimeout(h.sessions.ctx, h.sessions.publishTimeout)
 					revision := h.currentRevision(ctx, projectID)
 					presence := h.loadPresence(ctx, projectID)
 					cancel()
 					h.observeRevision(projectID, revision)
 					h.broadcast(projectID, projectCollaborationRevisionMessage{Type: projectCollaborationMessageRevision, ProjectID: projectID, CurrentRevision: revision, At: time.Now().UTC()})
-					if h.presenceStore != nil {
+					if h.presence.store != nil {
 						h.broadcast(projectID, projectCollaborationPresenceMessage{Type: projectCollaborationMessagePresence, ProjectID: projectID, Presence: presence, At: time.Now().UTC()})
 					}
 				}
@@ -286,17 +307,17 @@ func (h *ProjectCollaborationHub) startRevisionWatermarks() {
 }
 
 func (h *ProjectCollaborationHub) Close() {
-	h.closeOnce.Do(func() {
-		h.cancel()
+	h.sessions.closeOnce.Do(func() {
+		h.sessions.cancel()
 	})
 }
 
 func (h *ProjectCollaborationHub) startBusSubscription() {
-	if h.bus == nil {
+	if h.bus.bus == nil {
 		return
 	}
 
-	events, err := h.bus.Subscribe(h.ctx, apprealtime.TopicProjectCollaboration)
+	events, err := h.bus.bus.Subscribe(h.sessions.ctx, apprealtime.TopicProjectCollaboration)
 	if err != nil {
 		slog.Warn("project collaboration realtime bus subscription disabled", "err", err)
 		return
@@ -305,7 +326,7 @@ func (h *ProjectCollaborationHub) startBusSubscription() {
 	go func() {
 		for {
 			select {
-			case <-h.ctx.Done():
+			case <-h.sessions.ctx.Done():
 				return
 			case event, ok := <-events:
 				if !ok {
@@ -318,7 +339,7 @@ func (h *ProjectCollaborationHub) startBusSubscription() {
 }
 
 func (h *ProjectCollaborationHub) handleBusEvent(event apprealtime.Event) {
-	if event.Source == h.nodeID {
+	if event.Source == h.bus.nodeID {
 		return
 	}
 
@@ -357,15 +378,15 @@ func (h *ProjectCollaborationHub) observeRemoteRevision(projectID uuid.UUID, pay
 		return
 	}
 
-	h.mu.Lock()
-	if room := h.rooms[projectID]; room != nil {
+	h.rooms.mu.Lock()
+	if room := h.rooms.rooms[projectID]; room != nil {
 		room.revision = max(room.revision, revision)
 	}
-	h.mu.Unlock()
+	h.rooms.mu.Unlock()
 }
 
 func (h *ProjectCollaborationHub) Register(client *projectCollaborationClient) {
-	ctx, cancel := context.WithTimeout(h.ctx, h.publishTimeout)
+	ctx, cancel := context.WithTimeout(h.sessions.ctx, h.sessions.publishTimeout)
 	defer cancel()
 	revision := h.currentRevision(ctx, client.projectID)
 	now := time.Now().UTC()
@@ -374,15 +395,15 @@ func (h *ProjectCollaborationHub) Register(client *projectCollaborationClient) {
 	}
 	h.savePresence(ctx, client)
 	storedPresence := h.loadPresence(ctx, client.projectID)
-	h.mu.RLock()
-	_, roomAlreadyLoaded := h.rooms[client.projectID]
-	h.mu.RUnlock()
+	h.rooms.mu.RLock()
+	_, roomAlreadyLoaded := h.rooms.rooms[client.projectID]
+	h.rooms.mu.RUnlock()
 	var storedDrafts []ProjectDraftState
 	if !roomAlreadyLoaded {
 		storedDrafts = h.loadDraftStates(ctx, client.projectID)
 	}
 
-	h.mu.Lock()
+	h.rooms.mu.Lock()
 	room := h.ensureRoomLocked(client.projectID)
 	room.revision = max(room.revision, revision)
 	if !roomAlreadyLoaded {
@@ -413,7 +434,7 @@ func (h *ProjectCollaborationHub) Register(client *projectCollaborationClient) {
 	presence := snapshotPresence(room)
 	draftStates := snapshotDraftStates(room)
 	currentRevision := room.revision
-	h.mu.Unlock()
+	h.rooms.mu.Unlock()
 
 	h.sendToClient(client, projectCollaborationSnapshotMessage{
 		Type:            projectCollaborationMessageSnapshot,
@@ -447,7 +468,7 @@ func (h *ProjectCollaborationHub) unregister(client *projectCollaborationClient)
 		shouldClearDrafts bool
 	)
 
-	ctx, cancel := context.WithTimeout(context.Background(), h.publishTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), h.sessions.publishTimeout)
 	defer cancel()
 	h.deletePresence(ctx, client.connectionID)
 	storedPresence := h.loadPresence(ctx, client.projectID)
@@ -458,8 +479,8 @@ func (h *ProjectCollaborationHub) unregister(client *projectCollaborationClient)
 			break
 		}
 	}
-	h.mu.Lock()
-	room, ok := h.rooms[client.projectID]
+	h.rooms.mu.Lock()
+	room, ok := h.rooms.rooms[client.projectID]
 	if ok {
 		delete(room.clients, client)
 		if len(storedPresence) > 0 {
@@ -483,14 +504,14 @@ func (h *ProjectCollaborationHub) unregister(client *projectCollaborationClient)
 		}
 
 		if len(room.clients) == 0 {
-			delete(h.rooms, client.projectID)
+			delete(h.rooms.rooms, client.projectID)
 		} else {
 			presence = snapshotPresence(room)
 			draftStates = snapshotDraftStates(room)
 			shouldSend = true
 		}
 	}
-	h.mu.Unlock()
+	h.rooms.mu.Unlock()
 
 	if shouldSend {
 		h.broadcastDistributed(client.projectID, projectCollaborationPresenceMessage{
@@ -505,7 +526,7 @@ func (h *ProjectCollaborationHub) unregister(client *projectCollaborationClient)
 			DraftStates: draftStates,
 			At:          now,
 		})
-	} else if h.presenceStore != nil {
+	} else if h.presence.store != nil {
 		h.broadcastDistributed(client.projectID, projectCollaborationPresenceMessage{
 			Type: projectCollaborationMessagePresence, ProjectID: client.projectID,
 			Presence: storedPresence, At: now,
@@ -528,15 +549,15 @@ func (h *ProjectCollaborationHub) UpdateDraftState(projectID, userID uuid.UUID, 
 	now := time.Now().UTC()
 	normalized := cloneProjectDraftEntries(entries)
 
-	h.mu.Lock()
-	room, ok := h.rooms[projectID]
+	h.rooms.mu.Lock()
+	room, ok := h.rooms.rooms[projectID]
 	if !ok {
-		h.mu.Unlock()
+		h.rooms.mu.Unlock()
 		return
 	}
 	room.draftStates[userID] = normalized
 	draftStates := snapshotDraftStates(room)
-	h.mu.Unlock()
+	h.rooms.mu.Unlock()
 
 	h.broadcast(projectID, projectCollaborationDraftStatesMessage{
 		Type:        projectCollaborationMessageDraftStates,
@@ -554,10 +575,10 @@ func (h *ProjectCollaborationHub) ClearDraft(projectID, userID uuid.UUID, select
 	}
 	now := time.Now().UTC()
 
-	h.mu.Lock()
-	room, ok := h.rooms[projectID]
+	h.rooms.mu.Lock()
+	room, ok := h.rooms.rooms[projectID]
 	if !ok {
-		h.mu.Unlock()
+		h.rooms.mu.Unlock()
 		return
 	}
 	entries := room.draftStates[userID]
@@ -574,7 +595,7 @@ func (h *ProjectCollaborationHub) ClearDraft(projectID, userID uuid.UUID, select
 	}
 	current := cloneProjectDraftEntries(room.draftStates[userID])
 	draftStates := snapshotDraftStates(room)
-	h.mu.Unlock()
+	h.rooms.mu.Unlock()
 
 	h.broadcast(projectID, projectCollaborationDraftStatesMessage{
 		Type:        projectCollaborationMessageDraftStates,
@@ -593,9 +614,6 @@ func (h *ProjectCollaborationHub) BroadcastProjectChange(ctx context.Context, ch
 	change.ChangedFields = normalizeIDs(change.ChangedFields)
 	if change.ChangedFields == nil {
 		change.ChangedFields = []string{}
-	}
-	if change.ParentRefs == nil {
-		change.ParentRefs = map[string]string{}
 	}
 	if change.OccurredAt.IsZero() {
 		change.OccurredAt = time.Now().UTC()
@@ -626,9 +644,9 @@ func (h *ProjectCollaborationHub) BroadcastRevision(projectID uuid.UUID, revisio
 }
 
 func (h *ProjectCollaborationHub) observeRevision(projectID uuid.UUID, revision int64) int64 {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	room := h.rooms[projectID]
+	h.rooms.mu.Lock()
+	defer h.rooms.mu.Unlock()
+	room := h.rooms.rooms[projectID]
 	if room == nil {
 		return revision
 	}
@@ -638,7 +656,7 @@ func (h *ProjectCollaborationHub) observeRevision(projectID uuid.UUID, revision 
 
 func validateServerProjectChange(change ProjectChange) error {
 	if change.ProjectID == uuid.Nil || change.Revision <= 0 || change.EventID == uuid.Nil ||
-		strings.TrimSpace(change.AggregateType) == "" || change.AggregateID == uuid.Nil || strings.TrimSpace(change.Action) == "" {
+		strings.TrimSpace(string(change.AggregateType)) == "" || change.AggregateID == uuid.Nil || strings.TrimSpace(change.Action) == "" {
 		return ErrInvalidProjectChange
 	}
 	return nil
@@ -677,13 +695,13 @@ func (h *ProjectCollaborationHub) BroadcastFieldDeviceDelta(projectID uuid.UUID,
 
 func (h *ProjectCollaborationHub) broadcastLegacyProjectChange(projectID uuid.UUID, actorID *uuid.UUID, aggregateType string, aggregateID uuid.UUID, action string, fields []string) {
 	_ = h.BroadcastProjectChange(context.Background(), ProjectChange{
-		ProjectID: projectID, Revision: h.nextLocalRevision(projectID), EventID: uuid.New(), AggregateType: aggregateType,
-		AggregateID: aggregateID, Action: action, ActorID: actorID, ChangedFields: fields, ParentRefs: map[string]string{}, OccurredAt: time.Now().UTC(),
+		ProjectID: projectID, Revision: h.nextLocalRevision(projectID), EventID: uuid.New(), AggregateType: domainProject.AggregateKind(aggregateType),
+		AggregateID: aggregateID, Action: action, ActorID: actorID, ChangedFields: fields, OccurredAt: time.Now().UTC(),
 	})
 }
 
 func (h *ProjectCollaborationHub) ensureRoomLocked(projectID uuid.UUID) *projectCollaborationRoom {
-	room, ok := h.rooms[projectID]
+	room, ok := h.rooms.rooms[projectID]
 	if !ok {
 		room = &projectCollaborationRoom{
 			clients:        make(map[*projectCollaborationClient]struct{}),
@@ -691,7 +709,7 @@ func (h *ProjectCollaborationHub) ensureRoomLocked(projectID uuid.UUID) *project
 			presence:       make(map[uuid.UUID]ProjectCollaboratorPresence),
 			draftStates:    make(map[uuid.UUID][]ProjectDraftEntry),
 		}
-		h.rooms[projectID] = room
+		h.rooms.rooms[projectID] = room
 	}
 	return room
 }
@@ -714,17 +732,17 @@ func (h *ProjectCollaborationHub) broadcastDistributed(projectID uuid.UUID, payl
 }
 
 func (h *ProjectCollaborationHub) broadcastBytes(projectID uuid.UUID, b []byte) {
-	h.mu.RLock()
-	room, ok := h.rooms[projectID]
+	h.rooms.mu.RLock()
+	room, ok := h.rooms.rooms[projectID]
 	if !ok {
-		h.mu.RUnlock()
+		h.rooms.mu.RUnlock()
 		return
 	}
 	clients := make([]*projectCollaborationClient, 0, len(room.clients))
 	for client := range room.clients {
 		clients = append(clients, client)
 	}
-	h.mu.RUnlock()
+	h.rooms.mu.RUnlock()
 
 	for _, client := range clients {
 		if client.socket == nil || !client.socket.SendBytes(b) {
@@ -761,16 +779,16 @@ func (h *ProjectCollaborationHub) publishDraftState(projectID, userID uuid.UUID,
 }
 
 func (h *ProjectCollaborationHub) publishBusEvent(payload projectCollaborationBusEvent) {
-	if h.bus == nil {
+	if h.bus.bus == nil {
 		return
 	}
 	b, err := json.Marshal(payload)
 	if err != nil {
 		return
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), h.publishTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), h.sessions.publishTimeout)
 	defer cancel()
-	if err := h.bus.Publish(ctx, apprealtime.NewEvent(apprealtime.TopicProjectCollaboration, h.nodeID, b)); err != nil {
+	if err := h.bus.bus.Publish(ctx, apprealtime.NewEvent(apprealtime.TopicProjectCollaboration, h.bus.nodeID, b)); err != nil {
 		slog.Warn("project collaboration realtime bus publish failed", "err", err)
 	}
 }
@@ -781,10 +799,10 @@ func (h *ProjectCollaborationHub) applyRemoteDraftState(projectID, userID uuid.U
 	}
 
 	now := time.Now().UTC()
-	h.mu.Lock()
-	room, ok := h.rooms[projectID]
+	h.rooms.mu.Lock()
+	room, ok := h.rooms.rooms[projectID]
 	if !ok {
-		h.mu.Unlock()
+		h.rooms.mu.Unlock()
 		return
 	}
 	if len(entries) == 0 {
@@ -793,7 +811,7 @@ func (h *ProjectCollaborationHub) applyRemoteDraftState(projectID, userID uuid.U
 		room.draftStates[userID] = cloneProjectDraftEntries(entries)
 	}
 	draftStates := snapshotDraftStates(room)
-	h.mu.Unlock()
+	h.rooms.mu.Unlock()
 
 	h.broadcast(projectID, projectCollaborationDraftStatesMessage{
 		Type:        projectCollaborationMessageDraftStates,
@@ -876,12 +894,22 @@ func cloneProjectDraftEntries(entries []ProjectDraftEntry) []ProjectDraftEntry {
 	cloned := make([]ProjectDraftEntry, len(entries))
 	for i, entry := range entries {
 		cloned[i] = entry
+		cloned[i].AggregateID = cloneProjectDraftID(entry.AggregateID)
+		cloned[i].DraftID = cloneProjectDraftID(entry.DraftID)
 		cloned[i].Fields = make([]ProjectDraftField, len(entry.Fields))
 		for j, field := range entry.Fields {
 			cloned[i].Fields[j] = ProjectDraftField{Path: field.Path, Value: cloneDraftValue(field.Value)}
 		}
 	}
 	return cloned
+}
+
+func cloneProjectDraftID(id *uuid.UUID) *uuid.UUID {
+	if id == nil {
+		return nil
+	}
+	cloned := *id
+	return &cloned
 }
 
 func cloneDraftValue(value any) any {
@@ -904,8 +932,8 @@ func cloneDraftValue(value any) any {
 }
 
 func (h *ProjectCollaborationHub) currentRevision(ctx context.Context, projectID uuid.UUID) int64 {
-	if h.revisions != nil {
-		revision, err := h.revisions.CurrentRevision(ctx, projectID)
+	if h.revisions.source != nil {
+		revision, err := h.revisions.source.CurrentRevision(ctx, projectID)
 		if err == nil && revision >= 0 {
 			return revision
 		}
@@ -913,9 +941,9 @@ func (h *ProjectCollaborationHub) currentRevision(ctx context.Context, projectID
 			slog.Warn("project collaboration revision lookup failed", "project_id", projectID, "err", err)
 		}
 	}
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-	if room := h.rooms[projectID]; room != nil {
+	h.rooms.mu.RLock()
+	defer h.rooms.mu.RUnlock()
+	if room := h.rooms.rooms[projectID]; room != nil {
 		return room.revision
 	}
 	return 0
@@ -923,13 +951,13 @@ func (h *ProjectCollaborationHub) currentRevision(ctx context.Context, projectID
 
 func (h *ProjectCollaborationHub) nextLocalRevision(projectID uuid.UUID) int64 {
 	current := int64(0)
-	if h.revisions != nil {
-		ctx, cancel := context.WithTimeout(context.Background(), h.publishTimeout)
+	if h.revisions.source != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), h.sessions.publishTimeout)
 		current = h.currentRevision(ctx, projectID)
 		cancel()
 	}
-	h.mu.Lock()
-	defer h.mu.Unlock()
+	h.rooms.mu.Lock()
+	defer h.rooms.mu.Unlock()
 	room := h.ensureRoomLocked(projectID)
 	room.revision = max(room.revision, current)
 	room.revision++
@@ -937,10 +965,10 @@ func (h *ProjectCollaborationHub) nextLocalRevision(projectID uuid.UUID) int64 {
 }
 
 func (h *ProjectCollaborationHub) loadDraftStates(ctx context.Context, projectID uuid.UUID) []ProjectDraftState {
-	if h.drafts == nil {
+	if h.drafts.store == nil {
 		return nil
 	}
-	states, err := h.drafts.LoadProjectDraftStates(ctx, projectID)
+	states, err := h.drafts.store.LoadProjectDraftStates(ctx, projectID)
 	if err != nil {
 		slog.Warn("project collaboration draft lookup failed", "project_id", projectID, "err", err)
 		return nil
@@ -949,50 +977,50 @@ func (h *ProjectCollaborationHub) loadDraftStates(ctx context.Context, projectID
 }
 
 func (h *ProjectCollaborationHub) saveStoredDraft(projectID, userID uuid.UUID, entries []ProjectDraftEntry) {
-	if h.drafts == nil {
+	if h.drafts.store == nil {
 		return
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), h.publishTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), h.sessions.publishTimeout)
 	defer cancel()
-	if err := h.drafts.SaveProjectDraftState(ctx, projectID, userID, cloneProjectDraftEntries(entries)); err != nil {
+	if err := h.drafts.store.SaveProjectDraftState(ctx, projectID, userID, cloneProjectDraftEntries(entries)); err != nil {
 		slog.Warn("project collaboration draft save failed", "project_id", projectID, "user_id", userID, "err", err)
 	}
 }
 
 func (h *ProjectCollaborationHub) clearStoredDraft(projectID, userID uuid.UUID, selector *ProjectDraftSelector) {
-	if h.drafts == nil {
+	if h.drafts.store == nil {
 		return
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), h.publishTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), h.sessions.publishTimeout)
 	defer cancel()
-	if err := h.drafts.ClearProjectDraft(ctx, projectID, userID, selector); err != nil {
+	if err := h.drafts.store.ClearProjectDraft(ctx, projectID, userID, selector); err != nil {
 		slog.Warn("project collaboration draft clear failed", "project_id", projectID, "user_id", userID, "err", err)
 	}
 }
 
 func (h *ProjectCollaborationHub) savePresence(ctx context.Context, client *projectCollaborationClient) {
-	if h.presenceStore == nil {
+	if h.presence.store == nil {
 		return
 	}
-	if err := h.presenceStore.SaveProjectPresence(ctx, client.connectionID, client.projectID, client.userID, client.connectedAt); err != nil {
+	if err := h.presence.store.SaveProjectPresence(ctx, client.connectionID, client.projectID, client.userID, client.connectedAt); err != nil {
 		slog.Warn("project collaboration presence save failed", "project_id", client.projectID, "err", err)
 	}
 }
 
 func (h *ProjectCollaborationHub) deletePresence(ctx context.Context, connectionID uuid.UUID) {
-	if h.presenceStore == nil {
+	if h.presence.store == nil {
 		return
 	}
-	if err := h.presenceStore.DeleteProjectPresence(ctx, connectionID); err != nil {
+	if err := h.presence.store.DeleteProjectPresence(ctx, connectionID); err != nil {
 		slog.Warn("project collaboration presence delete failed", "connection_id", connectionID, "err", err)
 	}
 }
 
 func (h *ProjectCollaborationHub) loadPresence(ctx context.Context, projectID uuid.UUID) []ProjectCollaboratorPresence {
-	if h.presenceStore == nil {
+	if h.presence.store == nil {
 		return nil
 	}
-	items, err := h.presenceStore.LoadProjectPresence(ctx, projectID)
+	items, err := h.presence.store.LoadProjectPresence(ctx, projectID)
 	if err != nil {
 		slog.Warn("project collaboration presence lookup failed", "project_id", projectID, "err", err)
 		return nil
@@ -1001,7 +1029,7 @@ func (h *ProjectCollaborationHub) loadPresence(ctx context.Context, projectID uu
 }
 
 func (h *ProjectCollaborationHub) renewPresence(ctx context.Context, client *projectCollaborationClient) {
-	if h.presenceStore == nil {
+	if h.presence.store == nil {
 		return
 	}
 	ticker := time.NewTicker(20 * time.Second)
@@ -1011,17 +1039,17 @@ func (h *ProjectCollaborationHub) renewPresence(ctx context.Context, client *pro
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			callCtx, cancel := context.WithTimeout(ctx, h.publishTimeout)
+			callCtx, cancel := context.WithTimeout(ctx, h.sessions.publishTimeout)
 			h.savePresence(callCtx, client)
-			h.mu.RLock()
-			room := h.rooms[client.projectID]
+			h.rooms.mu.RLock()
+			room := h.rooms.rooms[client.projectID]
 			var entries []ProjectDraftEntry
 			if room != nil {
 				entries = cloneProjectDraftEntries(room.draftStates[client.userID])
 			}
-			h.mu.RUnlock()
-			if len(entries) > 0 && h.drafts != nil {
-				if err := h.drafts.SaveProjectDraftState(callCtx, client.projectID, client.userID, entries); err != nil {
+			h.rooms.mu.RUnlock()
+			if len(entries) > 0 && h.drafts.store != nil {
+				if err := h.drafts.store.SaveProjectDraftState(callCtx, client.projectID, client.userID, entries); err != nil {
 					slog.Warn("project collaboration draft renewal failed", "project_id", client.projectID, "user_id", client.userID, "err", err)
 				}
 			}

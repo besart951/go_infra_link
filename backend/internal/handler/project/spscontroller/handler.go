@@ -46,7 +46,7 @@ func NewHandler(access projectshared.AccessPolicyService, facilityLink FacilityL
 	return &Handler{base: projectshared.NewFacilityLinkHandler(access, notify), facilityLink: facilityLink, notifyDelta: delta}
 }
 
-func (h *Handler) ConfigureFacilityJobs(facilityJobs *facilityservice.FacilityJobManager) {
+func (h *Handler) ConfigureFacilityJobs(facilityJobs *facilityservice.JobService) {
 	h.base.ConfigureFacilityJobs(facilityJobs)
 }
 

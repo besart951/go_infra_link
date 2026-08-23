@@ -88,6 +88,11 @@ export class FacilityJobState {
     if (jobId === this.jobId) this.reset();
   }
 
+  async remove(jobId: string): Promise<void> {
+    await facilityJobRepository.remove(jobId);
+    this.jobs = this.jobs.filter((job) => job.jobId !== jobId);
+  }
+
   async submit(start: FacilityJobStarter): Promise<FacilityJobSubmissionResult> {
     this.initialize();
     if (this.isPending) return { started: false };
@@ -132,7 +137,7 @@ export class FacilityJobState {
       ...(event.total !== undefined ? { total: event.total } : {}),
       ...(event.success_count !== undefined ? { successCount: event.success_count } : {}),
       ...(event.failure_count !== undefined ? { failureCount: event.failure_count } : {}),
-      ...(event.error ? { error: event.error } : {})
+      error: event.error || undefined
     });
     if (existing && sameFacilityJobProgress(existing, next)) return;
     this.jobs = reconcileFacilityJob(this.jobs, next);

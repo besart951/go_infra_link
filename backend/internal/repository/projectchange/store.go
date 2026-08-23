@@ -27,16 +27,15 @@ type cursorRecord struct {
 func (cursorRecord) TableName() string { return "project_change_cursors" }
 
 type changeRecord struct {
-	EventID       uuid.UUID  `gorm:"type:uuid;primaryKey"`
-	ProjectID     uuid.UUID  `gorm:"type:uuid;not null;uniqueIndex:idx_project_changes_revision;index:idx_project_changes_project_time"`
-	Revision      uint64     `gorm:"not null;uniqueIndex:idx_project_changes_revision"`
-	AggregateType string     `gorm:"size:100;not null"`
-	AggregateID   *uuid.UUID `gorm:"type:uuid"`
-	Action        string     `gorm:"size:50;not null"`
-	ActorID       *uuid.UUID `gorm:"type:uuid"`
-	ChangedFields []byte     `gorm:"type:jsonb;not null"`
-	ParentRefs    []byte     `gorm:"type:jsonb;not null"`
-	OccurredAt    time.Time  `gorm:"not null;index:idx_project_changes_project_time"`
+	EventID       uuid.UUID                   `gorm:"type:uuid;primaryKey"`
+	ProjectID     uuid.UUID                   `gorm:"type:uuid;not null;uniqueIndex:idx_project_changes_revision;index:idx_project_changes_project_time"`
+	Revision      uint64                      `gorm:"not null;uniqueIndex:idx_project_changes_revision"`
+	AggregateType domainProject.AggregateKind `gorm:"size:100;not null"`
+	AggregateID   *uuid.UUID                  `gorm:"type:uuid"`
+	Action        string                      `gorm:"size:50;not null"`
+	ActorID       *uuid.UUID                  `gorm:"type:uuid"`
+	ChangedFields []byte                      `gorm:"type:jsonb;not null"`
+	OccurredAt    time.Time                   `gorm:"not null;index:idx_project_changes_project_time"`
 }
 
 func (changeRecord) TableName() string { return "project_changes" }
@@ -87,12 +86,8 @@ func (s *Store) AppendBatch(ctx context.Context, inputs []domainProject.NewChang
 		if err != nil {
 			return nil, fmt.Errorf("marshal changed fields: %w", err)
 		}
-		parentRefs, err := json.Marshal(nonNilRefs(input.ParentRefs))
-		if err != nil {
-			return nil, fmt.Errorf("marshal parent refs: %w", err)
-		}
-		records[i] = changeRecord{EventID: eventID, ProjectID: projectID, AggregateType: input.AggregateType, AggregateID: cloneUUID(input.AggregateID), Action: string(input.Action), ActorID: cloneUUID(input.ActorID), ChangedFields: changedFields, ParentRefs: parentRefs, OccurredAt: occurredAt}
-		changes[i] = domainProject.Change{EventID: eventID, ProjectID: projectID, AggregateType: input.AggregateType, AggregateID: cloneUUID(input.AggregateID), Action: input.Action, ActorID: cloneUUID(input.ActorID), ChangedFields: nonNilStrings(input.ChangedFields), ParentRefs: nonNilRefs(input.ParentRefs), OccurredAt: occurredAt}
+		records[i] = changeRecord{EventID: eventID, ProjectID: projectID, AggregateType: input.AggregateType, AggregateID: cloneUUID(input.AggregateID), Action: string(input.Action), ActorID: cloneUUID(input.ActorID), ChangedFields: changedFields, OccurredAt: occurredAt}
+		changes[i] = domainProject.Change{EventID: eventID, ProjectID: projectID, AggregateType: input.AggregateType, AggregateID: cloneUUID(input.AggregateID), Action: input.Action, ActorID: cloneUUID(input.ActorID), ChangedFields: nonNilStrings(input.ChangedFields), OccurredAt: occurredAt}
 	}
 
 	var lastRevision uint64
@@ -184,16 +179,12 @@ func (r changeRecord) domain() (domainProject.Change, error) {
 	if err := json.Unmarshal(r.ChangedFields, &changedFields); err != nil {
 		return domainProject.Change{}, fmt.Errorf("decode project change %s changed fields: %w", r.EventID, err)
 	}
-	var parentRefs map[string]uuid.UUID
-	if err := json.Unmarshal(r.ParentRefs, &parentRefs); err != nil {
-		return domainProject.Change{}, fmt.Errorf("decode project change %s parent refs: %w", r.EventID, err)
-	}
 	return domainProject.Change{
 		EventID: r.EventID, ProjectID: r.ProjectID, Revision: r.Revision,
 		AggregateType: r.AggregateType, AggregateID: r.AggregateID,
 		Action: domainProject.ChangeAction(r.Action), ActorID: r.ActorID,
-		ChangedFields: nonNilStrings(changedFields), ParentRefs: nonNilRefs(parentRefs),
-		OccurredAt: r.OccurredAt,
+		ChangedFields: nonNilStrings(changedFields),
+		OccurredAt:    r.OccurredAt,
 	}, nil
 }
 
@@ -207,13 +198,6 @@ func normalizeLimit(limit int) int {
 func nonNilStrings(values []string) []string {
 	if values == nil {
 		return []string{}
-	}
-	return values
-}
-
-func nonNilRefs(values map[string]uuid.UUID) map[string]uuid.UUID {
-	if values == nil {
-		return map[string]uuid.UUID{}
 	}
 	return values
 }

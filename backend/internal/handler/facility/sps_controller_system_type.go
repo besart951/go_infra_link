@@ -94,7 +94,7 @@ func (h *SPSControllerSystemTypeHandler) UpdateSPSControllerSystemType(c *gin.Co
 type SPSControllerSystemTypeHandler struct {
 	service       SPSControllerSystemTypeService
 	collaboration ProjectRefreshBroadcaster
-	facilityJobs  *facilityservice.FacilityJobManager
+	facilityJobs  *facilityservice.JobService
 }
 
 func NewSPSControllerSystemTypeHandler(service SPSControllerSystemTypeService, collaboration ...ProjectRefreshBroadcaster) *SPSControllerSystemTypeHandler {
@@ -105,7 +105,7 @@ func NewSPSControllerSystemTypeHandler(service SPSControllerSystemTypeService, c
 	return h
 }
 
-func NewSPSControllerSystemTypeHandlerWithFacilityJobs(service SPSControllerSystemTypeService, collaboration ProjectRefreshBroadcaster, facilityJobs *facilityservice.FacilityJobManager) *SPSControllerSystemTypeHandler {
+func NewSPSControllerSystemTypeHandlerWithFacilityJobs(service SPSControllerSystemTypeService, collaboration ProjectRefreshBroadcaster, facilityJobs *facilityservice.JobService) *SPSControllerSystemTypeHandler {
 	handler := NewSPSControllerSystemTypeHandler(service, collaboration)
 	handler.facilityJobs = facilityJobs
 	return handler

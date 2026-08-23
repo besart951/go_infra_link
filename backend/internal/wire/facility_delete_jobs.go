@@ -15,7 +15,7 @@ import (
 )
 
 type facilityDeleteOperation struct {
-	task     string
+	task     facilityservice.FacilityJobTaskID
 	resource string
 	rootKind hierarchydelete.RootKind
 }
@@ -50,13 +50,13 @@ type facilityDeleteTaskRegistrar struct {
 	runtime *RuntimeAdapters
 }
 
-func registerFacilityDeleteTasks(jobs *facilityservice.FacilityJobManager, runtime *RuntimeAdapters) {
+func registerFacilityDeleteTasks(tasks *facilityservice.TaskRegistry, runtime *RuntimeAdapters) {
 	registrar := facilityDeleteTaskRegistrar{runtime: runtime}
 	if runtime != nil {
 		registrar.steps = runtime.FacilityJobSteps
 	}
 	for _, operation := range facilityDeleteOperations() {
-		jobs.RegisterTask(operation.task, registrar.handler(operation))
+		tasks.Register(operation.task, registrar.handler(operation))
 	}
 }
 
@@ -157,7 +157,7 @@ func reportFacilityDeleteCheckpoint(execution facilityDeleteExecution, checkpoin
 		stage = "deleting_" + string(stages[checkpoint.StageIndex])
 	}
 	execution.report(facilityservice.FacilityJobProgress{
-		Progress: min(progress, 95), Stage: stage, Processed: checkpoint.Processed,
+		Progress: min(progress, 95), Stage: facilityservice.FacilityJobStage(stage), Processed: checkpoint.Processed,
 		Succeeded: checkpoint.Processed, Checkpoint: encoded,
 	})
 	return nil

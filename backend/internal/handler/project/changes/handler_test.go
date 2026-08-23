@@ -49,7 +49,7 @@ func TestListReturnsV2ProjectChangeContract(t *testing.T) {
 			EventID: eventID, ProjectID: projectID, Revision: 8,
 			AggregateType: "field_device", AggregateID: &aggregateID,
 			Action: domainProject.ChangeUpdated, ChangedFields: []string{"description"},
-			ParentRefs: map[string]uuid.UUID{"project_id": projectID}, OccurredAt: time.Now().UTC(),
+			OccurredAt: time.Now().UTC(),
 		}},
 	}}
 

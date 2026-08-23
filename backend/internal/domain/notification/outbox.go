@@ -22,11 +22,11 @@ type EmailOutbox struct {
 	domain.Base
 	RecipientID    uuid.UUID         `gorm:"type:uuid;not null;index:idx_email_outbox_recipient_status"`
 	RecipientEmail string            `gorm:"type:varchar(320);not null"`
-	EventKey       string            `gorm:"type:varchar(128);not null;index"`
+	EventKey       EventKey          `gorm:"type:varchar(128);not null;index"`
 	Subject        string            `gorm:"not null"`
 	Body           string            `gorm:"type:text"`
 	Frequency      DeliveryFrequency `gorm:"type:varchar(16);not null;index:idx_email_outbox_due"`
-	ResourceType   string            `gorm:"type:varchar(64)"`
+	ResourceType   ResourceKind      `gorm:"column:resource_type;type:varchar(64)"`
 	ResourceID     *uuid.UUID        `gorm:"type:uuid;index"`
 	Metadata       map[string]string `gorm:"serializer:json;type:text"`
 	Status         EmailOutboxStatus `gorm:"type:varchar(16);not null;index:idx_email_outbox_due"`

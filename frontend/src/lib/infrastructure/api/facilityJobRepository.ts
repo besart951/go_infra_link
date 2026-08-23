@@ -52,5 +52,13 @@ export const facilityJobRepository = {
       skipHttpErrorNavigation: true
     });
     return toFacilityJob(data);
+  },
+
+  async remove(id: string, signal?: AbortSignal): Promise<void> {
+    await api<void>(`/facility/jobs/${id}`, {
+      method: 'DELETE',
+      signal,
+      skipHttpErrorNavigation: true
+    });
   }
 };

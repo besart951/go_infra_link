@@ -22,7 +22,7 @@ type ProjectCopyCommand struct {
 	ProjectID uuid.UUID
 	SourceID  uuid.UUID
 	Kind      facilityservice.FacilityJobKind
-	Task      string
+	Task      facilityservice.FacilityJobTaskID
 }
 
 func RequiredBaseVersion(c *gin.Context) (domain.AggregateVersion, bool) {
@@ -49,14 +49,14 @@ type projectCopyIdentity struct {
 type FacilityLinkHandler struct {
 	access       AccessPolicyService
 	notify       ProjectChangeNotifier
-	facilityJobs *facilityservice.FacilityJobManager
+	facilityJobs *facilityservice.JobService
 }
 
 func NewFacilityLinkHandler(access AccessPolicyService, notify ProjectChangeNotifier) *FacilityLinkHandler {
 	return &FacilityLinkHandler{access: access, notify: notify}
 }
 
-func (h *FacilityLinkHandler) ConfigureFacilityJobs(facilityJobs *facilityservice.FacilityJobManager) {
+func (h *FacilityLinkHandler) ConfigureFacilityJobs(facilityJobs *facilityservice.JobService) {
 	h.facilityJobs = facilityJobs
 }
 

@@ -229,6 +229,12 @@ var migrations = []migration{
 		blueGreenCompatible: true,
 		apply:               migrateFieldDeviceCombinedSearchIndex,
 	},
+	{
+		version:             "202608230001",
+		description:         "remove_project_change_parent_refs",
+		blueGreenCompatible: false,
+		apply:               removeProjectChangeParentRefs,
+	},
 }
 
 type MigrationOptions struct {

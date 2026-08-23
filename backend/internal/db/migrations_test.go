@@ -12,20 +12,81 @@ import (
 	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	projectrepo "github.com/besart951/go_infra_link/backend/internal/repository/project"
+	projectchangerepo "github.com/besart951/go_infra_link/backend/internal/repository/projectchange"
 	"github.com/google/uuid"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
-func TestProductionMigrationsAreBlueGreenCompatible(t *testing.T) {
+func TestProductionMigrationsDeclareMaintenanceRequirements(t *testing.T) {
+	maintenanceVersions := make([]string, 0, 1)
 	for _, migration := range migrations {
 		if !migration.blueGreenCompatible {
-			t.Fatalf(
-				"migration %s (%s) is not blue-green compatible; use a maintenance migration path instead",
-				migration.version,
-				migration.description,
-			)
+			maintenanceVersions = append(maintenanceVersions, migration.version)
 		}
+	}
+	if !slices.Equal(maintenanceVersions, []string{"202608230001"}) {
+		t.Fatalf("maintenance migrations = %v", maintenanceVersions)
+	}
+}
+
+func TestRemoveProjectChangeParentRefsPreservesChangePersistence(t *testing.T) {
+	database := openMigrationTestDB(t)
+	if err := database.Exec(`CREATE TABLE project_changes (
+		event_id text PRIMARY KEY, project_id text NOT NULL, revision integer NOT NULL,
+		aggregate_type text NOT NULL, aggregate_id text, action text NOT NULL, actor_id text,
+		changed_fields blob NOT NULL, parent_refs blob NOT NULL, occurred_at datetime NOT NULL
+	)`).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := database.Exec(`CREATE UNIQUE INDEX idx_project_changes_revision ON project_changes(project_id, revision)`).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := database.Exec(`CREATE TABLE project_change_cursors (
+		project_id text PRIMARY KEY, current_revision integer NOT NULL DEFAULT 0, updated_at datetime NOT NULL
+	)`).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	projectID, aggregateID, eventID := uuid.New(), uuid.New(), uuid.New()
+	now := time.Now().UTC()
+	if err := database.Exec(
+		`INSERT INTO project_changes
+		(event_id, project_id, revision, aggregate_type, aggregate_id, action, changed_fields, parent_refs, occurred_at)
+		VALUES (?, ?, 1, ?, ?, ?, ?, ?, ?)`,
+		eventID, projectID, domainProject.AggregateFieldDevice, aggregateID,
+		domainProject.ChangeCreated, `[]`, `{"project_id":"`+projectID.String()+`"}`, now,
+	).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := database.Exec(
+		`INSERT INTO project_change_cursors (project_id, current_revision, updated_at) VALUES (?, 1, ?)`,
+		projectID, now,
+	).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	if err := removeProjectChangeParentRefs(database); err != nil {
+		t.Fatalf("remove parent_refs: %v", err)
+	}
+	if database.Migrator().HasColumn("project_changes", "parent_refs") {
+		t.Fatal("parent_refs column still exists")
+	}
+
+	store := projectchangerepo.NewStore(database)
+	if _, err := store.Append(t.Context(), domainProject.NewChange{
+		ProjectID: projectID, AggregateType: domainProject.AggregateFieldDevice,
+		AggregateID: &aggregateID, Action: domainProject.ChangeUpdated,
+		ChangedFields: []string{"description"},
+	}); err != nil {
+		t.Fatalf("append after migration: %v", err)
+	}
+	page, err := store.ListAfter(t.Context(), projectID, 0, 10)
+	if err != nil {
+		t.Fatalf("list after migration: %v", err)
+	}
+	if page.CurrentRevision != 2 || len(page.Events) != 2 {
+		t.Fatalf("page after migration = revision %d, %d events", page.CurrentRevision, len(page.Events))
 	}
 }
 

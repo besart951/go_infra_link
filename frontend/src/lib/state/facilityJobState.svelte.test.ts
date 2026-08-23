@@ -23,12 +23,19 @@ const realtime = vi.hoisted(() => {
 const getJob = vi.hoisted(() => vi.fn());
 const listJobs = vi.hoisted(() => vi.fn());
 const cancelJob = vi.hoisted(() => vi.fn());
+const removeJob = vi.hoisted(() => vi.fn());
 
 vi.mock('$lib/services/facilityReferenceDataCache.js', () => ({
   facilityReferenceDataCache: realtime.cache
 }));
 vi.mock('$lib/infrastructure/api/facilityJobRepository.js', () => ({
-  facilityJobRepository: { get: getJob, list: listJobs, retry: vi.fn(), cancel: cancelJob }
+  facilityJobRepository: {
+    get: getJob,
+    list: listJobs,
+    retry: vi.fn(),
+    cancel: cancelJob,
+    remove: removeJob
+  }
 }));
 
 import { FacilityJobState } from './facilityJobState.svelte.js';
@@ -114,5 +121,50 @@ describe('FacilityJobState', () => {
 
     expect(cancelJob).toHaveBeenCalledWith(jobId);
     expect(state.jobs[0]).toMatchObject({ status: 'cancelled', retryable: false });
+  });
+
+  it('clears an old error when a completed realtime snapshot omits error', () => {
+    const state = new FacilityJobState();
+    state.initialize('user-a');
+    state.track({
+      jobId,
+      kind: 'sps_controller',
+      type: 'copy',
+      status: 'failed',
+      progress: 100,
+      stage: 'failed',
+      error: 'ERROR: invalid input syntax for type json (SQLSTATE 22P02)'
+    });
+
+    realtime.emit({
+      type: 'facility.job.progress',
+      job_id: jobId,
+      kind: 'sps_controller',
+      job_type: 'copy',
+      status: 'completed',
+      progress: 100,
+      stage: 'completed',
+      updated_at: new Date().toISOString()
+    });
+
+    expect(state.jobs[0]).toMatchObject({ status: 'completed', error: undefined });
+    state.dispose();
+  });
+
+  it('removes a terminal job after the API confirms deletion', async () => {
+    const state = new FacilityJobState();
+    state.track({
+      jobId,
+      kind: 'field_device',
+      type: 'export',
+      status: 'completed',
+      progress: 100,
+      stage: 'completed'
+    });
+
+    await state.remove(jobId);
+
+    expect(removeJob).toHaveBeenCalledWith(jobId);
+    expect(state.jobs).toEqual([]);
   });
 });

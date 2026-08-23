@@ -124,7 +124,7 @@ func ensureSeedSystemNotifications(
 				UpdatedAt: createdAt,
 			},
 			RecipientID: user.ID,
-			EventKey:    sample.eventKey,
+			EventKey:    domainNotification.EventKey(sample.eventKey),
 			Title:       sample.title,
 			Body:        sample.body,
 			Metadata:    map[string]string{"seed": "dummy"},

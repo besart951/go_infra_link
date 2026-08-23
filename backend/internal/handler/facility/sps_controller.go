@@ -15,10 +15,10 @@ import (
 type SPSControllerHandler struct {
 	service       SPSControllerService
 	collaboration ProjectRefreshBroadcaster
-	facilityJobs  *facilityservice.FacilityJobManager
+	facilityJobs  *facilityservice.JobService
 }
 
-func NewSPSControllerHandler(service SPSControllerService, collaboration ProjectRefreshBroadcaster, facilityJobs ...*facilityservice.FacilityJobManager) *SPSControllerHandler {
+func NewSPSControllerHandler(service SPSControllerService, collaboration ProjectRefreshBroadcaster, facilityJobs ...*facilityservice.JobService) *SPSControllerHandler {
 	handler := &SPSControllerHandler{service: service, collaboration: collaboration}
 	if len(facilityJobs) > 0 {
 		handler.facilityJobs = facilityJobs[0]

@@ -8,7 +8,7 @@ import (
 	facilityservice "github.com/besart951/go_infra_link/backend/internal/service/facility"
 )
 
-func newProjectHandlers(services *Services, runtime *RuntimeAdapters, facilityJobs *facilityservice.FacilityJobManager) *projecthandler.Handlers {
+func newProjectHandlers(services *Services, runtime *RuntimeAdapters, facilityJobs *facilityservice.JobService) *projecthandler.Handlers {
 	return projecthandler.NewHandlers(projecthandler.ServiceDeps{
 		Lifecycle:          services.Project.Lifecycle,
 		Changes:            services.Project.Changes,
@@ -19,7 +19,10 @@ func newProjectHandlers(services *Services, runtime *RuntimeAdapters, facilityJo
 		Phase:              services.Phase,
 		PhasePermission:    services.PhasePermission,
 		FieldDeviceOptions: services.Facility.FieldDevice,
-		FacilityDetail: projecthandler.FacilityDetailServices{
+		FacilityDetails: projecthandler.ProjectFacilityDetailDependencies{
+			Access:                  services.Project.AccessPolicy,
+			Links:                   services.Project.FacilityLink,
+			Authorization:           services.RBAC,
 			Building:                services.Facility.Building,
 			ControlCabinet:          services.Facility.ControlCabinet,
 			SPSController:           services.Facility.SPSController,
@@ -28,15 +31,14 @@ func newProjectHandlers(services *Services, runtime *RuntimeAdapters, facilityJo
 			Apparat:                 services.Facility.Apparat,
 			SystemPart:              services.Facility.SystemPart,
 		},
-		Authorization: services.RBAC,
-		Notifications: services.Notification,
+		Notifications: services.Notification.Rules,
 		Collaboration: runtime.ProjectCollaboration,
 		FacilityJobs:  facilityJobs,
 		Export:        services.Export,
 	})
 }
 
-func newFacilityHandlers(services *Services, collaboration facilityhandler.ProjectRefreshBroadcaster, referenceData facilityhandler.FacilityReferenceDataRealtime, facilityJobs *facilityservice.FacilityJobManager, imports facilityhandler.FieldDeviceImportService) *facilityhandler.Handlers {
+func newFacilityHandlers(services *Services, collaboration facilityhandler.ProjectRefreshBroadcaster, referenceData facilityhandler.FacilityReferenceDataRealtime, facilityJobs *facilityservice.JobService, imports facilityhandler.FieldDeviceImportService) *facilityhandler.Handlers {
 	return facilityhandler.NewHandlers(facilityhandler.ServiceDeps{
 		Building:                services.Facility.Building,
 		SystemType:              services.Facility.SystemType,

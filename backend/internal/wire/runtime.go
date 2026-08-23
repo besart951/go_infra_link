@@ -20,7 +20,7 @@ type RuntimeAdapters struct {
 	ProjectCollaboration     *realtime.ProjectCollaborationHub
 	SystemNotificationStream *realtime.SystemNotificationHub
 	FacilityReferenceData    *realtime.FacilityReferenceDataHub
-	FacilityJobs             *facilityservice.FacilityJobManager
+	FacilityJobs             *facilityservice.FacilityJobs
 	FacilityJobSteps         facilityjobs.StepStore
 	FieldDeviceUpdatePlans   facilityjobs.FieldDeviceUpdatePlanStore
 	DB                       *gorm.DB
@@ -90,7 +90,7 @@ func NewRuntimeAdaptersWithBusAndStore(bus apprealtime.Bus, nodeID string, ownsB
 			realtime.WithSystemNotificationBus(bus, nodeID),
 		),
 		FacilityReferenceData:  facilityReferenceData,
-		FacilityJobs:           facilityservice.NewFacilityJobManagerWithDB(facilityReferenceData, db),
+		FacilityJobs:           facilityservice.NewDurableFacilityJobs(facilityReferenceData, db),
 		FacilityJobSteps:       jobSteps,
 		FieldDeviceUpdatePlans: updatePlans,
 		DB:                     db,
@@ -116,7 +116,7 @@ func (r *RuntimeAdapters) Close() {
 	}
 	r.closeOnce.Do(func() {
 		if r.FacilityJobs != nil {
-			r.FacilityJobs.Close()
+			r.FacilityJobs.Worker.Close()
 		}
 		if r.ProjectCollaboration != nil {
 			r.ProjectCollaboration.Close()

@@ -17,31 +17,79 @@ import (
 	"github.com/google/uuid"
 )
 
-// FacilityDetailHandler exposes hierarchy details inside a project without
-// requiring global read permissions. Every result is additionally constrained
-// to the project's linked facility objects; update actions require both the
-// project capability and their matching global permission.
-type FacilityDetailHandler struct {
-	access   ProjectAccessPolicyService
-	links    ProjectFacilityLinkService
-	services FacilityDetailServices
-	auth     middleware.AuthorizationChecker
-	notify   projectshared.ProjectMutationNotifier
+type ProjectFacilityScope struct {
+	ProjectID uuid.UUID
+	EntityID  uuid.UUID
+	UserID    uuid.UUID
+	Role      *domainUser.Role
 }
 
-func NewFacilityDetailHandler(access ProjectAccessPolicyService, links ProjectFacilityLinkService, services FacilityDetailServices, auth middleware.AuthorizationChecker, notify projectshared.ProjectMutationNotifier) *FacilityDetailHandler {
-	return &FacilityDetailHandler{access: access, links: links, services: services, auth: auth, notify: notify}
+type ProjectFacilityScopeLoader struct {
+	access ProjectAccessPolicyService
+	links  ProjectFacilityLinkService
+	auth   middleware.AuthorizationChecker
 }
 
-func (h *FacilityDetailHandler) projectID(c *gin.Context) (uuid.UUID, bool) {
+type ProjectFacilityRelationPresenter struct {
+	*ProjectFacilityScopeLoader
+	building     FacilityBuildingDetailService
+	cabinets     FacilityControlCabinetDetailService
+	controllers  FacilitySPSControllerDetailService
+	systemTypes  FacilitySPSControllerSystemTypeDetailService
+	fieldDevices FacilityFieldDeviceDetailService
+	apparats     FacilityApparatDetailService
+	systemParts  FacilitySystemPartDetailService
+}
+
+type FacilityDetailReadEndpoints struct {
+	*ProjectFacilityRelationPresenter
+}
+
+type FacilityDetailWriteEndpoints struct {
+	*ProjectFacilityRelationPresenter
+	notify projectshared.ProjectMutationNotifier
+}
+
+func NewProjectFacilityDetailEndpoints(deps ProjectFacilityDetailDependencies) (*FacilityDetailReadEndpoints, *FacilityDetailWriteEndpoints) {
+	scope := &ProjectFacilityScopeLoader{access: deps.Access, links: deps.Links, auth: deps.Authorization}
+	relations := &ProjectFacilityRelationPresenter{
+		ProjectFacilityScopeLoader: scope,
+		building:                   deps.Building, cabinets: deps.ControlCabinet, controllers: deps.SPSController,
+		systemTypes: deps.SPSControllerSystemType, fieldDevices: deps.FieldDevice,
+		apparats: deps.Apparat, systemParts: deps.SystemPart,
+	}
+	return &FacilityDetailReadEndpoints{relations}, &FacilityDetailWriteEndpoints{ProjectFacilityRelationPresenter: relations, notify: deps.Notify}
+}
+
+func (h *ProjectFacilityScopeLoader) projectID(c *gin.Context) (uuid.UUID, bool) {
 	return handlerutil.ParseUUIDParam(c, "id")
 }
 
-func (h *FacilityDetailHandler) entityID(c *gin.Context, name string) (uuid.UUID, bool) {
+func (h *ProjectFacilityScopeLoader) entityID(c *gin.Context, name string) (uuid.UUID, bool) {
 	return handlerutil.ParseUUIDParam(c, name)
 }
 
-func (h *FacilityDetailHandler) canProject(c *gin.Context, projectID uuid.UUID, permission string) bool {
+func (h *ProjectFacilityScopeLoader) load(c *gin.Context, entityParam, permission string) (ProjectFacilityScope, bool) {
+	projectID, ok := h.projectID(c)
+	if !ok || !projectshared.EnsureProjectAccessAndPermission(c, h.access, projectID, permission) {
+		return ProjectFacilityScope{}, false
+	}
+	entityID, ok := h.entityID(c, entityParam)
+	if !ok {
+		return ProjectFacilityScope{}, false
+	}
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		return ProjectFacilityScope{}, false
+	}
+	var role *domainUser.Role
+	if value, exists := middleware.GetUserRole(c); exists {
+		role = &value
+	}
+	return ProjectFacilityScope{ProjectID: projectID, EntityID: entityID, UserID: userID, Role: role}, true
+}
+
+func (h *ProjectFacilityScopeLoader) canProject(c *gin.Context, projectID uuid.UUID, permission string) bool {
 	if h.access == nil {
 		return false
 	}
@@ -57,7 +105,7 @@ func (h *FacilityDetailHandler) canProject(c *gin.Context, projectID uuid.UUID, 
 	return err == nil && allowed
 }
 
-func (h *FacilityDetailHandler) canGlobal(c *gin.Context, permission string) bool {
+func (h *ProjectFacilityScopeLoader) canGlobal(c *gin.Context, permission string) bool {
 	if h.auth == nil {
 		return false
 	}
@@ -90,7 +138,7 @@ func projectDetailPage(c *gin.Context) (int, int, bool) {
 	return page, limit, true
 }
 
-func (h *FacilityDetailHandler) projectCabinets(ctx *gin.Context, projectID uuid.UUID) ([]domainFacility.ControlCabinet, error) {
+func (h *ProjectFacilityRelationPresenter) projectCabinets(ctx *gin.Context, projectID uuid.UUID) ([]domainFacility.ControlCabinet, error) {
 	links, err := h.links.ListControlCabinets(ctx.Request.Context(), projectID, 1, 1000)
 	if err != nil || len(links.Items) == 0 {
 		return nil, err
@@ -99,10 +147,10 @@ func (h *FacilityDetailHandler) projectCabinets(ctx *gin.Context, projectID uuid
 	for _, item := range links.Items {
 		ids = append(ids, item.ControlCabinetID)
 	}
-	return h.services.ControlCabinet.GetByIDs(ctx.Request.Context(), ids)
+	return h.cabinets.GetByIDs(ctx.Request.Context(), ids)
 }
 
-func (h *FacilityDetailHandler) projectControllers(ctx *gin.Context, projectID uuid.UUID) ([]domainFacility.SPSController, error) {
+func (h *ProjectFacilityRelationPresenter) projectControllers(ctx *gin.Context, projectID uuid.UUID) ([]domainFacility.SPSController, error) {
 	links, err := h.links.ListSPSControllers(ctx.Request.Context(), projectID, 1, 1000)
 	if err != nil || len(links.Items) == 0 {
 		return nil, err
@@ -111,10 +159,10 @@ func (h *FacilityDetailHandler) projectControllers(ctx *gin.Context, projectID u
 	for _, item := range links.Items {
 		ids = append(ids, item.SPSControllerID)
 	}
-	return h.services.SPSController.GetByIDs(ctx.Request.Context(), ids)
+	return h.controllers.GetByIDs(ctx.Request.Context(), ids)
 }
 
-func (h *FacilityDetailHandler) projectFieldDeviceIDs(ctx *gin.Context, projectID uuid.UUID) (map[uuid.UUID]struct{}, error) {
+func (h *ProjectFacilityRelationPresenter) projectFieldDeviceIDs(ctx *gin.Context, projectID uuid.UUID) (map[uuid.UUID]struct{}, error) {
 	links, err := h.links.ListFieldDevices(ctx.Request.Context(), projectID, 1, 1000)
 	if err != nil {
 		return nil, err
@@ -164,15 +212,12 @@ func projectDetailFetchFailed(c *gin.Context) {
 // @Failure 403 {object} facilitydto.ErrorResponse
 // @Failure 404 {object} facilitydto.ErrorResponse
 // @Router /api/v1/projects/{id}/facility/buildings/{buildingId} [get]
-func (h *FacilityDetailHandler) GetBuilding(c *gin.Context) {
-	projectID, ok := h.projectID(c)
-	if !ok || !projectshared.EnsureProjectAccessAndPermission(c, h.access, projectID, domainUser.PermissionProjectControlCabinetRead) {
-		return
-	}
-	buildingID, ok := h.entityID(c, "buildingId")
+func (h *FacilityDetailReadEndpoints) GetBuilding(c *gin.Context) {
+	scope, ok := h.load(c, "buildingId", domainUser.PermissionProjectControlCabinetRead)
 	if !ok {
 		return
 	}
+	projectID, buildingID := scope.ProjectID, scope.EntityID
 	page, limit, ok := projectDetailPage(c)
 	if !ok {
 		return
@@ -192,7 +237,7 @@ func (h *FacilityDetailHandler) GetBuilding(c *gin.Context) {
 		projectDetailForbidden(c)
 		return
 	}
-	building, err := h.services.Building.GetByID(c.Request.Context(), buildingID)
+	building, err := h.building.GetByID(c.Request.Context(), buildingID)
 	if err != nil {
 		handlerutil.RespondLocalizedError(c, http.StatusNotFound, "not_found", "facility.building_not_found")
 		return
@@ -215,15 +260,12 @@ func (h *FacilityDetailHandler) GetBuilding(c *gin.Context) {
 // @Success 200 {object} facilitydto.ControlCabinetDetailResponse
 // @Failure 403 {object} facilitydto.ErrorResponse
 // @Router /api/v1/projects/{id}/facility/control-cabinets/{controlCabinetId} [get]
-func (h *FacilityDetailHandler) GetControlCabinet(c *gin.Context) {
-	projectID, ok := h.projectID(c)
-	if !ok || !projectshared.EnsureProjectAccessAndPermission(c, h.access, projectID, domainUser.PermissionProjectControlCabinetRead) {
-		return
-	}
-	cabinetID, ok := h.entityID(c, "controlCabinetId")
+func (h *FacilityDetailReadEndpoints) GetControlCabinet(c *gin.Context) {
+	scope, ok := h.load(c, "controlCabinetId", domainUser.PermissionProjectControlCabinetRead)
 	if !ok {
 		return
 	}
+	projectID, cabinetID := scope.ProjectID, scope.EntityID
 	page, limit, ok := projectDetailPage(c)
 	if !ok {
 		return
@@ -239,7 +281,7 @@ func (h *FacilityDetailHandler) GetControlCabinet(c *gin.Context) {
 		return
 	}
 	relations := []facilitydto.DetailRelation{}
-	if building, getErr := h.services.Building.GetByID(c.Request.Context(), cabinet.BuildingID); getErr == nil {
+	if building, getErr := h.building.GetByID(c.Request.Context(), cabinet.BuildingID); getErr == nil {
 		relations = append(relations, projectSingleton("building", "Gebäude", "buildings", buildingRelationItem(*building)))
 	}
 	if h.canProject(c, projectID, domainUser.PermissionProjectSPSControllerRead) {
@@ -273,15 +315,12 @@ func (h *FacilityDetailHandler) GetControlCabinet(c *gin.Context) {
 // @Success 200 {object} facilitydto.SPSControllerDetailResponse
 // @Failure 403 {object} facilitydto.ErrorResponse
 // @Router /api/v1/projects/{id}/facility/sps-controllers/{spsControllerId} [get]
-func (h *FacilityDetailHandler) GetSPSController(c *gin.Context) {
-	projectID, ok := h.projectID(c)
-	if !ok || !projectshared.EnsureProjectAccessAndPermission(c, h.access, projectID, domainUser.PermissionProjectSPSControllerRead) {
-		return
-	}
-	controllerID, ok := h.entityID(c, "spsControllerId")
+func (h *FacilityDetailReadEndpoints) GetSPSController(c *gin.Context) {
+	scope, ok := h.load(c, "spsControllerId", domainUser.PermissionProjectSPSControllerRead)
 	if !ok {
 		return
 	}
+	projectID, controllerID := scope.ProjectID, scope.EntityID
 	page, limit, ok := projectDetailPage(c)
 	if !ok {
 		return
@@ -298,7 +337,7 @@ func (h *FacilityDetailHandler) GetSPSController(c *gin.Context) {
 	}
 	relations := h.projectControllerParents(c, projectID, controller.ControlCabinetID)
 	if h.canProject(c, projectID, domainUser.PermissionProjectSPSControllerSystemTypeRead) {
-		types, listErr := h.services.SPSControllerSystemType.ListBySPSControllerID(c.Request.Context(), controllerID, page, limit, "")
+		types, listErr := h.systemTypes.ListBySPSControllerID(c.Request.Context(), controllerID, page, limit, "")
 		if listErr != nil {
 			projectDetailFetchFailed(c)
 			return
@@ -326,20 +365,17 @@ func (h *FacilityDetailHandler) GetSPSController(c *gin.Context) {
 // @Success 200 {object} facilitydto.SPSControllerSystemTypeDetailResponse
 // @Failure 403 {object} facilitydto.ErrorResponse
 // @Router /api/v1/projects/{id}/facility/sps-controller-system-types/{spsControllerSystemTypeId} [get]
-func (h *FacilityDetailHandler) GetSPSControllerSystemType(c *gin.Context) {
-	projectID, ok := h.projectID(c)
-	if !ok || !projectshared.EnsureProjectAccessAndPermission(c, h.access, projectID, domainUser.PermissionProjectSPSControllerSystemTypeRead) {
-		return
-	}
-	typeID, ok := h.entityID(c, "spsControllerSystemTypeId")
+func (h *FacilityDetailReadEndpoints) GetSPSControllerSystemType(c *gin.Context) {
+	scope, ok := h.load(c, "spsControllerSystemTypeId", domainUser.PermissionProjectSPSControllerSystemTypeRead)
 	if !ok {
 		return
 	}
+	projectID, typeID := scope.ProjectID, scope.EntityID
 	page, limit, ok := projectDetailPage(c)
 	if !ok {
 		return
 	}
-	item, err := h.services.SPSControllerSystemType.GetByID(c.Request.Context(), typeID)
+	item, err := h.systemTypes.GetByID(c.Request.Context(), typeID)
 	if err != nil {
 		handlerutil.RespondLocalizedError(c, http.StatusNotFound, "not_found", "facility.sps_controller_system_type_not_found")
 		return
@@ -357,7 +393,7 @@ func (h *FacilityDetailHandler) GetSPSControllerSystemType(c *gin.Context) {
 	relations := []facilitydto.DetailRelation{projectSingleton("sps_controller", "SPS-Regler", "sps-controllers", controllerRelationItem(controller))}
 	relations = append(relations, h.projectControllerParents(c, projectID, controller.ControlCabinetID)...)
 	if h.canProject(c, projectID, domainUser.PermissionProjectFieldDeviceRead) {
-		devices, listErr := h.services.FieldDevice.ListWithFilters(c.Request.Context(), domain.PaginationParams{Page: page, Limit: limit}, domainFacility.FieldDeviceFilterParams{ProjectID: &projectID, SPSControllerSystemTypeID: &typeID})
+		devices, listErr := h.fieldDevices.ListWithFilters(c.Request.Context(), domain.PaginationParams{Page: page, Limit: limit}, domainFacility.FieldDeviceFilterParams{ProjectID: &projectID, SPSControllerSystemTypeID: &typeID})
 		if listErr != nil {
 			projectDetailFetchFailed(c)
 			return
@@ -383,15 +419,12 @@ func (h *FacilityDetailHandler) GetSPSControllerSystemType(c *gin.Context) {
 // @Success 200 {object} facilitydto.FieldDeviceDetailResponse
 // @Failure 403 {object} facilitydto.ErrorResponse
 // @Router /api/v1/projects/{id}/facility/field-devices/{fieldDeviceId} [get]
-func (h *FacilityDetailHandler) GetFieldDevice(c *gin.Context) {
-	projectID, ok := h.projectID(c)
-	if !ok || !projectshared.EnsureProjectAccessAndPermission(c, h.access, projectID, domainUser.PermissionProjectFieldDeviceRead) {
-		return
-	}
-	deviceID, ok := h.entityID(c, "fieldDeviceId")
+func (h *FacilityDetailReadEndpoints) GetFieldDevice(c *gin.Context) {
+	scope, ok := h.load(c, "fieldDeviceId", domainUser.PermissionProjectFieldDeviceRead)
 	if !ok {
 		return
 	}
+	projectID, deviceID := scope.ProjectID, scope.EntityID
 	deviceIDs, err := h.projectFieldDeviceIDs(c, projectID)
 	if err != nil {
 		projectDetailFetchFailed(c)
@@ -401,7 +434,7 @@ func (h *FacilityDetailHandler) GetFieldDevice(c *gin.Context) {
 		projectDetailForbidden(c)
 		return
 	}
-	device, err := h.services.FieldDevice.GetByID(c.Request.Context(), deviceID)
+	device, err := h.fieldDevices.GetByID(c.Request.Context(), deviceID)
 	if err != nil {
 		handlerutil.RespondLocalizedError(c, http.StatusNotFound, "not_found", "facility.field_device_not_found")
 		return
@@ -413,7 +446,7 @@ func (h *FacilityDetailHandler) GetFieldDevice(c *gin.Context) {
 	})
 }
 
-func (h *FacilityDetailHandler) projectControllerParents(c *gin.Context, projectID, cabinetID uuid.UUID) []facilitydto.DetailRelation {
+func (h *ProjectFacilityRelationPresenter) projectControllerParents(c *gin.Context, projectID, cabinetID uuid.UUID) []facilitydto.DetailRelation {
 	if !h.canProject(c, projectID, domainUser.PermissionProjectControlCabinetRead) {
 		return []facilitydto.DetailRelation{}
 	}
@@ -426,16 +459,16 @@ func (h *FacilityDetailHandler) projectControllerParents(c *gin.Context, project
 		return []facilitydto.DetailRelation{}
 	}
 	relations := []facilitydto.DetailRelation{projectSingleton("control_cabinet", "Schaltschrank", "control-cabinets", cabinetRelationItem(cabinet))}
-	if building, getErr := h.services.Building.GetByID(c.Request.Context(), cabinet.BuildingID); getErr == nil {
+	if building, getErr := h.building.GetByID(c.Request.Context(), cabinet.BuildingID); getErr == nil {
 		relations = append(relations, projectSingleton("building", "Gebäude", "buildings", buildingRelationItem(*building)))
 	}
 	return relations
 }
 
-func (h *FacilityDetailHandler) projectFieldDeviceRelations(c *gin.Context, projectID uuid.UUID, device domainFacility.FieldDevice) []facilitydto.DetailRelation {
+func (h *ProjectFacilityRelationPresenter) projectFieldDeviceRelations(c *gin.Context, projectID uuid.UUID, device domainFacility.FieldDevice) []facilitydto.DetailRelation {
 	relations := make([]facilitydto.DetailRelation, 0, 6)
 	if h.canProject(c, projectID, domainUser.PermissionProjectSPSControllerSystemTypeRead) {
-		if systemType, getErr := h.services.SPSControllerSystemType.GetByID(c.Request.Context(), device.SPSControllerSystemTypeID); getErr == nil {
+		if systemType, getErr := h.systemTypes.GetByID(c.Request.Context(), device.SPSControllerSystemTypeID); getErr == nil {
 			relations = append(relations, projectSingleton("sps_controller_system_type", "SPS-Systemtyp", "sps-controller-system-types", systemTypeRelationItem(*systemType)))
 			if h.canProject(c, projectID, domainUser.PermissionProjectSPSControllerRead) {
 				controllers, listErr := h.projectControllers(c, projectID)
@@ -449,12 +482,12 @@ func (h *FacilityDetailHandler) projectFieldDeviceRelations(c *gin.Context, proj
 		}
 	}
 	if h.canGlobal(c, domainUser.PermissionApparatRead) {
-		if apparat, getErr := h.services.Apparat.GetByID(c.Request.Context(), device.ApparatID); getErr == nil {
+		if apparat, getErr := h.apparats.GetByID(c.Request.Context(), device.ApparatID); getErr == nil {
 			relations = append(relations, projectSingleton("apparat", "Apparat", "references", apparatRelationItem(*apparat)))
 		}
 	}
 	if device.SystemPartID != uuid.Nil && h.canGlobal(c, domainUser.PermissionSystemPartRead) {
-		if part, getErr := h.services.SystemPart.GetByID(c.Request.Context(), device.SystemPartID); getErr == nil {
+		if part, getErr := h.systemParts.GetByID(c.Request.Context(), device.SystemPartID); getErr == nil {
 			relations = append(relations, projectSingleton("system_part", "Systemteil", "references", systemPartRelationItem(*part)))
 		}
 	}
@@ -462,7 +495,7 @@ func (h *FacilityDetailHandler) projectFieldDeviceRelations(c *gin.Context, proj
 		relations = append(relations, projectSingleton("specification", "Spezifikation", "references", specificationRelationItem(*device.Specification)))
 	}
 	if h.canProject(c, projectID, domainUser.PermissionProjectFieldDeviceBacnetObjectsRead) {
-		if objects, listErr := h.services.FieldDevice.ListBacnetObjects(c.Request.Context(), device.ID); listErr == nil && len(objects) > 0 {
+		if objects, listErr := h.fieldDevices.ListBacnetObjects(c.Request.Context(), device.ID); listErr == nil && len(objects) > 0 {
 			items := make([]facilitydto.DetailRelationItem, 0, len(objects))
 			for _, object := range objects {
 				items = append(items, facilitydto.DetailRelationItem{ID: object.ID.String(), Label: nonEmptyDetail(object.TextFix, nonEmptyDetail(stringPtrDetail(object.Description), "BACnet-Objekt")), Subtitle: string(object.SoftwareType)})
@@ -485,7 +518,7 @@ func (h *FacilityDetailHandler) projectFieldDeviceRelations(c *gin.Context, proj
 // @Failure 403 {object} facilitydto.ErrorResponse
 // @Failure 409 {object} facilitydto.ErrorResponse
 // @Router /api/v1/projects/{id}/facility/control-cabinets/{controlCabinetId} [patch]
-func (h *FacilityDetailHandler) UpdateControlCabinet(c *gin.Context) {
+func (h *FacilityDetailWriteEndpoints) UpdateControlCabinet(c *gin.Context) {
 	projectID, cabinetID, cabinet, ok := h.editableCabinet(c)
 	if !ok {
 		return
@@ -507,9 +540,9 @@ func (h *FacilityDetailHandler) UpdateControlCabinet(c *gin.Context) {
 		}
 		cabinet.BuildingID = req.BuildingID
 	}
-	if err := h.services.ControlCabinet.Update(c.Request.Context(), cabinet); err != nil {
+	if err := h.cabinets.Update(c.Request.Context(), cabinet); err != nil {
 		h.projectWriteError(c, err, "control_cabinet", cabinetID, baseVersion, req.ChangedFields(), func() (uint64, any, bool) {
-			current, getErr := h.services.ControlCabinet.GetByID(c.Request.Context(), cabinetID)
+			current, getErr := h.cabinets.GetByID(c.Request.Context(), cabinetID)
 			if getErr != nil {
 				return 0, nil, false
 			}
@@ -533,7 +566,7 @@ func (h *FacilityDetailHandler) UpdateControlCabinet(c *gin.Context) {
 // @Failure 403 {object} facilitydto.ErrorResponse
 // @Failure 409 {object} facilitydto.ErrorResponse
 // @Router /api/v1/projects/{id}/facility/sps-controllers/{spsControllerId} [patch]
-func (h *FacilityDetailHandler) UpdateSPSController(c *gin.Context) {
+func (h *FacilityDetailWriteEndpoints) UpdateSPSController(c *gin.Context) {
 	projectID, controllerID, controller, ok := h.editableController(c)
 	if !ok {
 		return
@@ -576,9 +609,9 @@ func (h *FacilityDetailHandler) UpdateSPSController(c *gin.Context) {
 	if req.Vlan != nil {
 		controller.Vlan = req.Vlan
 	}
-	if err := h.services.SPSController.Update(c.Request.Context(), controller); err != nil {
+	if err := h.controllers.Update(c.Request.Context(), controller); err != nil {
 		h.projectWriteError(c, err, "sps_controller", controllerID, baseVersion, req.ChangedFields(), func() (uint64, any, bool) {
-			current, getErr := h.services.SPSController.GetByID(c.Request.Context(), controllerID)
+			current, getErr := h.controllers.GetByID(c.Request.Context(), controllerID)
 			if getErr != nil {
 				return 0, nil, false
 			}
@@ -602,7 +635,7 @@ func (h *FacilityDetailHandler) UpdateSPSController(c *gin.Context) {
 // @Failure 403 {object} facilitydto.ErrorResponse
 // @Failure 409 {object} facilitydto.ErrorResponse
 // @Router /api/v1/projects/{id}/facility/sps-controller-system-types/{spsControllerSystemTypeId} [patch]
-func (h *FacilityDetailHandler) UpdateSPSControllerSystemType(c *gin.Context) {
+func (h *FacilityDetailWriteEndpoints) UpdateSPSControllerSystemType(c *gin.Context) {
 	projectID, typeID, item, ok := h.editableSystemType(c)
 	if !ok {
 		return
@@ -619,9 +652,9 @@ func (h *FacilityDetailHandler) UpdateSPSControllerSystemType(c *gin.Context) {
 	if req.DocumentName != nil {
 		item.DocumentName = req.DocumentName
 	}
-	if err := h.services.SPSControllerSystemType.Update(c.Request.Context(), item); err != nil {
+	if err := h.systemTypes.Update(c.Request.Context(), item); err != nil {
 		h.projectWriteError(c, err, "sps_controller_system_type", typeID, baseVersion, req.ChangedFields(), func() (uint64, any, bool) {
-			current, getErr := h.services.SPSControllerSystemType.GetByID(c.Request.Context(), typeID)
+			current, getErr := h.systemTypes.GetByID(c.Request.Context(), typeID)
 			if getErr != nil {
 				return 0, nil, false
 			}
@@ -645,7 +678,7 @@ func (h *FacilityDetailHandler) UpdateSPSControllerSystemType(c *gin.Context) {
 // @Failure 403 {object} facilitydto.ErrorResponse
 // @Failure 409 {object} facilitydto.ErrorResponse
 // @Router /api/v1/projects/{id}/facility/field-devices/{fieldDeviceId} [patch]
-func (h *FacilityDetailHandler) UpdateFieldDevice(c *gin.Context) {
+func (h *FacilityDetailWriteEndpoints) UpdateFieldDevice(c *gin.Context) {
 	projectID, deviceID, device, ok := h.editableFieldDevice(c)
 	if !ok {
 		return
@@ -679,7 +712,7 @@ func (h *FacilityDetailHandler) UpdateFieldDevice(c *gin.Context) {
 		device.SystemPartID = req.SystemPartID
 	}
 	if req.SPSControllerSystemTypeID != uuid.Nil {
-		typeItem, err := h.services.SPSControllerSystemType.GetByID(c.Request.Context(), req.SPSControllerSystemTypeID)
+		typeItem, err := h.systemTypes.GetByID(c.Request.Context(), req.SPSControllerSystemTypeID)
 		controllers, controllerErr := h.projectControllers(c, projectID)
 		if err != nil || controllerErr != nil {
 			projectDetailFetchFailed(c)
@@ -691,9 +724,9 @@ func (h *FacilityDetailHandler) UpdateFieldDevice(c *gin.Context) {
 		}
 		device.SPSControllerSystemTypeID = req.SPSControllerSystemTypeID
 	}
-	if err := h.services.FieldDevice.Update(c.Request.Context(), device); err != nil {
+	if err := h.fieldDevices.Update(c.Request.Context(), device); err != nil {
 		h.projectWriteError(c, err, "field_device", deviceID, baseVersion, req.ChangedFields(), func() (uint64, any, bool) {
-			current, getErr := h.services.FieldDevice.GetByID(c.Request.Context(), deviceID)
+			current, getErr := h.fieldDevices.GetByID(c.Request.Context(), deviceID)
 			if getErr != nil {
 				return 0, nil, false
 			}
@@ -705,20 +738,14 @@ func (h *FacilityDetailHandler) UpdateFieldDevice(c *gin.Context) {
 	c.JSON(http.StatusOK, projectFieldDeviceResponse(*device))
 }
 
-func (h *FacilityDetailHandler) editableCabinet(c *gin.Context) (uuid.UUID, uuid.UUID, *domainFacility.ControlCabinet, bool) {
-	projectID, ok := h.projectID(c)
+func (h *FacilityDetailWriteEndpoints) editableCabinet(c *gin.Context) (uuid.UUID, uuid.UUID, *domainFacility.ControlCabinet, bool) {
+	scope, ok := h.load(c, "controlCabinetId", domainUser.PermissionProjectControlCabinetUpdate)
 	if !ok {
 		return uuid.Nil, uuid.Nil, nil, false
 	}
-	if !projectshared.EnsureProjectAccessAndPermission(c, h.access, projectID, domainUser.PermissionProjectControlCabinetUpdate) {
-		return uuid.Nil, uuid.Nil, nil, false
-	}
+	projectID, id := scope.ProjectID, scope.EntityID
 	if !h.canGlobal(c, domainUser.PermissionControlCabinetUpdate) {
 		projectDetailForbidden(c)
-		return uuid.Nil, uuid.Nil, nil, false
-	}
-	id, ok := h.entityID(c, "controlCabinetId")
-	if !ok {
 		return uuid.Nil, uuid.Nil, nil, false
 	}
 	cabinets, err := h.projectCabinets(c, projectID)
@@ -734,20 +761,14 @@ func (h *FacilityDetailHandler) editableCabinet(c *gin.Context) (uuid.UUID, uuid
 	return projectID, id, &item, true
 }
 
-func (h *FacilityDetailHandler) editableController(c *gin.Context) (uuid.UUID, uuid.UUID, *domainFacility.SPSController, bool) {
-	projectID, ok := h.projectID(c)
+func (h *FacilityDetailWriteEndpoints) editableController(c *gin.Context) (uuid.UUID, uuid.UUID, *domainFacility.SPSController, bool) {
+	scope, ok := h.load(c, "spsControllerId", domainUser.PermissionProjectSPSControllerUpdate)
 	if !ok {
 		return uuid.Nil, uuid.Nil, nil, false
 	}
-	if !projectshared.EnsureProjectAccessAndPermission(c, h.access, projectID, domainUser.PermissionProjectSPSControllerUpdate) {
-		return uuid.Nil, uuid.Nil, nil, false
-	}
+	projectID, id := scope.ProjectID, scope.EntityID
 	if !h.canGlobal(c, domainUser.PermissionSPSControllerUpdate) {
 		projectDetailForbidden(c)
-		return uuid.Nil, uuid.Nil, nil, false
-	}
-	id, ok := h.entityID(c, "spsControllerId")
-	if !ok {
 		return uuid.Nil, uuid.Nil, nil, false
 	}
 	controllers, err := h.projectControllers(c, projectID)
@@ -763,23 +784,17 @@ func (h *FacilityDetailHandler) editableController(c *gin.Context) (uuid.UUID, u
 	return projectID, id, &item, true
 }
 
-func (h *FacilityDetailHandler) editableSystemType(c *gin.Context) (uuid.UUID, uuid.UUID, *domainFacility.SPSControllerSystemType, bool) {
-	projectID, ok := h.projectID(c)
+func (h *FacilityDetailWriteEndpoints) editableSystemType(c *gin.Context) (uuid.UUID, uuid.UUID, *domainFacility.SPSControllerSystemType, bool) {
+	scope, ok := h.load(c, "spsControllerSystemTypeId", domainUser.PermissionProjectSPSControllerSystemTypeUpdate)
 	if !ok {
 		return uuid.Nil, uuid.Nil, nil, false
 	}
-	if !projectshared.EnsureProjectAccessAndPermission(c, h.access, projectID, domainUser.PermissionProjectSPSControllerSystemTypeUpdate) {
-		return uuid.Nil, uuid.Nil, nil, false
-	}
+	projectID, id := scope.ProjectID, scope.EntityID
 	if !h.canGlobal(c, domainUser.PermissionSPSControllerSystemTypeUpdate) {
 		projectDetailForbidden(c)
 		return uuid.Nil, uuid.Nil, nil, false
 	}
-	id, ok := h.entityID(c, "spsControllerSystemTypeId")
-	if !ok {
-		return uuid.Nil, uuid.Nil, nil, false
-	}
-	item, err := h.services.SPSControllerSystemType.GetByID(c.Request.Context(), id)
+	item, err := h.systemTypes.GetByID(c.Request.Context(), id)
 	if err != nil {
 		handlerutil.RespondLocalizedError(c, http.StatusNotFound, "not_found", "facility.sps_controller_system_type_not_found")
 		return uuid.Nil, uuid.Nil, nil, false
@@ -796,20 +811,14 @@ func (h *FacilityDetailHandler) editableSystemType(c *gin.Context) (uuid.UUID, u
 	return projectID, id, item, true
 }
 
-func (h *FacilityDetailHandler) editableFieldDevice(c *gin.Context) (uuid.UUID, uuid.UUID, *domainFacility.FieldDevice, bool) {
-	projectID, ok := h.projectID(c)
+func (h *FacilityDetailWriteEndpoints) editableFieldDevice(c *gin.Context) (uuid.UUID, uuid.UUID, *domainFacility.FieldDevice, bool) {
+	scope, ok := h.load(c, "fieldDeviceId", domainUser.PermissionProjectFieldDeviceUpdate)
 	if !ok {
 		return uuid.Nil, uuid.Nil, nil, false
 	}
-	if !projectshared.EnsureProjectAccessAndPermission(c, h.access, projectID, domainUser.PermissionProjectFieldDeviceUpdate) {
-		return uuid.Nil, uuid.Nil, nil, false
-	}
+	projectID, id := scope.ProjectID, scope.EntityID
 	if !h.canGlobal(c, domainUser.PermissionFieldDeviceUpdate) {
 		projectDetailForbidden(c)
-		return uuid.Nil, uuid.Nil, nil, false
-	}
-	id, ok := h.entityID(c, "fieldDeviceId")
-	if !ok {
 		return uuid.Nil, uuid.Nil, nil, false
 	}
 	ids, err := h.projectFieldDeviceIDs(c, projectID)
@@ -821,7 +830,7 @@ func (h *FacilityDetailHandler) editableFieldDevice(c *gin.Context) (uuid.UUID, 
 		projectDetailForbidden(c)
 		return uuid.Nil, uuid.Nil, nil, false
 	}
-	item, err := h.services.FieldDevice.GetByID(c.Request.Context(), id)
+	item, err := h.fieldDevices.GetByID(c.Request.Context(), id)
 	if err != nil {
 		handlerutil.RespondLocalizedError(c, http.StatusNotFound, "not_found", "facility.field_device_not_found")
 		return uuid.Nil, uuid.Nil, nil, false
@@ -829,13 +838,13 @@ func (h *FacilityDetailHandler) editableFieldDevice(c *gin.Context) (uuid.UUID, 
 	return projectID, id, item, true
 }
 
-func (h *FacilityDetailHandler) notifyUpdate(c *gin.Context, projectID uuid.UUID, event string, changedFields []string, entityID uuid.UUID) {
+func (h *FacilityDetailWriteEndpoints) notifyUpdate(c *gin.Context, projectID uuid.UUID, event string, changedFields []string, entityID uuid.UUID) {
 	if h.notify != nil {
 		h.notify(c, projectID, event, changedFields, entityID.String())
 	}
 }
 
-func (h *FacilityDetailHandler) projectWriteError(c *gin.Context, err error, aggregate string, id uuid.UUID, baseVersion uint64, fields []string, current func() (uint64, any, bool)) {
+func (h *FacilityDetailWriteEndpoints) projectWriteError(c *gin.Context, err error, aggregate string, id uuid.UUID, baseVersion uint64, fields []string, current func() (uint64, any, bool)) {
 	if errors.Is(err, domain.ErrConflict) {
 		if version, entity, ok := current(); ok {
 			handlerutil.RespondWriteConflict(c, aggregate, id.String(), baseVersion, version, fields, entity)

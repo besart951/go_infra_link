@@ -66,6 +66,9 @@ func isVersionedMutation(path, method string) bool {
 	if method != "put" && method != "patch" && method != "delete" {
 		return false
 	}
+	if strings.HasPrefix(path, "/api/v1/facility/jobs/") {
+		return false
+	}
 	if strings.HasPrefix(path, "/api/v1/facility/") {
 		return true
 	}

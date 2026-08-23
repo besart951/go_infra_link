@@ -174,10 +174,10 @@ func validateProjectCollaborationDraftEntry(dto projectCollaborationDraftDTO) (P
 	if action != "create" && action != "update" {
 		return ProjectDraftEntry{}, fmt.Errorf("%w: action must be create or update", errProjectCollaborationInvalidMessage)
 	}
-	if action == "create" && selector.DraftID == "" {
+	if action == "create" && selector.DraftID == nil {
 		return ProjectDraftEntry{}, fmt.Errorf("%w: create drafts require draft_id", errProjectCollaborationInvalidMessage)
 	}
-	if action == "update" && selector.AggregateID == "" {
+	if action == "update" && selector.AggregateID == nil {
 		return ProjectDraftEntry{}, fmt.Errorf("%w: update drafts require aggregate_id", errProjectCollaborationInvalidMessage)
 	}
 	if dto.BaseVersion < 0 {
@@ -225,16 +225,16 @@ func validateProjectCollaborationDraftSelector(aggregateType string, aggregateID
 		if err != nil || parsed == uuid.Nil {
 			return ProjectDraftSelector{}, fmt.Errorf("%w: invalid aggregate_id", errProjectCollaborationInvalidMessage)
 		}
-		selector.AggregateID = parsed.String()
+		selector.AggregateID = &parsed
 	}
 	if draftID != nil {
 		parsed, err := uuid.Parse(strings.TrimSpace(*draftID))
 		if err != nil || parsed == uuid.Nil {
 			return ProjectDraftSelector{}, fmt.Errorf("%w: invalid draft_id", errProjectCollaborationInvalidMessage)
 		}
-		selector.DraftID = parsed.String()
+		selector.DraftID = &parsed
 	}
-	if (selector.AggregateID == "") == (selector.DraftID == "") {
+	if (selector.AggregateID == nil) == (selector.DraftID == nil) {
 		return ProjectDraftSelector{}, fmt.Errorf("%w: exactly one of aggregate_id or draft_id is required", errProjectCollaborationInvalidMessage)
 	}
 	return selector, nil

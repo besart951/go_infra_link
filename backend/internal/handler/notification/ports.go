@@ -38,11 +38,12 @@ type NotificationRuleService interface {
 	DeleteNotificationRule(ctx context.Context, id uuid.UUID) error
 }
 
-type NotificationSettingsService interface {
-	SMTPSettingsService
-	UserNotificationPreferenceService
-	SystemNotificationInboxService
-	NotificationRuleService
+type HandlerDependencies struct {
+	SMTP        SMTPSettingsService
+	Preferences UserNotificationPreferenceService
+	Inbox       SystemNotificationInboxService
+	Rules       NotificationRuleService
+	Streamer    SystemNotificationStreamer
 }
 
 type SystemNotificationStreamer interface {

@@ -192,11 +192,11 @@ func TestBulkDeleteFieldDevicesQueuesDurableJobAboveSynchronousLimit(t *testing.
 	if err := facilityservice.MigrateFacilityJobs(db); err != nil {
 		t.Fatalf("migrate jobs: %v", err)
 	}
-	jobs := facilityservice.NewFacilityJobManagerWithDB(nil, db)
-	t.Cleanup(jobs.Close)
+	jobModule := facilityservice.NewDurableFacilityJobs(nil, db)
+	t.Cleanup(jobModule.Worker.Close)
 
 	service := &fakeFieldDeviceHandlerService{}
-	handler := NewFieldDeviceHandlerWithFacilityJobs(service, nil, jobs)
+	handler := NewFieldDeviceHandlerWithFacilityJobs(service, nil, jobModule.Service)
 	request := versionedDeleteRequest(newFieldDeviceIDs(501))
 	body, err := json.Marshal(request)
 	if err != nil {

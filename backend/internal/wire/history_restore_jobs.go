@@ -37,15 +37,15 @@ type historyRestoreTaskRegistrar struct {
 	}
 }
 
-func registerHistoryRestoreTasks(jobs *facilityservice.FacilityJobManager, runtime *RuntimeAdapters, history HistoryRepository) {
-	if jobs == nil || history == nil {
+func registerHistoryRestoreTasks(tasks *facilityservice.TaskRegistry, runtime *RuntimeAdapters, history HistoryRepository) {
+	if tasks == nil || history == nil {
 		return
 	}
 	registrar := historyRestoreTaskRegistrar{history: history}
 	if runtime != nil {
 		registrar.steps = runtime.FacilityJobSteps
 	}
-	jobs.RegisterTask(domainHistory.TaskRestoreControlCabinet, registrar.handler())
+	tasks.Register(domainHistory.TaskRestoreControlCabinet, registrar.handler())
 }
 
 func (r historyRestoreTaskRegistrar) handler() facilityservice.FacilityJobHandler {

@@ -12,28 +12,28 @@ import (
 )
 
 type facilityCopyOperation struct {
-	task       string
+	task       facilityservice.FacilityJobTaskID
 	resource   string
 	entityType string
 	copy       func(context.Context, *facilityservice.Services, uuid.UUID) (uuid.UUID, error)
 }
 
 type facilityCopyTaskRegistrar struct {
-	jobs     *facilityservice.FacilityJobManager
+	tasks    *facilityservice.TaskRegistry
 	services *facilityservice.Services
 	runtime  *RuntimeAdapters
 }
 
-func registerFacilityCopyTasks(jobs *facilityservice.FacilityJobManager, services *Services, runtime *RuntimeAdapters) {
-	if jobs == nil || services == nil || services.Facility == nil {
+func registerFacilityCopyTasks(tasks *facilityservice.TaskRegistry, services *Services, runtime *RuntimeAdapters) {
+	if tasks == nil || services == nil || services.Facility == nil {
 		return
 	}
-	registrar := facilityCopyTaskRegistrar{jobs: jobs, services: services.Facility, runtime: runtime}
+	registrar := facilityCopyTaskRegistrar{tasks: tasks, services: services.Facility, runtime: runtime}
 	for _, operation := range facilityCopyOperations() {
-		jobs.RegisterTask(operation.task, registrar.taskHandler(operation))
+		tasks.Register(operation.task, registrar.taskHandler(operation))
 	}
-	registerFieldDeviceBulkTasks(jobs, runtime, services)
-	registerFacilityDeleteTasks(jobs, runtime)
+	registerFieldDeviceBulkTasks(tasks, runtime, services)
+	registerFacilityDeleteTasks(tasks, runtime)
 }
 
 func facilityCopyOperations() []facilityCopyOperation {

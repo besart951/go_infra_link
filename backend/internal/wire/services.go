@@ -39,7 +39,7 @@ type Services struct {
 	Team             *teamservice.Service
 	Admin            *adminservice.Service
 	UserDirectory    *userdirectoryservice.Service
-	Notification     *notificationservice.Service
+	Notification     *notificationservice.Services
 	Password         domainUser.PasswordHasher
 	Export           *exportservice.Service
 	History          HistoryRepository
@@ -79,18 +79,18 @@ func NewServices(gormDB *gorm.DB, repos *Repositories, cfg ServiceConfig) (*Serv
 	userSvc := newUserServices(repos, passwordService, security.userMutationPolicy, cfg)
 	facilityServices := newFacilityServices(gormDB, repos)
 
-	var facilityJobs *facilityservice.FacilityJobManager
+	var facilityJobs *facilityservice.FacilityJobs
 	if cfg.Runtime != nil {
 		facilityJobs = cfg.Runtime.FacilityJobs
 	}
 	if facilityJobs == nil {
-		facilityJobs = facilityservice.NewFacilityJobManagerWithDB(nil, gormDB)
+		facilityJobs = facilityservice.NewDurableFacilityJobs(nil, gormDB)
 	}
 	exportSvc, err := newExportService(gormDB, repos, cfg, facilityJobs)
 	if err != nil {
 		return nil, fmt.Errorf("new export service: %w", err)
 	}
-	notificationSvc, err := newNotificationService(repos, cfg)
+	notificationSvc, err := newNotificationServices(repos, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("new notification service: %w", err)
 	}

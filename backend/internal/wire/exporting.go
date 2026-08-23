@@ -16,7 +16,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func newExportService(db *gorm.DB, repos *Repositories, cfg ServiceConfig, jobs *facilityservice.FacilityJobManager) (*exportservice.Service, error) {
+func newExportService(db *gorm.DB, repos *Repositories, cfg ServiceConfig, jobs *facilityservice.FacilityJobs) (*exportservice.Service, error) {
 	fileStore, err := exportinfra.NewLocalFileStore(resolveExportDirectory(cfg))
 	if err != nil {
 		return nil, fmt.Errorf("export file store: %w", err)
@@ -45,14 +45,10 @@ func newExportService(db *gorm.DB, repos *Repositories, cfg ServiceConfig, jobs 
 		})
 	}
 	excelGenerator := exportinfra.NewExcelizeGenerator()
-	return exportservice.NewService(
-		dataProvider,
-		excelGenerator,
-		excelGenerator,
-		fileStore,
-		jobs,
-		resolveExportConfig(cfg.Export),
-	), nil
+	return exportservice.NewService(exportservice.Dependencies{
+		Data: dataProvider, Workbook: excelGenerator, ZIP: excelGenerator,
+		Files: fileStore, Jobs: jobs.Service, Tasks: jobs.Tasks,
+	}, resolveExportConfig(cfg.Export)), nil
 }
 
 func resolveExportDirectory(cfg ServiceConfig) string {

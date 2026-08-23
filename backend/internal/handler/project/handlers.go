@@ -1,7 +1,6 @@
 package project
 
 import (
-	"github.com/besart951/go_infra_link/backend/internal/handler/middleware"
 	changeshandler "github.com/besart951/go_infra_link/backend/internal/handler/project/changes"
 	controlcabinethandler "github.com/besart951/go_infra_link/backend/internal/handler/project/controlcabinet"
 	fielddevicehandler "github.com/besart951/go_infra_link/backend/internal/handler/project/fielddevice"
@@ -14,18 +13,19 @@ import (
 )
 
 type Handlers struct {
-	Project            *ProjectHandler
-	Changes            *changeshandler.Handler
-	Membership         *membershiphandler.Handler
-	ControlCabinet     *controlcabinethandler.Handler
-	SPSController      *spscontrollerhandler.Handler
-	FieldDevice        *fielddevicehandler.Handler
-	ObjectData         *objectdatahandler.Handler
-	Phase              *phasehandler.Handler
-	PhasePermission    *phasepermissionhandler.Handler
-	FieldDeviceOptions *fielddevicehandler.OptionsHandler
-	FacilityDetail     *FacilityDetailHandler
-	RefreshBroadcaster *FacilityRefreshBroadcaster
+	Project             *ProjectHandler
+	Changes             *changeshandler.Handler
+	Membership          *membershiphandler.Handler
+	ControlCabinet      *controlcabinethandler.Handler
+	SPSController       *spscontrollerhandler.Handler
+	FieldDevice         *fielddevicehandler.Handler
+	ObjectData          *objectdatahandler.Handler
+	Phase               *phasehandler.Handler
+	PhasePermission     *phasepermissionhandler.Handler
+	FieldDeviceOptions  *fielddevicehandler.OptionsHandler
+	FacilityDetailRead  *FacilityDetailReadEndpoints
+	FacilityDetailWrite *FacilityDetailWriteEndpoints
+	RefreshBroadcaster  *FacilityRefreshBroadcaster
 }
 
 type ServiceDeps struct {
@@ -38,11 +38,10 @@ type ServiceDeps struct {
 	Phase              PhaseService
 	PhasePermission    PhasePermissionService
 	FieldDeviceOptions FieldDeviceOptionsService
-	FacilityDetail     FacilityDetailServices
-	Authorization      middleware.AuthorizationChecker
+	FacilityDetails    ProjectFacilityDetailDependencies
 	Notifications      NotificationEventDispatcher
 	Collaboration      *ProjectCollaborationHub
-	FacilityJobs       *facilityservice.FacilityJobManager
+	FacilityJobs       *facilityservice.JobService
 	Export             fielddevicehandler.ExportService
 }
 
@@ -63,18 +62,22 @@ func NewHandlers(deps ServiceDeps) *Handlers {
 
 	fieldDeviceHandler := fielddevicehandler.NewHandler(deps.AccessPolicy, deps.FacilityLink, projectHandler.notifyProjectChange, projectHandler.notifyProjectFieldDeviceDelta)
 	fieldDeviceHandler.ConfigureExport(deps.Export)
+	facilityDetails := deps.FacilityDetails
+	facilityDetails.Notify = projectHandler.notifyProjectMutation
+	facilityDetailRead, facilityDetailWrite := NewProjectFacilityDetailEndpoints(facilityDetails)
 	return &Handlers{
-		Project:            projectHandler,
-		Changes:            changeshandler.NewHandler(deps.AccessPolicy, deps.Changes),
-		Membership:         membershiphandler.NewHandler(deps.AccessPolicy, workflow, projectHandler.notifyProjectChange),
-		ControlCabinet:     controlCabinetHandler,
-		SPSController:      spsControllerHandler,
-		FieldDevice:        fieldDeviceHandler,
-		ObjectData:         objectdatahandler.NewHandler(deps.AccessPolicy, deps.FacilityLink, projectHandler.notifyProjectChange),
-		Phase:              phasehandler.NewHandler(deps.Phase),
-		PhasePermission:    phasepermissionhandler.NewHandler(deps.PhasePermission),
-		FieldDeviceOptions: fielddevicehandler.NewOptionsHandler(deps.AccessPolicy, deps.FieldDeviceOptions),
-		FacilityDetail:     NewFacilityDetailHandler(deps.AccessPolicy, deps.FacilityLink, deps.FacilityDetail, deps.Authorization, projectHandler.notifyProjectMutation),
-		RefreshBroadcaster: NewFacilityRefreshBroadcaster(deps.FacilityLink, collaboration, deps.Changes),
+		Project:             projectHandler,
+		Changes:             changeshandler.NewHandler(deps.AccessPolicy, deps.Changes),
+		Membership:          membershiphandler.NewHandler(deps.AccessPolicy, workflow, projectHandler.notifyProjectChange),
+		ControlCabinet:      controlCabinetHandler,
+		SPSController:       spsControllerHandler,
+		FieldDevice:         fieldDeviceHandler,
+		ObjectData:          objectdatahandler.NewHandler(deps.AccessPolicy, deps.FacilityLink, projectHandler.notifyProjectChange),
+		Phase:               phasehandler.NewHandler(deps.Phase),
+		PhasePermission:     phasepermissionhandler.NewHandler(deps.PhasePermission),
+		FieldDeviceOptions:  fielddevicehandler.NewOptionsHandler(deps.AccessPolicy, deps.FieldDeviceOptions),
+		FacilityDetailRead:  facilityDetailRead,
+		FacilityDetailWrite: facilityDetailWrite,
+		RefreshBroadcaster:  NewFacilityRefreshBroadcaster(deps.FacilityLink, collaboration, deps.Changes),
 	}
 }

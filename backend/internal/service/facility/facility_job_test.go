@@ -24,18 +24,18 @@ func (f *facilityJobPublisherFake) BroadcastFacilityJobProgress(_ context.Contex
 	f.mu.Unlock()
 }
 
-func TestFacilityJobManagerPublishesPersistedTaskProgress(t *testing.T) {
+func TestFacilityJobWorkerPublishesPersistedTaskProgress(t *testing.T) {
 	db := openFacilityJobTestDB(t)
 	publisher := &facilityJobPublisherFake{}
-	manager := NewFacilityJobManagerWithDB(publisher, db)
-	t.Cleanup(manager.Close)
-	manager.RegisterTask("test.progress.v1", FacilityJobHandlerFunc(progressTask))
+	jobs := NewDurableFacilityJobs(publisher, db)
+	t.Cleanup(jobs.Worker.Close)
+	jobs.Tasks.Register("test.progress.v1", FacilityJobHandlerFunc(progressTask))
 
 	job := newTestFacilityJob("test.progress.v1")
-	if _, err := manager.SubmitTask(t.Context(), job); err != nil {
+	if _, err := jobs.Service.SubmitTask(t.Context(), job); err != nil {
 		t.Fatalf("SubmitTask() error = %v", err)
 	}
-	waitForFacilityJobStatus(t, manager, job.OwnerID, job.ID, FacilityJobStatusCompleted)
+	waitForFacilityJobStatus(t, jobs.Service, job.OwnerID, job.ID, FacilityJobStatusCompleted)
 
 	publisher.mu.Lock()
 	defer publisher.mu.Unlock()
@@ -44,10 +44,10 @@ func TestFacilityJobManagerPublishesPersistedTaskProgress(t *testing.T) {
 	}
 }
 
-func TestFacilityJobManagerListCursorIsOwnerScoped(t *testing.T) {
+func TestJobServiceListCursorIsOwnerScoped(t *testing.T) {
 	db := openFacilityJobTestDB(t)
-	manager := NewFacilityJobManagerWithDB(nil, db)
-	t.Cleanup(manager.Close)
+	jobs := NewDurableFacilityJobs(nil, db)
+	t.Cleanup(jobs.Worker.Close)
 	ownerID := uuid.New()
 	for index := range 4 {
 		job := newTestFacilityJob("unregistered.v1")
@@ -60,11 +60,11 @@ func TestFacilityJobManagerListCursorIsOwnerScoped(t *testing.T) {
 		}
 	}
 
-	page, err := manager.ListPage(ownerID, 2, "")
+	page, err := jobs.Service.ListPage(ownerID, 2, "")
 	if err != nil || len(page.Items) != 2 || page.NextCursor == "" {
 		t.Fatalf("first page = %#v, error = %v", page, err)
 	}
-	if _, err := manager.ListPage(uuid.New(), 2, page.NextCursor); !errors.Is(err, cursorcodec.ErrInvalid) {
+	if _, err := jobs.Service.ListPage(uuid.New(), 2, page.NextCursor); !errors.Is(err, cursorcodec.ErrInvalid) {
 		t.Fatalf("cross-owner cursor error = %v", err)
 	}
 }
@@ -74,7 +74,7 @@ func progressTask(_ context.Context, execution FacilityJobExecution) (FacilityJo
 	return FacilityJobTaskResult{Result: json.RawMessage(`{"done":true}`)}, nil
 }
 
-func newTestFacilityJob(task string) FacilityJob {
+func newTestFacilityJob(task FacilityJobTaskID) FacilityJob {
 	now := time.Now().UTC()
 	return FacilityJob{
 		ID: uuid.New(), OwnerID: uuid.New(), Kind: FacilityJobKindFieldDevice,
@@ -91,4 +91,14 @@ func hasProgress(events []apprealtime.FacilityJobProgressEvent, expected int) bo
 		}
 	}
 	return false
+}
+
+func TestNewFacilityJobTaskIDTrimsAndRejectsEmptyValues(t *testing.T) {
+	task, err := NewFacilityJobTaskID("  fielddevice.test.v1  ")
+	if err != nil || task != "fielddevice.test.v1" {
+		t.Fatalf("NewFacilityJobTaskID() = %q, %v", task, err)
+	}
+	if _, err := NewFacilityJobTaskID("  "); err == nil {
+		t.Fatal("NewFacilityJobTaskID() accepted an empty value")
+	}
 }

@@ -106,120 +106,152 @@ func NewExcelizeGenerator() *ExcelizeGenerator {
 
 const excelMaximumRows = 1_048_576
 
-func (g *ExcelizeGenerator) GenerateWorkbook(ctx context.Context, outputPath string, controllers []domainExport.Controller, source domainExport.DataProvider, req domainExport.Request, pageSize int) (int64, error) {
-	if pageSize <= 0 || pageSize > 500 {
-		pageSize = 500
-	}
-	f := excelize.NewFile()
-	defer func() { _ = f.Close() }()
-
-	st, err := createStyles(f)
+func (g *ExcelizeGenerator) GenerateWorkbook(ctx context.Context, build domainExport.WorkbookBuild) (int64, error) {
+	build.PageSize = normalizedExportPageSize(build.PageSize)
+	book, err := newWorkbookLifecycle(build.Request)
 	if err != nil {
 		return 0, err
 	}
-
-	defaultSheet := f.GetSheetName(0)
+	defer book.Close()
 	var written int64
-	usedSheets := make(map[string]struct{})
-	if err := writeExportManifest(f, req); err != nil {
-		return 0, err
+	for idx, controller := range sortedControllers(build.Controllers) {
+		count, writeErr := writeControllerWorkbook(ctx, book, idx, controller, build)
+		if writeErr != nil {
+			return 0, writeErr
+		}
+		written += count
 	}
-	machineSheets, err := newMachineDataSheets(f)
+	return written, book.Save(build.OutputPath)
+}
+
+func normalizedExportPageSize(pageSize int) int {
+	if pageSize <= 0 || pageSize > 500 {
+		return 500
+	}
+	return pageSize
+}
+
+type workbookLifecycle struct {
+	file         *excelize.File
+	styles       styles
+	machine      *machineDataSheets
+	defaultSheet string
+	usedSheets   map[string]struct{}
+}
+
+func newWorkbookLifecycle(request domainExport.Request) (*workbookLifecycle, error) {
+	file := excelize.NewFile()
+	styles, err := createStyles(file)
+	if err != nil {
+		_ = file.Close()
+		return nil, err
+	}
+	if err := writeExportManifest(file, request); err != nil {
+		_ = file.Close()
+		return nil, err
+	}
+	machine, err := newMachineDataSheets(file)
+	if err != nil {
+		_ = file.Close()
+		return nil, err
+	}
+	return &workbookLifecycle{file: file, styles: styles, machine: machine, defaultSheet: file.GetSheetName(0), usedSheets: make(map[string]struct{})}, nil
+}
+
+func (b *workbookLifecycle) Close() { _ = b.file.Close() }
+
+func (b *workbookLifecycle) Save(path string) error {
+	if err := b.machine.Close(); err != nil {
+		return err
+	}
+	if len(b.file.GetSheetList()) > 0 {
+		b.file.SetActiveSheet(0)
+	}
+	return b.file.SaveAs(path)
+}
+
+type controllerSheetWriter struct {
+	book       *workbookLifecycle
+	controller domainExport.Controller
+	stream     *excelize.StreamWriter
+	row        int
+	part       int
+}
+
+func newControllerSheetWriter(book *workbookLifecycle, controller domainExport.Controller, index int) (*controllerSheetWriter, error) {
+	writer := &controllerSheetWriter{book: book, controller: controller}
+	if err := writer.open(index == 0); err != nil {
+		return nil, err
+	}
+	return writer, nil
+}
+
+func (w *controllerSheetWriter) open(reuseDefault bool) error {
+	w.part++
+	name := uniqueSheetName(safeSheetName(w.controller.GADevice, w.controller.ID), w.part, w.book.usedSheets)
+	if reuseDefault && w.book.defaultSheet != "" {
+		if err := w.book.file.SetSheetName(w.book.defaultSheet, name); err != nil {
+			return err
+		}
+	} else if _, err := w.book.file.NewSheet(name); err != nil {
+		return err
+	}
+	stream, err := w.book.file.NewStreamWriter(name)
+	if err != nil {
+		return err
+	}
+	w.stream = stream
+	w.row, err = writeControllerHeading(stream, w.controller, w.book.styles)
+	return err
+}
+
+func (w *controllerSheetWriter) Write(device domainFacility.FieldDevice) error {
+	if w.row+len(device.BacnetObjects) > excelMaximumRows {
+		if err := w.stream.Flush(); err != nil {
+			return err
+		}
+		if err := w.open(false); err != nil {
+			return err
+		}
+	}
+	if err := w.stream.SetRow(cell("A", w.row), styledAnyRow(firstLine(w.controller, device), w.book.styles.firstLineStyle)); err != nil {
+		return err
+	}
+	w.row++
+	for _, object := range device.BacnetObjects {
+		if err := w.stream.SetRow(cell("A", w.row), anyToCells(bacnetLine(w.controller, device, object))); err != nil {
+			return err
+		}
+		w.row++
+	}
+	return w.book.machine.Write(w.controller, device)
+}
+
+func (w *controllerSheetWriter) Close() error { return w.stream.Flush() }
+
+func writeControllerWorkbook(ctx context.Context, book *workbookLifecycle, index int, controller domainExport.Controller, build domainExport.WorkbookBuild) (int64, error) {
+	writer, err := newControllerSheetWriter(book, controller, index)
 	if err != nil {
 		return 0, err
 	}
-
-	for idx, controller := range sortedControllers(controllers) {
-		select {
-		case <-ctx.Done():
-			return 0, ctx.Err()
-		default:
+	var written int64
+	for afterID := uuid.Nil; ; {
+		devices, listErr := build.Source.ListFieldDevicesByControllerAfter(ctx, controller.ID, build.Request, afterID, build.PageSize)
+		if listErr != nil {
+			return 0, listErr
 		}
-
-		part := 1
-		sheetName := uniqueSheetName(safeSheetName(controller.GADevice, controller.ID), part, usedSheets)
-		if idx == 0 && defaultSheet != "" {
-			if err := f.SetSheetName(defaultSheet, sheetName); err != nil {
+		for _, device := range devices {
+			if err := writer.Write(device); err != nil {
 				return 0, err
 			}
-		} else {
-			if _, err = f.NewSheet(sheetName); err != nil {
-				return 0, err
-			}
+			written++
 		}
-		stream, err := f.NewStreamWriter(sheetName)
-		if err != nil {
-			return 0, err
+		if len(devices) < build.PageSize {
+			break
 		}
-		rowIdx, err := writeControllerHeading(stream, controller, st)
-		if err != nil {
-			return 0, err
-		}
-
-		afterID := uuid.Nil
-		for {
-			devices, listErr := source.ListFieldDevicesByControllerAfter(ctx, controller.ID, req, afterID, pageSize)
-			if listErr != nil {
-				return 0, listErr
-			}
-			if len(devices) == 0 {
-				break
-			}
-			for _, device := range devices {
-				rowsNeeded := 1 + len(device.BacnetObjects)
-				if rowIdx+rowsNeeded-1 > excelMaximumRows {
-					if err := stream.Flush(); err != nil {
-						return 0, err
-					}
-					part++
-					sheetName = uniqueSheetName(safeSheetName(controller.GADevice, controller.ID), part, usedSheets)
-					if _, err := f.NewSheet(sheetName); err != nil {
-						return 0, err
-					}
-					stream, err = f.NewStreamWriter(sheetName)
-					if err != nil {
-						return 0, err
-					}
-					rowIdx, err = writeControllerHeading(stream, controller, st)
-					if err != nil {
-						return 0, err
-					}
-				}
-				if err := stream.SetRow(cell("A", rowIdx), styledAnyRow(firstLine(controller, device), st.firstLineStyle)); err != nil {
-					return 0, err
-				}
-				rowIdx++
-
-				for _, bo := range device.BacnetObjects {
-					if err := stream.SetRow(cell("A", rowIdx), anyToCells(bacnetLine(controller, device, bo))); err != nil {
-						return 0, err
-					}
-					rowIdx++
-				}
-				written++
-				if err := machineSheets.Write(controller, device); err != nil {
-					return 0, err
-				}
-			}
-			afterID = devices[len(devices)-1].ID
-			if len(devices) < pageSize {
-				break
-			}
-		}
-
-		if err := stream.Flush(); err != nil {
-			return 0, err
-		}
+		afterID = devices[len(devices)-1].ID
 	}
-	if err := machineSheets.Close(); err != nil {
-		return 0, err
-	}
-
-	if len(f.GetSheetList()) > 0 {
-		f.SetActiveSheet(0)
-	}
-
-	return written, f.SaveAs(outputPath)
+	return written, writer.Close()
 }
 
 type dataSheetWriter struct {
@@ -508,12 +540,12 @@ func uniqueSheetName(base string, part int, used map[string]struct{}) string {
 	}
 }
 
-func (g *ExcelizeGenerator) GenerateZipByCabinet(ctx context.Context, outputPath string, controllers []domainExport.Controller, source domainExport.DataProvider, req domainExport.Request, pageSize int) (int64, error) {
-	if err := os.MkdirAll(filepath.Dir(outputPath), 0o755); err != nil {
+func (g *ExcelizeGenerator) GenerateZipByCabinet(ctx context.Context, build domainExport.WorkbookBuild) (int64, error) {
+	if err := os.MkdirAll(filepath.Dir(build.OutputPath), 0o755); err != nil {
 		return 0, err
 	}
 
-	f, err := os.Create(outputPath)
+	f, err := os.Create(build.OutputPath)
 	if err != nil {
 		return 0, err
 	}
@@ -523,7 +555,7 @@ func (g *ExcelizeGenerator) GenerateZipByCabinet(ctx context.Context, outputPath
 	defer func() { _ = zw.Close() }()
 
 	byCabinet := map[uuid.UUID][]domainExport.Controller{}
-	for _, controller := range controllers {
+	for _, controller := range build.Controllers {
 		byCabinet[controller.ControlCabinetID] = append(byCabinet[controller.ControlCabinetID], controller)
 	}
 
@@ -545,7 +577,10 @@ func (g *ExcelizeGenerator) GenerateZipByCabinet(ctx context.Context, outputPath
 		tmpPath := tmp.Name()
 		_ = tmp.Close()
 
-		count, err := g.GenerateWorkbook(ctx, tmpPath, cabinetControllers, source, req, pageSize)
+		count, err := g.GenerateWorkbook(ctx, domainExport.WorkbookBuild{
+			OutputPath: tmpPath, Controllers: cabinetControllers,
+			Source: build.Source, Request: build.Request, PageSize: build.PageSize,
+		})
 		if err != nil {
 			_ = os.Remove(tmpPath)
 			return 0, err

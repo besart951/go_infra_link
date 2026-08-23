@@ -17,7 +17,7 @@ import (
 
 var ErrJobNotFound = errors.New("export job not found")
 
-const fieldDeviceExportTask = "fielddevice.export.v1"
+const fieldDeviceExportTask facilityservice.FacilityJobTaskID = "fielddevice.export.v1"
 
 type Config struct {
 	QueueSize             int
@@ -40,24 +40,26 @@ type Service struct {
 	workbook domainExport.WorkbookGenerator
 	zip      domainExport.ZipGenerator
 	files    domainExport.FileStore
-	jobs     *facilityservice.FacilityJobManager
+	jobs     *facilityservice.JobService
 	cfg      Config
 }
 
-func NewService(
-	data domainExport.DataProvider,
-	workbook domainExport.WorkbookGenerator,
-	zip domainExport.ZipGenerator,
-	files domainExport.FileStore,
-	jobs *facilityservice.FacilityJobManager,
-	cfg Config,
-) *Service {
+type Dependencies struct {
+	Data     domainExport.DataProvider
+	Workbook domainExport.WorkbookGenerator
+	ZIP      domainExport.ZipGenerator
+	Files    domainExport.FileStore
+	Jobs     *facilityservice.JobService
+	Tasks    *facilityservice.TaskRegistry
+}
+
+func NewService(deps Dependencies, cfg Config) *Service {
 	if cfg.PageSize <= 0 || cfg.PageSize > 500 {
 		cfg.PageSize = 500
 	}
-	service := &Service{data: data, workbook: workbook, zip: zip, files: files, jobs: jobs, cfg: cfg}
-	if jobs != nil {
-		jobs.RegisterTask(fieldDeviceExportTask, facilityservice.FacilityJobHandlerFunc(service.run))
+	service := &Service{data: deps.Data, workbook: deps.Workbook, zip: deps.ZIP, files: deps.Files, jobs: deps.Jobs, cfg: cfg}
+	if deps.Tasks != nil {
+		deps.Tasks.Register(fieldDeviceExportTask, facilityservice.FacilityJobHandlerFunc(service.run))
 	}
 	return service
 }
@@ -140,10 +142,14 @@ func (s *Service) run(ctx context.Context, execution facilityservice.FacilityJob
 
 	report(facilityservice.FacilityJobProgress{Progress: 30, Stage: "generating"})
 	var processed int64
+	build := domainExport.WorkbookBuild{
+		OutputPath: stagingPath, Controllers: controllers, Source: snapshot,
+		Request: req, PageSize: s.cfg.PageSize,
+	}
 	if outputType == domainExport.OutputTypeZip {
-		processed, err = s.zip.GenerateZipByCabinet(ctx, stagingPath, controllers, snapshot, req, s.cfg.PageSize)
+		processed, err = s.zip.GenerateZipByCabinet(ctx, build)
 	} else {
-		processed, err = s.workbook.GenerateWorkbook(ctx, stagingPath, controllers, snapshot, req, s.cfg.PageSize)
+		processed, err = s.workbook.GenerateWorkbook(ctx, build)
 	}
 	if err != nil {
 		return facilityservice.FacilityJobTaskResult{}, fmt.Errorf("generate export: %w", err)
@@ -215,7 +221,7 @@ func (s *Service) toExportJob(job facilityservice.FacilityJob) (domainExport.Job
 		return domainExport.Job{}, err
 	}
 	return domainExport.Job{
-		ID: job.ID, Status: status, Progress: job.Progress, Message: job.Stage,
+		ID: job.ID, Status: status, Progress: job.Progress, Message: string(job.Stage),
 		OutputType: result.OutputType, FileName: result.FileName, ContentType: result.ContentType,
 		FilePath: filePath, Error: job.Error, CreatedAt: job.CreatedAt, UpdatedAt: job.UpdatedAt,
 		Scope: scope,

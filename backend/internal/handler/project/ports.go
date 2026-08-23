@@ -8,14 +8,15 @@ import (
 	domainNotification "github.com/besart951/go_infra_link/backend/internal/domain/notification"
 	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
+	"github.com/besart951/go_infra_link/backend/internal/handler/middleware"
+	projectshared "github.com/besart951/go_infra_link/backend/internal/handler/project/shared"
 	"github.com/google/uuid"
 )
 
-// FacilityDetailServices groups the concrete facility aggregates used by
-// project-scoped hierarchy details. These calls deliberately bypass global
-// route middleware after the project handler has verified membership,
-// capability, and the actual project relationship.
-type FacilityDetailServices struct {
+type ProjectFacilityDetailDependencies struct {
+	Access                  ProjectAccessPolicyService
+	Links                   ProjectFacilityLinkService
+	Authorization           middleware.AuthorizationChecker
 	Building                FacilityBuildingDetailService
 	ControlCabinet          FacilityControlCabinetDetailService
 	SPSController           FacilitySPSControllerDetailService
@@ -23,6 +24,7 @@ type FacilityDetailServices struct {
 	FieldDevice             FacilityFieldDeviceDetailService
 	Apparat                 FacilityApparatDetailService
 	SystemPart              FacilitySystemPartDetailService
+	Notify                  projectshared.ProjectMutationNotifier
 }
 
 type FacilityBuildingDetailService interface {

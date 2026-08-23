@@ -33,10 +33,10 @@ type Service interface {
 
 type Handler struct {
 	service Service
-	jobs    *facilityservice.FacilityJobManager
+	jobs    *facilityservice.JobService
 }
 
-func NewHandler(service Service, jobs ...*facilityservice.FacilityJobManager) *Handler {
+func NewHandler(service Service, jobs ...*facilityservice.JobService) *Handler {
 	handler := &Handler{service: service}
 	if len(jobs) > 0 {
 		handler.jobs = jobs[0]

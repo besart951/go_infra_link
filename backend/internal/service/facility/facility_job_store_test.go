@@ -20,7 +20,8 @@ func TestPersistedTaskRunsAfterManagerRestartWithoutResubmission(t *testing.T) {
 	db := openFacilityJobTestDB(t)
 	ownerID := uuid.New()
 	jobID := uuid.New()
-	first := NewFacilityJobManagerWithDB(nil, db)
+	firstJobs := NewDurableFacilityJobs(nil, db)
+	first := firstJobs.Service
 	if _, err := first.SubmitTask(t.Context(), FacilityJob{
 		ID: jobID, OwnerID: ownerID, Kind: FacilityJobKindFieldDevice,
 		Class: FacilityJobClassExport, Type: FacilityJobTypeExport,
@@ -28,12 +29,13 @@ func TestPersistedTaskRunsAfterManagerRestartWithoutResubmission(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("SubmitTask() error = %v", err)
 	}
-	first.Close()
+	firstJobs.Worker.Close()
 
-	second := NewFacilityJobManagerWithDB(nil, db)
-	t.Cleanup(second.Close)
+	secondJobs := NewDurableFacilityJobs(nil, db)
+	second := secondJobs.Service
+	t.Cleanup(secondJobs.Worker.Close)
 	runs := make(chan int, 1)
-	second.RegisterTask("test.export.v1", FacilityJobHandlerFunc(func(_ context.Context, execution FacilityJobExecution) (FacilityJobTaskResult, error) {
+	secondJobs.Tasks.Register("test.export.v1", FacilityJobHandlerFunc(func(_ context.Context, execution FacilityJobExecution) (FacilityJobTaskResult, error) {
 		job, report := execution.Job, execution.Reporter.Report
 		var payload struct {
 			Value int `json:"value"`
@@ -63,8 +65,9 @@ func TestPersistedTaskRunsAfterManagerRestartWithoutResubmission(t *testing.T) {
 
 func TestExportConcurrencyLimitAndRetry(t *testing.T) {
 	db := openFacilityJobTestDB(t)
-	manager := NewFacilityJobManagerWithDB(nil, db)
-	t.Cleanup(manager.Close)
+	jobs := NewDurableFacilityJobs(nil, db)
+	manager := jobs.Service
+	t.Cleanup(jobs.Worker.Close)
 	ownerID := uuid.New()
 	for range 2 {
 		if _, err := manager.SubmitTask(t.Context(), FacilityJob{
@@ -84,8 +87,9 @@ func TestExportConcurrencyLimitAndRetry(t *testing.T) {
 
 func TestCancelQueuedJob(t *testing.T) {
 	db := openFacilityJobTestDB(t)
-	manager := NewFacilityJobManagerWithDB(nil, db)
-	t.Cleanup(manager.Close)
+	jobs := NewDurableFacilityJobs(nil, db)
+	manager := jobs.Service
+	t.Cleanup(jobs.Worker.Close)
 	ownerID, jobID := uuid.New(), uuid.New()
 	if _, err := manager.SubmitTask(t.Context(), FacilityJob{
 		ID: jobID, OwnerID: ownerID, Kind: FacilityJobKindFieldDevice,
@@ -104,11 +108,12 @@ func TestCancelQueuedJob(t *testing.T) {
 
 func TestCancelRunningJobPreservesCancelledStatus(t *testing.T) {
 	db := openFacilityJobTestDB(t)
-	manager := NewFacilityJobManagerWithDB(nil, db)
-	t.Cleanup(manager.Close)
+	jobs := NewDurableFacilityJobs(nil, db)
+	manager := jobs.Service
+	t.Cleanup(jobs.Worker.Close)
 	started := make(chan struct{})
 	stopped := make(chan struct{})
-	manager.RegisterTask("wait-for-cancel.v1", FacilityJobHandlerFunc(func(ctx context.Context, _ FacilityJobExecution) (FacilityJobTaskResult, error) {
+	jobs.Tasks.Register("wait-for-cancel.v1", FacilityJobHandlerFunc(func(ctx context.Context, _ FacilityJobExecution) (FacilityJobTaskResult, error) {
 		close(started)
 		<-ctx.Done()
 		close(stopped)
@@ -137,6 +142,72 @@ func TestCancelRunningJobPreservesCancelledStatus(t *testing.T) {
 	job := waitForFacilityJobStatus(t, manager, ownerID, jobID, FacilityJobStatusCancelled)
 	if job.Retryable {
 		t.Fatalf("cancelled job unexpectedly retryable: %#v", job)
+	}
+}
+
+func TestRemoveTerminalJobClearsOnlyOwnedExecutionMetadata(t *testing.T) {
+	db := openFacilityJobTestDB(t)
+	jobs := NewDurableFacilityJobs(nil, db)
+	manager := jobs.Service
+	t.Cleanup(jobs.Worker.Close)
+	ownerID, jobID := uuid.New(), uuid.New()
+	if _, err := manager.SubmitTask(t.Context(), FacilityJob{
+		ID: jobID, OwnerID: ownerID, Kind: FacilityJobKindFieldDevice,
+		Class: FacilityJobClassExport, Type: FacilityJobTypeExport, Task: "unregistered.v1",
+	}); err != nil {
+		t.Fatalf("SubmitTask() error = %v", err)
+	}
+	if err := manager.Remove(t.Context(), uuid.New(), jobID); !errors.Is(err, ErrFacilityJobNotFound) {
+		t.Fatalf("Remove() other owner error = %v, want %v", err, ErrFacilityJobNotFound)
+	}
+	if err := manager.Remove(t.Context(), ownerID, jobID); !errors.Is(err, ErrFacilityJobNotRemovable) {
+		t.Fatalf("Remove() queued error = %v, want %v", err, ErrFacilityJobNotRemovable)
+	}
+
+	now := time.Now().UTC()
+	if err := db.Model(&facilityJobRecord{}).Where("owner_id = ? AND id = ?", ownerID, jobID).
+		Updates(map[string]any{"status": string(FacilityJobStatusCompleted), "completed_at": now}).Error; err != nil {
+		t.Fatalf("complete job: %v", err)
+	}
+	if err := db.Create(&facilityJobItemRecord{
+		OwnerID: ownerID, JobID: jobID, Ordinal: 0, Status: "completed", Input: []byte(`{}`), CreatedAt: now, UpdatedAt: now,
+	}).Error; err != nil {
+		t.Fatalf("create item: %v", err)
+	}
+	if err := db.Create(&facilityJobIDMappingRecord{
+		OwnerID: ownerID, JobID: jobID, EntityType: "field_device", SourceID: uuid.New(), TargetID: uuid.New(), CreatedAt: now,
+	}).Error; err != nil {
+		t.Fatalf("create mapping: %v", err)
+	}
+	if err := db.Create(&facilityAggregateLifecycleRecord{
+		Kind: "field_device", ResourceID: uuid.New(), State: "deleting", OwnerID: ownerID, JobID: jobID, CreatedAt: now, UpdatedAt: now,
+	}).Error; err != nil {
+		t.Fatalf("create lifecycle: %v", err)
+	}
+
+	if err := manager.Remove(t.Context(), ownerID, jobID); err != nil {
+		t.Fatalf("Remove() error = %v", err)
+	}
+	if _, err := manager.Get(ownerID, jobID); !errors.Is(err, ErrFacilityJobNotFound) {
+		t.Fatalf("Get() after Remove() error = %v, want %v", err, ErrFacilityJobNotFound)
+	}
+	assertFacilityJobMetadataRemoved(t, db, ownerID, jobID)
+}
+
+func assertFacilityJobMetadataRemoved(t *testing.T, db *gorm.DB, ownerID, jobID uuid.UUID) {
+	t.Helper()
+	for _, target := range []struct {
+		record any
+		name   string
+	}{
+		{&facilityJobItemRecord{}, "items"},
+		{&facilityJobIDMappingRecord{}, "mappings"},
+		{&facilityAggregateLifecycleRecord{}, "lifecycle records"},
+	} {
+		var count int64
+		if err := db.Model(target.record).Where("owner_id = ? AND job_id = ?", ownerID, jobID).Count(&count).Error; err != nil || count != 0 {
+			t.Fatalf("%s after Remove() = %d, error = %v; want zero", target.name, count, err)
+		}
 	}
 }
 
@@ -172,9 +243,10 @@ func TestFacilityJobJSONFieldsPersistAsJSONBPostgres(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	manager := NewFacilityJobManagerWithDB(nil, database)
-	t.Cleanup(manager.Close)
-	manager.RegisterTask("test.export.v1", FacilityJobHandlerFunc(func(_ context.Context, execution FacilityJobExecution) (FacilityJobTaskResult, error) {
+	jobs := NewDurableFacilityJobs(nil, database)
+	manager := jobs.Service
+	t.Cleanup(jobs.Worker.Close)
+	jobs.Tasks.Register("test.export.v1", FacilityJobHandlerFunc(func(_ context.Context, execution FacilityJobExecution) (FacilityJobTaskResult, error) {
 		total := int64(1)
 		execution.Reporter.Report(FacilityJobProgress{Progress: 50, Stage: "generating", Processed: 1, Total: &total})
 		return FacilityJobTaskResult{Result: json.RawMessage(`{"done":true}`)}, nil
@@ -203,8 +275,9 @@ func TestDeleteJobAdmissionLocksAggregateAtomically(t *testing.T) {
 		t.Fatalf("seed aggregate: %v", err)
 	}
 
-	manager := NewFacilityJobManagerWithDB(nil, db)
-	t.Cleanup(manager.Close)
+	jobs := NewDurableFacilityJobs(nil, db)
+	manager := jobs.Service
+	t.Cleanup(jobs.Worker.Close)
 	job := admittedDeleteJob(uuid.New(), uuid.New(), resourceID)
 	if _, err := manager.SubmitTask(t.Context(), job); err != nil {
 		t.Fatalf("submit admitted job: %v", err)
@@ -228,8 +301,9 @@ func TestDeleteJobAdmissionRejectsMissingAggregateWithoutCreatingJob(t *testing.
 	if err := db.Exec("CREATE TABLE control_cabinets (id text PRIMARY KEY, version integer NOT NULL)").Error; err != nil {
 		t.Fatalf("create aggregate table: %v", err)
 	}
-	manager := NewFacilityJobManagerWithDB(nil, db)
-	t.Cleanup(manager.Close)
+	jobs := NewDurableFacilityJobs(nil, db)
+	manager := jobs.Service
+	t.Cleanup(jobs.Worker.Close)
 
 	job := admittedDeleteJob(uuid.New(), uuid.New(), uuid.New())
 	if _, err := manager.SubmitTask(t.Context(), job); !errors.Is(err, ErrAggregateNotFound) {
@@ -269,7 +343,7 @@ func openFacilityJobTestDB(t *testing.T) *gorm.DB {
 	return db
 }
 
-func waitForFacilityJobStatus(t *testing.T, manager *FacilityJobManager, ownerID, jobID uuid.UUID, want FacilityJobStatus) FacilityJob {
+func waitForFacilityJobStatus(t *testing.T, manager *JobService, ownerID, jobID uuid.UUID, want FacilityJobStatus) FacilityJob {
 	t.Helper()
 	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {

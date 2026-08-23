@@ -23,15 +23,15 @@ func TestProjectCollaborationProjectChangeRoutesAcrossInstances(t *testing.T) {
 	change := ProjectChange{
 		ProjectID: projectID, Revision: 42, EventID: uuid.New(), AggregateType: "field_device",
 		AggregateID: uuid.New(), Action: "updated", ActorID: ptrUUID(uuid.New()),
-		ChangedFields: []string{"bmk", "description"}, ParentRefs: map[string]string{"control_cabinet_id": uuid.NewString()},
-		OccurredAt: time.Now().UTC(),
+		ChangedFields: []string{"bmk", "description"},
+		OccurredAt:    time.Now().UTC(),
 	}
 	if err := hubA.BroadcastProjectChange(t.Context(), change); err != nil {
 		t.Fatalf("broadcast project change: %v", err)
 	}
 
 	message := receiveSocketMessageOfType(t, client.socket, projectCollaborationMessageProjectChange)
-	if len(message) != 11 {
+	if len(message) != 10 {
 		t.Fatalf("project_change keys = %#v", message)
 	}
 	if message["revision"] != float64(42) || message["event_id"] != change.EventID.String() || message["aggregate_id"] != change.AggregateID.String() {
@@ -65,7 +65,7 @@ func TestProjectCollaborationDraftStateRoutesAcrossInstances(t *testing.T) {
 	drainSocket(editor.socket)
 
 	hubA.UpdateDraftState(projectID, editorID, []ProjectDraftEntry{{
-		ProjectDraftSelector: ProjectDraftSelector{AggregateType: "field_device", AggregateID: uuid.NewString()},
+		ProjectDraftSelector: ProjectDraftSelector{AggregateType: "field_device", AggregateID: ptrUUID(uuid.New())},
 		Action:               "update", BaseVersion: 3, Fields: []ProjectDraftField{{Path: "bmk", Value: "draft"}},
 	}})
 
@@ -95,11 +95,11 @@ func TestProjectCollaborationDraftStoreReceivesSaveAndClear(t *testing.T) {
 	projectID, userID := uuid.New(), uuid.New()
 	client := registerProjectTestClient(hub, projectID, userID, 8)
 	drainSocket(client.socket)
-	selector := ProjectDraftSelector{AggregateType: "control_cabinet", AggregateID: uuid.NewString()}
+	selector := ProjectDraftSelector{AggregateType: "control_cabinet", AggregateID: ptrUUID(uuid.New())}
 	entry := ProjectDraftEntry{ProjectDraftSelector: selector, Action: "update", BaseVersion: 2, Fields: []ProjectDraftField{{Path: "control_cabinet_nr", Value: "AA-1"}}}
 
 	hub.UpdateDraftState(projectID, userID, []ProjectDraftEntry{entry})
-	if len(store.saved) != 1 || store.saved[0].AggregateID != selector.AggregateID {
+	if len(store.saved) != 1 || store.saved[0].AggregateID == nil || selector.AggregateID == nil || *store.saved[0].AggregateID != *selector.AggregateID {
 		t.Fatalf("saved = %+v", store.saved)
 	}
 	hub.ClearDraft(projectID, userID, selector)
@@ -131,18 +131,18 @@ func TestProjectCollaborationUnregisterIsIdempotentAcrossTabs(t *testing.T) {
 	first := registerProjectTestClient(hub, projectID, userID, 8)
 	second := registerProjectTestClient(hub, projectID, userID, 8)
 	hub.UpdateDraftState(projectID, userID, []ProjectDraftEntry{{
-		ProjectDraftSelector: ProjectDraftSelector{AggregateType: "field_device", AggregateID: uuid.NewString()},
+		ProjectDraftSelector: ProjectDraftSelector{AggregateType: "field_device", AggregateID: ptrUUID(uuid.New())},
 		Action:               "update", Fields: []ProjectDraftField{{Path: "bmk", Value: "draft"}},
 	}})
 
 	hub.Unregister(first)
 	hub.Unregister(first)
 
-	hub.mu.RLock()
-	room := hub.rooms[projectID]
+	hub.rooms.mu.RLock()
+	room := hub.rooms.rooms[projectID]
 	connections := room.connectionByID[userID]
 	drafts := len(room.draftStates[userID])
-	hub.mu.RUnlock()
+	hub.rooms.mu.RUnlock()
 	if connections != 1 || drafts != 1 {
 		t.Fatalf("second tab state was changed by duplicate unregister: connections=%d drafts=%d", connections, drafts)
 	}
@@ -159,9 +159,9 @@ func TestProjectCollaborationBroadcastDoesNotCreateEmptyRoom(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	hub.mu.RLock()
-	rooms := len(hub.rooms)
-	hub.mu.RUnlock()
+	hub.rooms.mu.RLock()
+	rooms := len(hub.rooms.rooms)
+	hub.rooms.mu.RUnlock()
 	if rooms != 0 {
 		t.Fatalf("broadcast retained %d empty rooms", rooms)
 	}

@@ -50,9 +50,13 @@ func TestGenerateWorkbookStreamsPastFormerThreeHundredRowLimit(t *testing.T) {
 	}
 	source := &generatorPageSource{items: items}
 	path := t.TempDir() + "/export.xlsx"
-	count, err := NewExcelizeGenerator().GenerateWorkbook(t.Context(), path, []domainExport.Controller{{
-		ID: controllerID, ControlCabinetID: uuid.New(), GADevice: "A",
-	}}, source, domainExport.Request{SchemaVersion: 1}, 300)
+	count, err := NewExcelizeGenerator().GenerateWorkbook(t.Context(), domainExport.WorkbookBuild{
+		OutputPath: path,
+		Controllers: []domainExport.Controller{{
+			ID: controllerID, ControlCabinetID: uuid.New(), GADevice: "A",
+		}},
+		Source: source, Request: domainExport.Request{SchemaVersion: 1}, PageSize: 300,
+	})
 	if err != nil {
 		t.Fatalf("GenerateWorkbook() error = %v", err)
 	}

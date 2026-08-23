@@ -118,24 +118,25 @@ func MigrateFacilityAggregateLifecycle(db *gorm.DB) error {
 	return db.AutoMigrate(&facilityAggregateLifecycleRecord{})
 }
 
-type facilityJobStore interface {
+type JobStore interface {
 	CreateOrGetActive(context.Context, FacilityJob) (FacilityJob, bool, error)
 	Get(context.Context, uuid.UUID, uuid.UUID) (FacilityJob, error)
 	List(context.Context, uuid.UUID, int) ([]FacilityJob, error)
 	ListPage(context.Context, uuid.UUID, *facilityJobCursor, int) ([]FacilityJob, error)
-	ClaimNext(context.Context, FacilityJobClass, []string, string, time.Time, time.Time) (FacilityJob, bool, error)
+	ClaimNext(context.Context, FacilityJobClass, []FacilityJobTaskID, string, time.Time, time.Time) (FacilityJob, bool, error)
 	Heartbeat(context.Context, uuid.UUID, uuid.UUID, string, time.Time, time.Time) error
 	Save(context.Context, FacilityJob, string) error
 	Prune(context.Context, time.Time) error
 	Retry(context.Context, uuid.UUID, uuid.UUID, time.Time) (FacilityJob, error)
 	Cancel(context.Context, uuid.UUID, uuid.UUID, time.Time) (FacilityJob, error)
+	Delete(context.Context, uuid.UUID, uuid.UUID) error
 }
 
 type sqlFacilityJobStore struct {
 	db *gorm.DB
 }
 
-func newSQLFacilityJobStore(db *gorm.DB) facilityJobStore {
+func newSQLFacilityJobStore(db *gorm.DB) JobStore {
 	if db == nil {
 		return nil
 	}
@@ -366,7 +367,7 @@ func (s *sqlFacilityJobStore) ListPage(ctx context.Context, ownerID uuid.UUID, a
 func (s *sqlFacilityJobStore) ClaimNext(
 	ctx context.Context,
 	class FacilityJobClass,
-	tasks []string,
+	tasks []FacilityJobTaskID,
 	workerID string,
 	now, leaseUntil time.Time,
 ) (FacilityJob, bool, error) {
@@ -513,6 +514,41 @@ func (s *sqlFacilityJobStore) Cancel(ctx context.Context, ownerID, jobID uuid.UU
 	return s.Get(ctx, ownerID, jobID)
 }
 
+func (s *sqlFacilityJobStore) Delete(ctx context.Context, ownerID, jobID uuid.UUID) error {
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var job facilityJobRecord
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			Where("owner_id = ? AND id = ?", ownerID, jobID).
+			First(&job).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrFacilityJobNotFound
+			}
+			return err
+		}
+		if !job.toDomain().IsTerminal() {
+			return ErrFacilityJobNotRemovable
+		}
+		return deleteFacilityJobRecords(tx, ownerID, jobID)
+	})
+}
+
+func deleteFacilityJobRecords(tx *gorm.DB, ownerID, jobID uuid.UUID) error {
+	for _, target := range []struct {
+		record   any
+		idColumn string
+	}{
+		{&facilityJobItemRecord{}, "job_id"},
+		{&facilityJobIDMappingRecord{}, "job_id"},
+		{&facilityAggregateLifecycleRecord{}, "job_id"},
+		{&facilityJobRecord{}, "id"},
+	} {
+		if err := tx.Where("owner_id = ? AND "+target.idColumn+" = ?", ownerID, jobID).Delete(target.record).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (s *sqlFacilityJobStore) Prune(ctx context.Context, before time.Time) error {
 	return s.db.WithContext(ctx).
 		Where("status IN ? AND updated_at < ?", []string{
@@ -529,12 +565,12 @@ func facilityJobRecordFromDomain(job FacilityJob) facilityJobRecord {
 		Kind:       string(job.Kind),
 		Class:      string(job.Class),
 		JobType:    string(job.Type),
-		Task:       job.Task,
+		Task:       string(job.Task),
 		Payload:    postgresjson.Document(job.Payload),
 		Checkpoint: postgresjson.Document(job.Checkpoint),
 		Status:     string(job.Status),
 		Progress:   job.Progress,
-		Stage:      job.Stage,
+		Stage:      string(job.Stage),
 		Error:      job.Error,
 		Processed:  job.Processed,
 		Total:      job.Total,
@@ -554,12 +590,12 @@ func (r facilityJobRecord) toDomain() FacilityJob {
 		Kind:        FacilityJobKind(r.Kind),
 		Class:       FacilityJobClass(r.Class),
 		Type:        FacilityJobType(r.JobType),
-		Task:        r.Task,
+		Task:        FacilityJobTaskID(r.Task),
 		Payload:     r.Payload.Bytes(),
 		Checkpoint:  r.Checkpoint.Bytes(),
 		Status:      FacilityJobStatus(r.Status),
 		Progress:    r.Progress,
-		Stage:       r.Stage,
+		Stage:       FacilityJobStage(r.Stage),
 		Error:       r.Error,
 		Attempts:    r.Attempts,
 		Processed:   r.Processed,

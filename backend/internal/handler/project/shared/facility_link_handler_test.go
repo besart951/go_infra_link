@@ -21,14 +21,14 @@ import (
 
 func TestFacilityLinkHandlerStartCopyPersistsProjectCommand(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	manager := newDurableFacilityJobManager(t)
+	jobs := newDurableFacilityJobs(t)
 
 	projectID := uuid.New()
 	actorID := uuid.New()
 	operationID := uuid.New()
 	sourceID := uuid.New()
 	received := make(chan domainproject.ProjectFacilityCopyCommand, 1)
-	manager.RegisterTask(domainproject.TaskCopyProjectControlCabinet, facilityservice.FacilityJobHandlerFunc(func(_ context.Context, execution facilityservice.FacilityJobExecution) (facilityservice.FacilityJobTaskResult, error) {
+	jobs.Tasks.Register(domainproject.TaskCopyProjectControlCabinet, facilityservice.FacilityJobHandlerFunc(func(_ context.Context, execution facilityservice.FacilityJobExecution) (facilityservice.FacilityJobTaskResult, error) {
 		job := execution.Job
 		var payload domainproject.ProjectFacilityCopyCommand
 		if err := json.Unmarshal(job.Payload, &payload); err != nil {
@@ -39,7 +39,7 @@ func TestFacilityLinkHandlerStartCopyPersistsProjectCommand(t *testing.T) {
 	}))
 
 	handler := NewFacilityLinkHandler(nil, nil)
-	handler.ConfigureFacilityJobs(manager)
+	handler.ConfigureFacilityJobs(jobs.Service)
 	c, recorder := copyRequestContext(projectID, operationID, actorID)
 
 	handler.StartCopy(c, ProjectCopyCommand{
@@ -63,10 +63,10 @@ func TestFacilityLinkHandlerStartCopyPersistsProjectCommand(t *testing.T) {
 }
 
 func TestFacilityLinkHandlerRejectsCopyWithoutDurableStore(t *testing.T) {
-	manager := facilityservice.NewFacilityJobManager(nil)
-	t.Cleanup(manager.Close)
+	jobs := facilityservice.NewFacilityJobs(nil)
+	t.Cleanup(jobs.Worker.Close)
 	handler := NewFacilityLinkHandler(nil, nil)
-	handler.ConfigureFacilityJobs(manager)
+	handler.ConfigureFacilityJobs(jobs.Service)
 	c, recorder := copyRequestContext(uuid.New(), uuid.New(), uuid.New())
 
 	handler.StartCopy(c, ProjectCopyCommand{Task: domainproject.TaskCopyProjectControlCabinet})
@@ -75,7 +75,7 @@ func TestFacilityLinkHandlerRejectsCopyWithoutDurableStore(t *testing.T) {
 	}
 }
 
-func newDurableFacilityJobManager(t *testing.T) *facilityservice.FacilityJobManager {
+func newDurableFacilityJobs(t *testing.T) *facilityservice.FacilityJobs {
 	t.Helper()
 	db, err := gorm.Open(sqlite.Open(filepath.Join(t.TempDir(), "facility-jobs.db")), &gorm.Config{Logger: logger.Default.LogMode(logger.Silent)})
 	if err != nil {
@@ -89,9 +89,9 @@ func newDurableFacilityJobManager(t *testing.T) *facilityservice.FacilityJobMana
 		t.Fatalf("database handle: %v", err)
 	}
 	t.Cleanup(func() { _ = sqlDB.Close() })
-	manager := facilityservice.NewFacilityJobManagerWithDB(nil, db)
-	t.Cleanup(manager.Close)
-	return manager
+	jobs := facilityservice.NewDurableFacilityJobs(nil, db)
+	t.Cleanup(jobs.Worker.Close)
+	return jobs
 }
 
 func copyRequestContext(projectID, operationID, actorID uuid.UUID) (*gin.Context, *httptest.ResponseRecorder) {

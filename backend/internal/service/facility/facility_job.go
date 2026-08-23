@@ -6,6 +6,7 @@ import (
 	"errors"
 	"slices"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -45,6 +46,18 @@ const (
 
 type FacilityJobType string
 
+type FacilityJobTaskID string
+
+func NewFacilityJobTaskID(raw string) (FacilityJobTaskID, error) {
+	task := FacilityJobTaskID(strings.TrimSpace(raw))
+	if task == "" {
+		return "", errors.New("facility job task ID is required")
+	}
+	return task, nil
+}
+
+type FacilityJobStage string
+
 const (
 	FacilityJobTypeCopy    FacilityJobType = "copy"
 	FacilityJobTypeExport  FacilityJobType = "export"
@@ -54,19 +67,19 @@ const (
 )
 
 const (
-	facilityJobStageQueued              = "queued"
-	facilityJobStagePreparing           = "preparing"
-	facilityJobStageCopyingRoot         = "copying_root"
-	facilityJobStageCopyingControllers  = "copying_controllers"
-	facilityJobStageCopyingSystemTypes  = "copying_system_types"
-	facilityJobStageCopyingFieldDevices = "copying_field_devices"
-	facilityJobStageFinalizing          = "finalizing"
-	facilityJobStageCompleted           = "completed"
-	facilityJobStageFailed              = "failed"
-	facilityJobStageCancelled           = "cancelled"
-	facilityJobRetention                = 90 * 24 * time.Hour
-	facilityJobLeaseDuration            = 30 * time.Second
-	facilityJobHeartbeatInterval        = 10 * time.Second
+	facilityJobStageQueued              FacilityJobStage = "queued"
+	facilityJobStagePreparing           FacilityJobStage = "preparing"
+	facilityJobStageCopyingRoot         FacilityJobStage = "copying_root"
+	facilityJobStageCopyingControllers  FacilityJobStage = "copying_controllers"
+	facilityJobStageCopyingSystemTypes  FacilityJobStage = "copying_system_types"
+	facilityJobStageCopyingFieldDevices FacilityJobStage = "copying_field_devices"
+	facilityJobStageFinalizing          FacilityJobStage = "finalizing"
+	facilityJobStageCompleted           FacilityJobStage = "completed"
+	facilityJobStageFailed              FacilityJobStage = "failed"
+	facilityJobStageCancelled           FacilityJobStage = "cancelled"
+	facilityJobRetention                                 = 90 * 24 * time.Hour
+	facilityJobLeaseDuration                             = 30 * time.Second
+	facilityJobHeartbeatInterval                         = 10 * time.Second
 )
 
 var (
@@ -74,7 +87,8 @@ var (
 	ErrFacilityJobLimit          = errors.New("facility job concurrency limit reached")
 	ErrFacilityJobNotRetryable   = errors.New("facility job is not retryable")
 	ErrFacilityJobNotCancellable = errors.New("facility job is not cancellable")
-	errFacilityJobManagerClosed  = errors.New("facility job manager is closed")
+	ErrFacilityJobNotRemovable   = errors.New("facility job is not removable")
+	errFacilityJobWorkerClosed   = errors.New("facility job worker is closed")
 )
 
 // FacilityJob is a durable, user-scoped asynchronous facility operation. The
@@ -85,12 +99,12 @@ type FacilityJob struct {
 	Kind        FacilityJobKind
 	Class       FacilityJobClass
 	Type        FacilityJobType
-	Task        string
+	Task        FacilityJobTaskID
 	Payload     json.RawMessage
 	Checkpoint  json.RawMessage
 	Status      FacilityJobStatus
 	Progress    int
-	Stage       string
+	Stage       FacilityJobStage
 	Error       string
 	Attempts    int
 	Processed   int64
@@ -116,7 +130,7 @@ func (j FacilityJob) IsTerminal() bool {
 
 type FacilityJobProgress struct {
 	Progress   int
-	Stage      string
+	Stage      FacilityJobStage
 	Processed  int64
 	Total      *int64
 	Succeeded  int64
@@ -157,11 +171,11 @@ func (reporter facilityJobReporter) Report(progress FacilityJobProgress) {
 }
 
 const (
-	FacilityJobTaskCopyControlCabinet          = "controlcabinet.copy.v1"
-	FacilityJobTaskCopySPSController           = "spscontroller.copy.v1"
-	FacilityJobTaskCopySPSControllerSystemType = "spscontrollersystemtype.copy.v1"
-	FacilityJobTaskCopyFieldDevice             = "fielddevice.copy.v1"
-	FacilityJobTaskCopyObjectData              = "objectdata.copy.v1"
+	FacilityJobTaskCopyControlCabinet          FacilityJobTaskID = "controlcabinet.copy.v1"
+	FacilityJobTaskCopySPSController           FacilityJobTaskID = "spscontroller.copy.v1"
+	FacilityJobTaskCopySPSControllerSystemType FacilityJobTaskID = "spscontrollersystemtype.copy.v1"
+	FacilityJobTaskCopyFieldDevice             FacilityJobTaskID = "fielddevice.copy.v1"
+	FacilityJobTaskCopyObjectData              FacilityJobTaskID = "objectdata.copy.v1"
 )
 
 type FacilityCopyTaskPayload struct {
@@ -181,10 +195,50 @@ type facilityJobCursor struct {
 	OwnerID   uuid.UUID `json:"owner_id"`
 }
 
-type FacilityJobManager struct {
+type TaskRegistry struct {
+	mu     sync.RWMutex
+	tasks  map[FacilityJobTaskID]FacilityJobHandler
+	signal func()
+}
+
+func newTaskRegistry() *TaskRegistry {
+	return &TaskRegistry{tasks: make(map[FacilityJobTaskID]FacilityJobHandler)}
+}
+
+func (r *TaskRegistry) Register(task FacilityJobTaskID, handler FacilityJobHandler) {
+	if r == nil || task == "" || handler == nil {
+		return
+	}
+	r.mu.Lock()
+	r.tasks[task] = handler
+	r.mu.Unlock()
+	if r.signal != nil {
+		r.signal()
+	}
+}
+
+func (r *TaskRegistry) handler(task FacilityJobTaskID) FacilityJobHandler {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.tasks[task]
+}
+
+func (r *TaskRegistry) IDs() []FacilityJobTaskID {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	tasks := make([]FacilityJobTaskID, 0, len(r.tasks))
+	for task := range r.tasks {
+		tasks = append(tasks, task)
+	}
+	sort.Slice(tasks, func(i, j int) bool { return tasks[i] < tasks[j] })
+	return tasks
+}
+
+type Worker struct {
 	mu        sync.Mutex
 	jobs      map[facilityJobKey]FacilityJob
-	store     facilityJobStore
+	store     JobStore
+	tasks     *TaskRegistry
 	workerID  string
 	publisher apprealtime.FacilityJobProgressPublisher
 	ctx       context.Context
@@ -192,70 +246,69 @@ type FacilityJobManager struct {
 	wg        sync.WaitGroup
 	closeOnce sync.Once
 	closed    bool
-	tasks     map[string]FacilityJobHandler
 	cancels   map[facilityJobKey]context.CancelFunc
 	wake      chan struct{}
 }
 
-func NewFacilityJobManager(publisher apprealtime.FacilityJobProgressPublisher) *FacilityJobManager {
-	return newFacilityJobManager(publisher, nil)
+type JobService struct {
+	store     JobStore
+	worker    *Worker
+	publisher apprealtime.FacilityJobProgressPublisher
 }
 
-func NewFacilityJobManagerWithDB(publisher apprealtime.FacilityJobProgressPublisher, db *gorm.DB) *FacilityJobManager {
-	return newFacilityJobManager(publisher, newSQLFacilityJobStore(db))
+type FacilityJobs struct {
+	Service *JobService
+	Tasks   *TaskRegistry
+	Worker  *Worker
 }
 
-func newFacilityJobManager(publisher apprealtime.FacilityJobProgressPublisher, store facilityJobStore) *FacilityJobManager {
+func NewFacilityJobs(publisher apprealtime.FacilityJobProgressPublisher) *FacilityJobs {
+	return newFacilityJobs(publisher, nil)
+}
+
+func NewDurableFacilityJobs(publisher apprealtime.FacilityJobProgressPublisher, db *gorm.DB) *FacilityJobs {
+	return newFacilityJobs(publisher, newSQLFacilityJobStore(db))
+}
+
+func newFacilityJobs(publisher apprealtime.FacilityJobProgressPublisher, store JobStore) *FacilityJobs {
 	ctx, cancel := context.WithCancel(context.Background())
-	m := &FacilityJobManager{
+	registry := newTaskRegistry()
+	worker := &Worker{
 		jobs:      make(map[facilityJobKey]FacilityJob),
 		store:     store,
+		tasks:     registry,
 		workerID:  uuid.NewString(),
 		publisher: publisher,
 		ctx:       ctx,
 		cancel:    cancel,
-		tasks:     make(map[string]FacilityJobHandler),
 		cancels:   make(map[facilityJobKey]context.CancelFunc),
 		wake:      make(chan struct{}, 1),
 	}
+	registry.signal = worker.signal
+	service := &JobService{store: store, worker: worker, publisher: publisher}
 	if store != nil {
 		for range 2 {
-			m.wg.Add(2)
-			go m.dispatch(FacilityJobClassMutation)
-			go m.dispatch(FacilityJobClassExport)
+			worker.wg.Add(2)
+			go worker.dispatch(FacilityJobClassMutation)
+			go worker.dispatch(FacilityJobClassExport)
 		}
 	}
-	return m
+	return &FacilityJobs{Service: service, Tasks: registry, Worker: worker}
 }
 
-// RegisterTask connects a versioned persisted task name to executable domain
-// logic. Registration is intentionally explicit so the worker can safely
-// ignore jobs created by a newer application version.
-func (m *FacilityJobManager) RegisterTask(task string, handler FacilityJobHandler) {
-	if m == nil || task == "" || handler == nil {
-		return
-	}
-	m.mu.Lock()
-	m.tasks[task] = handler
-	m.mu.Unlock()
-	m.signalWorkers()
-}
-
-func (m *FacilityJobManager) SupportsDurableTasks() bool {
-	return m != nil && m.store != nil
+func (s *JobService) SupportsDurableTasks() bool {
+	return s != nil && s.store != nil
 }
 
 // SubmitTask persists all information required to execute a job after a
 // process restart.
-func (m *FacilityJobManager) SubmitTask(ctx context.Context, job FacilityJob) (FacilityJob, error) {
-	if m == nil || m.store == nil {
+func (s *JobService) SubmitTask(ctx context.Context, job FacilityJob) (FacilityJob, error) {
+	if s == nil || s.store == nil {
 		return FacilityJob{}, errors.New("durable facility job store is unavailable")
 	}
-	m.mu.Lock()
-	closed := m.closed
-	m.mu.Unlock()
+	closed := s.worker.isClosed()
 	if closed {
-		return FacilityJob{}, errFacilityJobManagerClosed
+		return FacilityJob{}, errFacilityJobWorkerClosed
 	}
 	if job.ID == uuid.Nil {
 		job.ID = uuid.New()
@@ -270,7 +323,7 @@ func (m *FacilityJobManager) SubmitTask(ctx context.Context, job FacilityJob) (F
 		job.Type = FacilityJobTypeCopy
 	}
 	now := time.Now().UTC()
-	_ = m.store.Prune(ctx, now.Add(-facilityJobRetention))
+	_ = s.store.Prune(ctx, now.Add(-facilityJobRetention))
 	job.Status = FacilityJobStatusQueued
 	job.Progress = 0
 	job.Stage = facilityJobStageQueued
@@ -278,20 +331,20 @@ func (m *FacilityJobManager) SubmitTask(ctx context.Context, job FacilityJob) (F
 	job.UpdatedAt = now
 	job.Retryable = true
 
-	selected, created, err := m.store.CreateOrGetActive(ctx, job)
+	selected, created, err := s.store.CreateOrGetActive(ctx, job)
 	if err != nil {
 		return FacilityJob{}, err
 	}
 	if created {
-		m.publish(selected)
+		s.publish(selected)
 	}
-	m.signalWorkers()
+	s.worker.signal()
 	return selected, nil
 }
 
-func (m *FacilityJobManager) signalWorkers() {
+func (w *Worker) signal() {
 	select {
-	case m.wake <- struct{}{}:
+	case w.wake <- struct{}{}:
 	default:
 	}
 }
@@ -299,34 +352,40 @@ func (m *FacilityJobManager) signalWorkers() {
 // Close cancels local workers and waits until their goroutines exit. Durable
 // jobs deliberately remain running until their lease expires, allowing a new
 // process to claim and resume them.
-func (m *FacilityJobManager) Close() {
-	if m == nil {
+func (w *Worker) Close() {
+	if w == nil {
 		return
 	}
-	m.closeOnce.Do(func() {
-		m.mu.Lock()
-		m.closed = true
-		m.mu.Unlock()
-		m.cancel()
-		m.wg.Wait()
+	w.closeOnce.Do(func() {
+		w.mu.Lock()
+		w.closed = true
+		w.mu.Unlock()
+		w.cancel()
+		w.wg.Wait()
 	})
 }
 
-func (m *FacilityJobManager) Get(ownerID, jobID uuid.UUID) (FacilityJob, error) {
-	if m == nil || m.store == nil {
+func (w *Worker) isClosed() bool {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return w.closed
+}
+
+func (s *JobService) Get(ownerID, jobID uuid.UUID) (FacilityJob, error) {
+	if s == nil || s.store == nil {
 		return FacilityJob{}, ErrFacilityJobNotFound
 	}
-	return m.store.Get(context.Background(), ownerID, jobID)
+	return s.store.Get(context.Background(), ownerID, jobID)
 }
 
-func (m *FacilityJobManager) List(ownerID uuid.UUID, limit int) ([]FacilityJob, error) {
-	if m == nil || m.store == nil {
+func (s *JobService) List(ownerID uuid.UUID, limit int) ([]FacilityJob, error) {
+	if s == nil || s.store == nil {
 		return nil, ErrFacilityJobNotFound
 	}
-	return m.store.List(context.Background(), ownerID, limit)
+	return s.store.List(context.Background(), ownerID, limit)
 }
 
-func (m *FacilityJobManager) ListPage(ownerID uuid.UUID, limit int, encodedCursor string) (FacilityJobPage, error) {
+func (s *JobService) ListPage(ownerID uuid.UUID, limit int, encodedCursor string) (FacilityJobPage, error) {
 	if limit <= 0 {
 		limit = 50
 	}
@@ -344,10 +403,10 @@ func (m *FacilityJobManager) ListPage(ownerID uuid.UUID, limit int, encodedCurso
 		}
 		after = &decoded
 	}
-	if m == nil || m.store == nil {
+	if s == nil || s.store == nil {
 		return FacilityJobPage{}, ErrFacilityJobNotFound
 	}
-	items, err := m.store.ListPage(context.Background(), ownerID, after, limit+1)
+	items, err := s.store.ListPage(context.Background(), ownerID, after, limit+1)
 	if err != nil {
 		return FacilityJobPage{}, err
 	}
@@ -401,8 +460,8 @@ func buildFacilityJobPage(ownerID uuid.UUID, items []FacilityJob, limit int, pag
 	return page, nil
 }
 
-func (m *FacilityJobManager) startHeartbeat(key facilityJobKey) func() {
-	if m.store == nil {
+func (w *Worker) startHeartbeat(key facilityJobKey) func() {
+	if w.store == nil {
 		return func() {}
 	}
 	stop := make(chan struct{})
@@ -415,7 +474,7 @@ func (m *FacilityJobManager) startHeartbeat(key facilityJobKey) func() {
 			select {
 			case <-ticker.C:
 				now := time.Now().UTC()
-				_ = m.store.Heartbeat(context.Background(), key.ownerID, key.jobID, m.workerID, now, now.Add(facilityJobLeaseDuration))
+				_ = w.store.Heartbeat(context.Background(), key.ownerID, key.jobID, w.workerID, now, now.Add(facilityJobLeaseDuration))
 			case <-stop:
 				return
 			}
@@ -427,19 +486,19 @@ func (m *FacilityJobManager) startHeartbeat(key facilityJobKey) func() {
 	}
 }
 
-func (m *FacilityJobManager) fail(key facilityJobKey, cause error) {
+func (w *Worker) fail(key facilityJobKey, cause error) {
 	message := "job_failed"
 	if cause != nil {
 		message = cause.Error()
 	}
-	m.update(key, FacilityJobStatusFailed, 100, facilityJobStageFailed, message)
+	w.update(key, FacilityJobStatusFailed, 100, facilityJobStageFailed, message)
 }
 
-func (m *FacilityJobManager) update(key facilityJobKey, status FacilityJobStatus, progress int, stage, failure string) {
-	m.mu.Lock()
-	job, ok := m.jobs[key]
+func (w *Worker) update(key facilityJobKey, status FacilityJobStatus, progress int, stage FacilityJobStage, failure string) {
+	w.mu.Lock()
+	job, ok := w.jobs[key]
 	if !ok {
-		m.mu.Unlock()
+		w.mu.Unlock()
 		return
 	}
 	job.Status = status
@@ -447,120 +506,109 @@ func (m *FacilityJobManager) update(key facilityJobKey, status FacilityJobStatus
 	job.Stage = stage
 	job.Error = failure
 	job.UpdatedAt = time.Now().UTC()
-	m.jobs[key] = job
-	m.mu.Unlock()
-	if err := m.persistAndPublish(job); err != nil {
+	w.jobs[key] = job
+	w.mu.Unlock()
+	if err := w.persistAndPublish(job); err != nil {
 		return
 	}
 	if job.IsTerminal() {
-		m.mu.Lock()
-		delete(m.jobs, key)
-		m.mu.Unlock()
+		w.mu.Lock()
+		delete(w.jobs, key)
+		w.mu.Unlock()
 	}
 }
 
-func (m *FacilityJobManager) persistAndPublish(job FacilityJob) error {
-	if m.store != nil {
-		if err := m.store.Save(context.Background(), job, m.workerID); err != nil {
+func (w *Worker) persistAndPublish(job FacilityJob) error {
+	if w.store != nil {
+		if err := w.store.Save(context.Background(), job, w.workerID); err != nil {
 			return err
 		}
 	}
-	m.publish(job)
+	publishFacilityJob(w.publisher, job)
 	return nil
 }
 
-func (m *FacilityJobManager) dispatch(class FacilityJobClass) {
-	defer m.wg.Done()
+func (w *Worker) dispatch(class FacilityJobClass) {
+	defer w.wg.Done()
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 	for {
 		select {
-		case <-m.ctx.Done():
+		case <-w.ctx.Done():
 			return
-		case <-m.wake:
+		case <-w.wake:
 		case <-ticker.C:
 		}
 
 		for {
-			tasks := m.registeredTasks()
+			tasks := w.tasks.IDs()
 			if len(tasks) == 0 {
 				break
 			}
 			now := time.Now().UTC()
-			job, claimed, err := m.store.ClaimNext(m.ctx, class, tasks, m.workerID, now, now.Add(facilityJobLeaseDuration))
+			job, claimed, err := w.store.ClaimNext(w.ctx, class, tasks, w.workerID, now, now.Add(facilityJobLeaseDuration))
 			if err != nil || !claimed {
 				break
 			}
-			m.runPersistedTask(job)
+			w.runPersistedTask(job)
 		}
 	}
 }
 
-func (m *FacilityJobManager) registeredTasks() []string {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	tasks := make([]string, 0, len(m.tasks))
-	for task := range m.tasks {
-		tasks = append(tasks, task)
-	}
-	sort.Strings(tasks)
-	return tasks
-}
-
-func (m *FacilityJobManager) runPersistedTask(job FacilityJob) {
+func (w *Worker) runPersistedTask(job FacilityJob) {
 	key := facilityJobKey{ownerID: job.OwnerID, jobID: job.ID}
-	m.mu.Lock()
-	handler := m.tasks[job.Task]
+	w.mu.Lock()
+	handler := w.tasks.handler(job.Task)
 	job.Status = FacilityJobStatusRunning
 	job.Stage = facilityJobStagePreparing
 	job.Progress = max(1, job.Progress)
 	job.UpdatedAt = time.Now().UTC()
-	m.jobs[key] = job
-	m.mu.Unlock()
+	w.jobs[key] = job
+	w.mu.Unlock()
 	if handler == nil {
 		return
 	}
-	if err := m.persistAndPublish(job); err != nil {
-		m.fail(key, err)
+	if err := w.persistAndPublish(job); err != nil {
+		w.fail(key, err)
 		return
 	}
-	stopHeartbeat := m.startHeartbeat(key)
+	stopHeartbeat := w.startHeartbeat(key)
 	defer stopHeartbeat()
-	taskCtx, cancel := context.WithCancel(m.ctx)
-	m.mu.Lock()
-	m.cancels[key] = cancel
-	m.mu.Unlock()
+	taskCtx, cancel := context.WithCancel(w.ctx)
+	w.mu.Lock()
+	w.cancels[key] = cancel
+	w.mu.Unlock()
 	defer func() {
-		m.mu.Lock()
-		delete(m.cancels, key)
-		m.mu.Unlock()
+		w.mu.Lock()
+		delete(w.cancels, key)
+		w.mu.Unlock()
 		cancel()
 	}()
 
 	execution := FacilityJobExecution{Job: job, Reporter: facilityJobReporter{report: func(progress FacilityJobProgress) {
-		m.reportTask(key, progress)
+		w.reportTask(key, progress)
 	}}}
 	result, err := handler.Execute(taskCtx, execution)
 	if err != nil {
 		if errors.Is(err, context.Canceled) && taskCtx.Err() != nil {
 			return
 		}
-		m.fail(key, err)
+		w.fail(key, err)
 		return
 	}
-	m.mu.Lock()
-	completed := m.jobs[key]
+	w.mu.Lock()
+	completed := w.jobs[key]
 	completed.Result = result.Result
-	m.jobs[key] = completed
-	m.mu.Unlock()
-	m.update(key, FacilityJobStatusCompleted, 100, facilityJobStageCompleted, "")
+	w.jobs[key] = completed
+	w.mu.Unlock()
+	w.update(key, FacilityJobStatusCompleted, 100, facilityJobStageCompleted, "")
 }
 
-func (m *FacilityJobManager) reportTask(key facilityJobKey, progress FacilityJobProgress) {
-	m.mu.Lock()
-	job, ok := m.jobs[key]
+func (w *Worker) reportTask(key facilityJobKey, progress FacilityJobProgress) {
+	w.mu.Lock()
+	job, ok := w.jobs[key]
 	if !ok || job.IsTerminal() {
-		m.mu.Unlock()
+		w.mu.Unlock()
 		return
 	}
 	if progress.Progress >= job.Progress {
@@ -577,56 +625,73 @@ func (m *FacilityJobManager) reportTask(key facilityJobKey, progress FacilityJob
 		job.Checkpoint = progress.Checkpoint
 	}
 	job.UpdatedAt = time.Now().UTC()
-	m.jobs[key] = job
-	m.mu.Unlock()
-	if err := m.persistAndPublish(job); err != nil {
-		m.fail(key, err)
+	w.jobs[key] = job
+	w.mu.Unlock()
+	if err := w.persistAndPublish(job); err != nil {
+		w.fail(key, err)
 	}
 }
 
 // Retry requeues a failed, retryable job while preserving its checkpoint.
-func (m *FacilityJobManager) Retry(ctx context.Context, ownerID, jobID uuid.UUID) (FacilityJob, error) {
-	if m == nil || m.store == nil {
+func (s *JobService) Retry(ctx context.Context, ownerID, jobID uuid.UUID) (FacilityJob, error) {
+	if s == nil || s.store == nil {
 		return FacilityJob{}, ErrFacilityJobNotFound
 	}
-	job, err := m.store.Retry(ctx, ownerID, jobID, time.Now().UTC())
+	job, err := s.store.Retry(ctx, ownerID, jobID, time.Now().UTC())
 	if err != nil {
 		return FacilityJob{}, err
 	}
-	m.signalWorkers()
-	m.publish(job)
+	s.worker.signal()
+	s.publish(job)
 	return job, nil
 }
 
 // Cancel marks an owned queued or running job as cancelled. A local worker is
 // signalled through its task context; workers in other processes cannot write
 // a later terminal state because the durable store only accepts running jobs.
-func (m *FacilityJobManager) Cancel(ctx context.Context, ownerID, jobID uuid.UUID) (FacilityJob, error) {
-	if m == nil || m.store == nil {
+func (s *JobService) Cancel(ctx context.Context, ownerID, jobID uuid.UUID) (FacilityJob, error) {
+	if s == nil || s.store == nil {
 		return FacilityJob{}, ErrFacilityJobNotFound
 	}
-	job, err := m.store.Cancel(ctx, ownerID, jobID, time.Now().UTC())
+	job, err := s.store.Cancel(ctx, ownerID, jobID, time.Now().UTC())
 	if err != nil {
 		return FacilityJob{}, err
 	}
 	key := facilityJobKey{ownerID: ownerID, jobID: jobID}
-	m.mu.Lock()
-	if cancel := m.cancels[key]; cancel != nil {
-		cancel()
-	}
-	delete(m.jobs, key)
-	m.mu.Unlock()
-	m.publish(job)
+	s.worker.cancelJob(key)
+	s.publish(job)
 	return job, nil
 }
 
-func (m *FacilityJobManager) publish(job FacilityJob) {
-	if m.publisher == nil {
+// Remove permanently clears an owned, terminal job and its execution metadata.
+// It never affects the facility resource produced by a completed copy job.
+func (s *JobService) Remove(ctx context.Context, ownerID, jobID uuid.UUID) error {
+	if s == nil || s.store == nil {
+		return ErrFacilityJobNotFound
+	}
+	return s.store.Delete(ctx, ownerID, jobID)
+}
+
+func (s *JobService) publish(job FacilityJob) {
+	publishFacilityJob(s.publisher, job)
+}
+
+func (w *Worker) cancelJob(key facilityJobKey) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if cancel := w.cancels[key]; cancel != nil {
+		cancel()
+	}
+	delete(w.jobs, key)
+}
+
+func publishFacilityJob(publisher apprealtime.FacilityJobProgressPublisher, job FacilityJob) {
+	if publisher == nil {
 		return
 	}
-	m.publisher.BroadcastFacilityJobProgress(context.Background(), apprealtime.FacilityJobProgressEvent{
+	publisher.BroadcastFacilityJobProgress(context.Background(), apprealtime.FacilityJobProgressEvent{
 		JobID: job.ID, OwnerID: job.OwnerID, Kind: string(job.Kind), Status: string(job.Status),
-		JobType: string(job.Type), Class: string(job.Class), Progress: job.Progress, Stage: job.Stage,
+		JobType: string(job.Type), Class: string(job.Class), Progress: job.Progress, Stage: string(job.Stage),
 		Error: job.Error, Processed: job.Processed, Total: job.Total, Succeeded: job.Succeeded, Failed: job.Failed, UpdatedAt: job.UpdatedAt,
 	})
 }

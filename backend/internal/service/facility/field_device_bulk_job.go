@@ -6,9 +6,9 @@ import (
 )
 
 const (
-	FacilityJobTaskMultiCreateFieldDevices = "fielddevice.multi_create.v1"
-	FacilityJobTaskBulkUpdateFieldDevices  = "fielddevice.bulk_update.v1"
-	FacilityJobTaskBulkDeleteFieldDevices  = "fielddevice.bulk_delete.v1"
+	FacilityJobTaskMultiCreateFieldDevices FacilityJobTaskID = "fielddevice.multi_create.v1"
+	FacilityJobTaskBulkUpdateFieldDevices  FacilityJobTaskID = "fielddevice.bulk_update.v1"
+	FacilityJobTaskBulkDeleteFieldDevices  FacilityJobTaskID = "fielddevice.bulk_delete.v1"
 )
 
 type FieldDeviceMultiCreateTaskPayload struct {

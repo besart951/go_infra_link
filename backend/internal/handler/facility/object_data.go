@@ -15,10 +15,10 @@ type ObjectDataHandler struct {
 	service        ObjectDataService
 	bacnetService  BacnetObjectService
 	apparatService ApparatService
-	facilityJobs   *facilityservice.FacilityJobManager
+	facilityJobs   *facilityservice.JobService
 }
 
-func NewObjectDataHandlerWithFacilityJobs(service ObjectDataService, bacnetService BacnetObjectService, apparatService ApparatService, facilityJobs *facilityservice.FacilityJobManager) *ObjectDataHandler {
+func NewObjectDataHandlerWithFacilityJobs(service ObjectDataService, bacnetService BacnetObjectService, apparatService ApparatService, facilityJobs *facilityservice.JobService) *ObjectDataHandler {
 	handler := NewObjectDataHandler(service, bacnetService, apparatService)
 	handler.facilityJobs = facilityJobs
 	return handler

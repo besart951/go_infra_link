@@ -72,7 +72,7 @@ type ServiceDeps struct {
 	BacnetAlarm             BacnetAlarmValueService
 	BacnetReferenceUsage    BacnetReferenceUsageService
 	DeleteImpact            DeleteImpactService
-	FacilityJobs            *facilityservice.FacilityJobManager
+	FacilityJobs            *facilityservice.JobService
 	Collaboration           ProjectRefreshBroadcaster
 	ReferenceData           FacilityReferenceDataRealtime
 }
